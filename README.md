@@ -190,7 +190,11 @@ must mount your project directory to `/app` inside the container.**
 
 - `-v "/path/to/your/project:/app"`: Mounts your local project directory into
   the container at `/app`. The server inside the container will treat `/app` as
-  its root. **Remember to use the correct absolute path for your system.**
+  its root. **Remember to replace `/path/to/your/project` with the correct
+  absolute path for your system.** (Note: Depending on your MCP host environment
+  and shell, you _might_ be able to use variables like `$PWD` (Linux/macOS),
+  `%CD%` (Windows Cmd), or `${workspaceFolder}` (if supported by the host)
+  instead of the explicit path, but this is not guaranteed to work universally.)
 - `shtse8/filesystem-mcp:latest`: Specifies the Docker image. Docker will pull
   it if needed.
 
