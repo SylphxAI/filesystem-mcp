@@ -5,7 +5,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { promises as fs, Stats } from "fs"; // Use promise-based fs, import Stats type
 import path from "path";
 import { fileURLToPath } from 'url'; // To get __dirname in ES modules
-import { glob, Path } from 'glob'; // Import glob and Path type
+import { glob, Path, GlobOptions, GlobOptionsWithFileTypesTrue, GlobOptionsWithFileTypesFalse } from 'glob'; // Add GlobOptions
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -75,7 +75,7 @@ const replaceContentTool = { name: "replace_content", description: "Replace cont
 const handleListFiles = async (args: any) => {
   const relativeInputPath = args?.path ?? ".";
   const recursive = args?.recursive ?? false;
-  const includeStats = args?.include_stats ?? false;
+  const includeStats = args?.include_stats ?? false; // User's request
   const targetAbsolutePath = resolvePath(relativeInputPath); // Absolute path of the item requested
 
   try {
@@ -83,7 +83,7 @@ const handleListFiles = async (args: any) => {
 
     // Case 1: Path points to a file
     if (initialStats.isFile()) {
-      // Return stats for the single file
+      // Always return stats for a single file path, regardless of includeStats flag
       const statsResult = formatStats(relativeInputPath, targetAbsolutePath, initialStats);
       return { content: [{ type: "text", text: JSON.stringify(statsResult, null, 2) }] };
     }
@@ -93,74 +93,118 @@ const handleListFiles = async (args: any) => {
       let results: { path: string; stats?: ReturnType<typeof formatStats> | { error: string } }[] = [];
       // Construct glob pattern relative to PROJECT_ROOT
       const globPattern = path.join(relativeInputPath, recursive ? '**/*' : '*').replace(/\\/g, '/');
-      const globOptions = {
-          cwd: PROJECT_ROOT, // Run glob from project root
-          dot: true,
-          mark: true,
-          nodir: false, // Always get dirs to check type later if needed
-          stat: includeStats,
-          withFileTypes: !includeStats,
-          absolute: true // Get absolute paths from glob to avoid confusion
-      };
 
-      const absolutePathsFromGlob = await glob(globPattern, globOptions) as (string | Path)[];
-
-      for (const entry of absolutePathsFromGlob) {
-          let fullEntryPath: string;
-          let entryStats: Stats | undefined;
-          let isDirectory: boolean | undefined;
-
-          // Determine the absolute path and potentially stats from the glob result
-          if (typeof entry === 'string') {
-              fullEntryPath = entry; // Already absolute
-              isDirectory = entry.endsWith('/');
-          } else if (typeof entry === 'object' && entry !== null && 'fullpath' in entry && typeof entry.fullpath === 'function') {
-              // If it's a Path object (from stat:true or withFileTypes:true)
-              fullEntryPath = entry.fullpath(); // Use the method to get absolute path
-              if ('stats' in entry) {
-                  entryStats = (entry as any).stats; // Stats might be attached
-                  isDirectory = entryStats?.isDirectory();
-              } else if (typeof (entry as any).isDirectory === 'function') {
-                  isDirectory = (entry as any).isDirectory(); // Check type if stats weren't requested/available
+      // --- Use fs.readdir for simple, non-recursive, no-stats case ---
+      if (!recursive && !includeStats) {
+          console.error(`[handleListFiles] Using fs.readdir for path: ${targetAbsolutePath}`);
+          const names = await fs.readdir(targetAbsolutePath);
+          for (const name of names) {
+              const itemRelativePath = path.join(relativeInputPath, name);
+              // We need to stat to determine if it's a directory for the trailing slash
+              let isDirectory = false;
+              try {
+                  const itemFullPath = path.resolve(targetAbsolutePath, name); // Use targetAbsolutePath which is already resolved
+                  const itemStats = await fs.stat(itemFullPath);
+                  isDirectory = itemStats.isDirectory();
+              } catch (statError: any) {
+                  console.warn(`[handleListFiles] Could not stat item ${itemRelativePath} during readdir: ${statError.message}`);
+                  // Decide whether to include the item even if stat fails, maybe add error?
+                  // For now, just skip adding the trailing slash if stat fails
               }
-          } else {
-              console.warn(`[Filesystem MCP] Unexpected entry type from glob:`, entry);
-              continue;
+              const displayPath = isDirectory ? `${itemRelativePath.replace(/\\/g, '/')}/` : itemRelativePath.replace(/\\/g, '/');
+              results.push({ path: displayPath });
           }
+      } else {
+          // --- Use glob for recursive or stats-included cases ---
+          console.error(`[handleListFiles] Using glob for pattern: ${globPattern}`);
+          // Always use stat:true and absolute:true to avoid the problematic option combination
+          const globOptions: GlobOptions = {
+              cwd: PROJECT_ROOT,
+              dot: true,
+              mark: true, // OK with absolute: true
+              nodir: false,
+              stat: true, // Always request stats object
+              withFileTypes: false, // Must be false when stat: true
+              absolute: true // Always get absolute paths
+          };
 
-          // Calculate the path relative to the *original requested directory* for output consistency
-          const entryRelativePath = path.relative(targetAbsolutePath, fullEntryPath);
+          // Log the options right before the call
+          console.error(`[handleListFiles] Glob Options (Always Stat): ${JSON.stringify(globOptions)}`);
+          // Result should always be Path[] with stats
+          const pathsFromGlob = await glob(globPattern, globOptions) as Path[];
+          console.error(`[handleListFiles] Glob Result (pathsFromGlob): ${JSON.stringify(pathsFromGlob)}`); // Log raw glob result
 
-          // Skip the base directory itself in recursive results
-          if (entryRelativePath === '' || entryRelativePath === '.') continue;
+          // Loop through the results (which are Path objects with stats)
+          for (const entry of pathsFromGlob) {
+              let entryRelativePath: string;
+              let fullEntryPath: string;
+              let entryStats: Stats | undefined;
+              let isDirectory: boolean | undefined;
+              let isSymbolicLink: boolean | undefined;
 
-          // Clean up path for output key, ensure forward slashes
-          const itemPathOutput = entryRelativePath.replace(/\\/g, '/');
-          const finalPathOutput = isDirectory ? `${itemPathOutput}/` : itemPathOutput;
+              // Since we always use stat:true, entry should always be a Path object with stats
+              const pathWithStats = entry as Path;
+              if (typeof pathWithStats === 'object' && pathWithStats !== null && typeof pathWithStats.fullpath === 'function' && typeof pathWithStats.isDirectory === 'function') {
+                  entryStats = pathWithStats as any; // Assign for formatStats, cast to any
+                  fullEntryPath = pathWithStats.fullpath(); // Absolute path from glob
+                  entryRelativePath = path.relative(PROJECT_ROOT, fullEntryPath); // Calculate relative path
+                  isDirectory = pathWithStats.isDirectory();
+                  isSymbolicLink = pathWithStats.isSymbolicLink();
+              } else {
+                  console.warn(`[Filesystem MCP] Unexpected entry type (expected Path with stats):`, entry);
+                  continue; // Skip malformed entry
+              }
 
+              // Path relative to project root is now entryRelativePath calculated above
+              const entryRelativePathOutput = entryRelativePath;
 
-          if (includeStats) {
-              if (entryStats) {
-                  results.push({ path: finalPathOutput, stats: formatStats(entryRelativePath, fullEntryPath, entryStats) });
-              } else { // Fallback stat if needed
-                  try {
-                      const fallbackStats = await fs.stat(fullEntryPath);
-                      isDirectory = fallbackStats.isDirectory(); // Update isDirectory based on fallback stat
-                      results.push({ path: finalPathOutput, stats: formatStats(entryRelativePath, fullEntryPath, fallbackStats) });
-                  } catch (statError: any) {
-                      console.warn(`[Filesystem MCP] Could not stat ${fullEntryPath} during list with stats: ${statError.message}`);
-                      results.push({ path: finalPathOutput, stats: { error: `Could not get stats: ${statError.message}` } });
+              // Log the path before filtering
+              console.error(`[handleListFiles] Found path (relative to root): ${entryRelativePathOutput}`);
+
+              // Skip the base directory itself if glob includes it (e.g., listing '.')
+              // Also skip if the path is somehow outside the project root (shouldn't happen with cwd)
+              if (entryRelativePathOutput === '' || entryRelativePathOutput === '.' || entryRelativePathOutput.startsWith('..')) {
+                  console.error(`[handleListFiles] Skipping path: ${entryRelativePathOutput}`);
+                  continue;
+              }
+
+              // Ensure forward slashes for output consistency
+              const finalPathOutput = entryRelativePathOutput.replace(/\\/g, '/');
+              // Add trailing slash for directories if not already present (glob adds it with mark:true)
+              const displayPath = (isDirectory && !finalPathOutput.endsWith('/')) ? `${finalPathOutput}/` : finalPathOutput;
+              // Log the final display path
+              console.error(`[handleListFiles] Display path: ${displayPath}`);
+
+              // Decide whether to include stats in the result based on the original user request
+              if (includeStats) {
+                  // User requested stats, format and add them
+                  // Check if entryStats was successfully assigned (it should have been)
+                  if (entryStats) {
+                      // Use displayPath for the output path key
+                      // entryStats is valid here
+                      results.push({ path: displayPath, stats: formatStats(entryRelativePathOutput, fullEntryPath, entryStats) });
+                  } else {
+                      // This case should ideally not be reached if glob works as expected
+                      console.warn(`[Filesystem MCP] Missing stats object for ${displayPath} when includeStats=true.`);
+                      results.push({ path: displayPath, stats: { error: `Could not get stats object from glob` } });
                   }
+              } else {
+                  // User did NOT request stats, just add the path
+                  results.push({ path: displayPath });
               }
-          } else { // Not including stats
-              results.push({ path: finalPathOutput });
-          }
-      }
+          } // End for loop (glob results)
+      } // End else (use glob)
+
+      // Prepare final result (array of paths or array of objects with stats) - THIS IS NOW CORRECTLY PLACED
       const resultData = includeStats ? results : results.map(item => item.path);
       return { content: [{ type: "text", text: JSON.stringify(resultData, null, 2) }] };
-    }
+
+    } // End if (initialStats.isDirectory())
+
+    // This path should not be reached if the initial path is a file or directory
     throw new McpError(ErrorCode.InternalError, `Path is neither a file nor a directory: ${relativeInputPath}`);
-  } catch (error: any) {
+
+  } catch (error: any) { // Correctly placed catch block
     if (error.code === 'ENOENT') throw new McpError(ErrorCode.InvalidRequest, `Path not found: ${relativeInputPath}`);
     if (error instanceof McpError) throw error;
     console.error(`[Filesystem MCP] Error in listFiles for ${targetAbsolutePath}:`, error);
@@ -212,7 +256,8 @@ const handleReadContent = async (args: any) => { // Renamed from handleReadMulti
 };
 
 const handleWriteContent = async (args: any) => { // Renamed from handleWriteMultipleFiles
-  const filesToWrite = args?.files;
+  console.error(`[handleWriteContent] Received args: ${JSON.stringify(args)}`); // Add logging
+  const filesToWrite = args?.items; // Corrected variable name from args?.files
   if (!Array.isArray(filesToWrite) || filesToWrite.length === 0 || !filesToWrite.every(f => typeof f === 'object' && typeof f.path === 'string' && typeof f.content === 'string')) throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: items (must be a non-empty array of {path: string, content: string, append?: boolean} objects)');
   const results = await Promise.allSettled(filesToWrite.map(async (file) => {
     const relativePath = file.path;
