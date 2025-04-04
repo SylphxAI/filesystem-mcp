@@ -1,9 +1,13 @@
-# Filesystem MCP Server
+# Filesystem MCP Server (@shtse8/filesystem-mcp)
+
+[![npm version](https://badge.fury.io/js/%40shtse8%2Ffilesystem-mcp.svg)](https://badge.fury.io/js/%40shtse8%2Ffilesystem-mcp)
+
+<!-- Add other badges here if applicable (e.g., license, build status) -->
 
 A Model Context Protocol (MCP) server designed to provide controlled access to a
 user's filesystem relative to a defined project root directory.
 
-This server allows AI agents (like Cline) to interact with project files
+This server allows AI agents (like Cline/Claude) to interact with project files
 securely and efficiently, performing common filesystem operations without
 requiring direct, unrestricted access.
 
@@ -51,28 +55,17 @@ Provides a comprehensive set of tools for filesystem manipulation:
   in `src/handlers/`, utilities in `src/utils/`, and main server setup in
   `src/index.ts`.
 
-## Development
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Build the server (compiles TypeScript to JavaScript in `build/`):
-
-```bash
-npm run build
-```
-
-The build command also sets execute permissions on the output script
-(`build/index.js`).
-
 ## Installation & Usage with MCP Host
 
 This server is typically run as a background process managed by an MCP host
 environment (like the Roo/Cline VSCode extension). Configuration usually
-involves pointing the host environment to the compiled server script.
+involves pointing the host environment to the compiled server script or using
+`npx`.
+
+**Option 1: Using `npx` (Recommended)**
+
+Configure your MCP host to run the server using `npx`. This ensures you always
+use the latest published version.
 
 Example configuration snippet (e.g., in `mcp_settings.json` for Roo/Cline):
 
@@ -80,9 +73,9 @@ Example configuration snippet (e.g., in `mcp_settings.json` for Roo/Cline):
 {
   "mcpServers": {
     "filesystem-mcp": {
-      "command": "node",
+      "command": "npx",
       "args": [
-        "c:\\path\\to\\your\\project\\filesystem-mcp\\build\\index.js"
+        "@shtse8/filesystem-mcp"
       ],
       "disabled": false
     }
@@ -90,44 +83,54 @@ Example configuration snippet (e.g., in `mcp_settings.json` for Roo/Cline):
 }
 ```
 
-Replace the path in `"args"` with the correct absolute path to the compiled
-`build/index.js` on your system.
+**Option 2: Local Build**
 
-## Usage as a Standalone Package (via npm)
+1. Clone the repository.
+2. Install dependencies: `npm install`
+3. Build the server: `npm run build`
+4. Configure your MCP host to point to the local build output.
 
-This package is published to npm as `@shtse8/filesystem-mcp`. You can run it
-directly using `npx` or install it globally.
+Example configuration snippet:
 
-**Using `npx` (Recommended for temporary use or testing):**
-
-```bash
-npx @shtse8/filesystem-mcp
+```json
+{
+  "mcpServers": {
+    "filesystem-mcp": {
+      "command": "node",
+      "args": [
+        "c:\\path\\to\\your\\cloned\\repo\\filesystem-mcp\\build\\index.js"
+      ],
+      "disabled": false
+    }
+  }
+}
 ```
 
-This will download and run the server, communicating over stdio. Your MCP host
-environment needs to be configured to launch it this way (e.g., by setting the
-`command` to `npx` and `args` to `["@shtse8/filesystem-mcp"]` in the host's
-settings).
+_(Replace the path in `"args"` with the correct absolute path)_
 
-**Global Installation:**
+**Option 3: Global Installation**
 
 ```bash
 npm install -g @shtse8/filesystem-mcp
 ```
 
-After global installation, you can run the server using the command:
+Then configure your MCP host to run the command `filesystem-mcp`.
 
-```bash
-filesystem-mcp
-```
+## Development
 
-Your MCP host environment would need to be configured to launch this command
-(e.g., `command` set to `filesystem-mcp` with no `args`).
+1. Clone the repository.
+2. Install dependencies: `npm install`
+3. Build the server: `npm run build` (compiles TypeScript to `build/`)
+4. Watch for changes: `npm run watch` (optional, recompiles on save)
 
 ## Publishing (via GitHub Actions)
 
 This repository uses a GitHub Action defined in `.github/workflows/publish.yml`
-to automatically publish the package to npm upon pushes to the `main` branch.
+to automatically publish the package to npm upon pushes to the `main` branch. It
+requires an `NPM_TOKEN` secret to be configured in the GitHub repository
+settings.
 
-It requires an `NPM_TOKEN` secret to be configured in the GitHub repository
-settings for authentication with npm.
+## Contributing
+
+Contributions are welcome! Please feel free to open an issue or submit a pull
+request.
