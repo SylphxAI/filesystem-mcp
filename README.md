@@ -5,8 +5,8 @@
 
 <!-- Add other badges like License, Build Status if applicable -->
 
-**Empower your AI agents (like Cline/Claude) with secure and controlled access
-to your project files.**
+**Empower your AI agents (like Cline/Claude) with secure, efficient, and
+token-saving access to your project files.**
 
 This Node.js server implements the
 [Model Context Protocol (MCP)](https://docs.modelcontextprotocol.com/) to
@@ -15,38 +15,87 @@ project root directory.
 
 ---
 
-## ✨ Features
+## ⭐ Why Use This Server?
 
-- **Secure by Design:** All operations are strictly confined to the project root
-  directory, preventing unauthorized access.
-- **Comprehensive Toolset:** Offers a wide range of filesystem operations:
-  - 📁 **Listing & Status:** `list_files`, `stat_items`
-  - 📄 **Content Manipulation:** `read_content`, `write_content` (incl. append)
-  - ✏️ **Search & Replace:** `search_files` (regex), `replace_content`
-  - 🏗️ **Directory Management:** `create_directories`
-  - 🗑️ **Deletion:** `delete_items` (recursive)
-  - ↔️ **Moving & Copying:** `move_items`, `copy_items`
-  - 🔒 **Permissions:** `chmod_items`, `chown_items` (POSIX focused)
-- **Modern Tech:** Built with TypeScript, Node.js, and the
-  `@modelcontextprotocol/sdk`.
-- **Input Validation:** Uses Zod schemas for reliable tool argument validation.
-- **Containerized:** Available as a Docker image on Docker Hub for easy
-  deployment.
+- **🛡️ Secure & Convenient Project Root Focus:**
+  - All operations are **strictly confined to the project root directory**,
+    preventing unauthorized access.
+  - Uses **relative paths** from the project root, eliminating the need for the
+    AI or user to manage complex absolute paths or worry about the current
+    working directory (CWD).
+- **⚡ Optimized & Consolidated Tools:**
+  - Most tools support **batch operations** (e.g., reading multiple files,
+    deleting multiple items) in a single request.
+  - Designed to **reduce AI-server round trips**, minimizing token usage and
+    latency compared to executing individual commands for each file operation.
+- **🚀 Easy Integration:** Get started quickly using `npx` with minimal
+  configuration.
+- **🐳 Containerized Option:** Also available as a Docker image for consistent
+  deployment environments.
+- **🔧 Comprehensive Functionality:** Covers a wide range of common filesystem
+  tasks (see Features below).
+- **✅ Robust Validation:** Uses Zod schemas to validate all incoming tool
+  arguments.
 
 ---
 
-## 🚀 Quick Start: Usage with MCP Host (Recommended: Docker)
+## 🚀 Quick Start: Usage with MCP Host (Recommended: `npx`)
 
-The easiest way to use this server is via Docker, configured directly in your
-MCP host environment (e.g., Roo/Cline's `mcp_settings.json`).
+The simplest and recommended way to use this server is via `npx`, configured
+directly in your MCP host environment (e.g., Roo/Cline's `mcp_settings.json`).
+This ensures you always use the latest version from npm without needing local
+installation or Docker.
+
+**Configure your MCP Host:**
+
+Modify your MCP host's settings (e.g., `mcp_settings.json`) to run the server
+using `npx`.
+
+```json
+{
+  "mcpServers": {
+    "filesystem-mcp": {
+      "command": "npx",
+      "args": [
+        "@shtse8/filesystem-mcp"
+      ],
+      "name": "Filesystem (npx)" // Optional friendly name
+    }
+  }
+}
+```
+
+**That's it!** Restart your MCP Host environment (if necessary) for the settings
+to take effect. Your AI agent can now use the filesystem tools. The server
+automatically determines the project root based on where the host environment
+runs it (typically your open project folder).
+
+---
+
+## ✨ Features
+
+Provides a comprehensive, batch-capable toolset:
+
+- 📁 **Listing & Status:** `list_files`, `stat_items`
+- 📄 **Content Manipulation:** `read_content`, `write_content` (incl. append)
+- ✏️ **Search & Replace:** `search_files` (regex), `replace_content`
+- 🏗️ **Directory Management:** `create_directories`
+- 🗑️ **Deletion:** `delete_items` (recursive)
+- ↔️ **Moving & Copying:** `move_items`, `copy_items`
+- 🔒 **Permissions:** `chmod_items`, `chown_items` (POSIX focused)
+
+---
+
+## 🐳 Alternative Usage: Docker
+
+For users who prefer containerization or need a specific environment.
 
 **1. Ensure Docker is running.**
 
 **2. Configure your MCP Host:**
 
-Modify your MCP host's settings (e.g., `mcp_settings.json`) to run the Docker
-container. **Crucially, you must mount your project directory to `/app` inside
-the container.**
+Modify your MCP host's settings to run the Docker container. **Crucially, you
+must mount your project directory to `/app` inside the container.**
 
 ```json
 {
@@ -57,9 +106,11 @@ the container.**
         "run",
         "-i",
         "--rm",
+        // IMPORTANT: Replace '/path/to/your/project' with the ACTUAL path on your machine
         "-v",
         "/path/to/your/project:/app",
-        "shtse8/filesystem-mcp:latest"
+        // Specify the Docker image from Docker Hub
+        "shtse8/filesystem-mcp:latest" // Or a specific version
       ],
       "name": "Filesystem (Docker)"
     }
@@ -67,49 +118,21 @@ the container.**
 }
 ```
 
-**Explanation of `docker run` arguments:**
+**Explanation:**
 
-- `run`: Executes the container.
-- `-i`: Keeps STDIN open, essential for MCP communication over stdio.
-- `--rm`: Cleans up the container after it stops.
-- `-v "/path/to/your/project:/app"`: **The most important part!** Mounts your
-  local project directory into the container at `/app`. The server inside the
-  container will treat `/app` as its root and operate on your mounted files.
-  **Remember to use the correct absolute path for your system.**
-- `shtse8/filesystem-mcp:latest`: Specifies the Docker image to use. Docker will
-  automatically pull it from Docker Hub if it's not present locally.
+- `-v "/path/to/your/project:/app"`: Mounts your local project directory into
+  the container at `/app`. The server inside the container will treat `/app` as
+  its root. **Remember to use the correct absolute path for your system.**
+- `shtse8/filesystem-mcp:latest`: Specifies the Docker image. Docker will pull
+  it if needed.
 
-**3. Restart your MCP Host environment** (if necessary) for the settings to take
-effect.
-
-Your AI agent can now use the filesystem tools provided by the server running
-inside Docker!
+**3. Restart your MCP Host environment.**
 
 ---
 
-## 🛠️ Alternative Usage Options
+## 🛠️ Other Usage Options
 
-While Docker is recommended, other options exist:
-
-### Option 2: Using `npx`
-
-Runs the latest version directly from npm. Good for quick tests.
-
-```json
-{
-  "mcpServers": {
-    "filesystem-mcp": {
-      "command": "npx",
-      "args": ["@shtse8/filesystem-mcp"],
-      "name": "Filesystem (npx)"
-    }
-  }
-}
-```
-
-### Option 3: Local Build
-
-For development or specific needs.
+### Local Build (For Development)
 
 1. Clone: `git clone https://github.com/shtse8/filesystem-mcp.git`
 2. Install: `cd filesystem-mcp && npm install`
@@ -121,6 +144,7 @@ For development or specific needs.
   "mcpServers": {
     "filesystem-mcp": {
       "command": "node",
+      // Use the absolute path to the build output
       "args": ["/path/to/cloned/repo/filesystem-mcp/build/index.js"],
       "name": "Filesystem (Local Build)"
     }
