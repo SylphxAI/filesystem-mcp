@@ -5,12 +5,8 @@
 # Node modules
 node_modules
 
-# Source files (we only need the build output)
-src
-
-# Build artifacts/config
+# Build artifacts (we only need the build output in the final stage)
 build
-tsconfig.json
 
 # Docker files
 Dockerfile
