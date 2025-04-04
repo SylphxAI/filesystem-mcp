@@ -34,6 +34,8 @@ and secure manner, operating relative to a defined project root directory.
     directory.
   - `replace_content`: Search and replace content within files across multiple
     specified paths (files or directories).
+  - `edit_file`: Perform advanced, selective edits (insert, replace, delete)
+    based on patterns, preserving indentation.
 - **Technology Stack:** Use Node.js and TypeScript. Leverage the
   `@modelcontextprotocol/sdk` for MCP implementation and `glob` for file
   searching/listing.

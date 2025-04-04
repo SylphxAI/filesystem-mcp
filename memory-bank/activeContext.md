@@ -2,8 +2,8 @@
 
 ## 1. Current Work Focus
 
-The focus shifted to addressing a core architectural issue regarding project
-root determination to support multi-project usage correctly.
+The focus shifted from the project root logic (which was updated) to
+implementing a new advanced editing tool (`edit_file`).
 
 ## 2. Recent Changes/Decisions
 
@@ -37,8 +37,24 @@ root determination to support multi-project usage correctly.
   current project, **but requires the launching process to set the `cwd`
   correctly.**
 - **Memory Bank Updated:** Updated `systemPatterns.md`, `productContext.md`, and
-  `techContext.md` to reflect the new `process.cwd()`-based project root logic
-  and its implications.
+  `techContext.md`, `progress.md` to reflect the new `process.cwd()`-based
+  project root logic and its implications.
+- **Added `edit_file` Tool (Basic):**
+  - Implemented a new handler `src/handlers/editFile.ts`.
+  - Defined Zod schema for complex edit operations (insert, text
+    replace/delete).
+  - Added logic for handling multiple changes per file, bottom-up processing,
+    basic indentation preservation, and diff generation using `diff` and
+    `detect-indent` libraries.
+  - Integrated the tool definition into `src/handlers/index.ts`.
+- **Troubleshooting Build Error:** Investigated persistent `tsc` error "Cannot
+  find module '@modelcontextprotocol/sdk'" by performing clean installs,
+  checking `tsconfig.json`, adjusting import paths, and modifying
+  `skipLibCheck`, without success. Removed `prepare` script from `package.json`
+  as a temporary workaround to allow `npm install` to complete.
+- **Memory Bank Updated:** Updated `projectbrief.md`, `systemPatterns.md`,
+  `techContext.md`, and `progress.md` to include the new `edit_file` tool and
+  related dependencies/patterns.
 
 ## 3. Next Steps / Considerations
 
@@ -57,6 +73,10 @@ root determination to support multi-project usage correctly.
 - **CI/CD:** Ensure CI/CD pipeline still functions correctly after the changes.
 - **Resolve `list_files` Issue (Glob Path):** (Previous issue, lower priority
   now) Investigate the `glob`-based execution path within `handleListFiles`.
+- **Implement `edit_file` Regex Support:** Add logic for handling
+  `use_regex: true`.
+- **Resolve Build Error:** Find the root cause of the persistent `tsc` error
+  preventing the SDK module from being found.
 
 ## 4. Active Decisions
 
@@ -67,3 +87,5 @@ root determination to support multi-project usage correctly.
   instructions, with JSON examples adhering to standard JSON (no comments).
 - **Project Root Source:** The server now uses `process.cwd()` as the project
   root, requiring the launcher to set it appropriately.
+- **`edit_file` Implemented (Basic):** The core structure and basic
+  text/insertion logic for the new tool are in place.

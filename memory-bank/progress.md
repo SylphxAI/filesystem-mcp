@@ -16,6 +16,10 @@
   `search_files`, `replace_content`, `delete_items`, `list_files` simple case)
   have passed basic functional tests. Batch operations are supported where
   applicable.
+- **`edit_file` Tool (Basic Implementation):** Added new tool with support for
+  insertion, text search/replace/delete, indentation preservation, and diff
+  output. Zod schema defined and integrated. have passed basic functional tests.
+  Batch operations are supported where applicable.
 - **Documentation (`README.md`):** Significantly improved with clear usage
   instructions (prioritizing `npx`, adding `bunx` alternative), feature
   highlights, Docker instructions, and contribution guidelines. JSON examples
@@ -50,6 +54,7 @@
   of the dynamic root.
 - **Refine Batch Error Handling:** Review reporting for partial success/failure.
 - **Code Cleanup:** Remove any remaining debugging logs.
+- **`edit_file` Regex Support:** Implement regex matching for search patterns.
 
 ## 3. Current Status
 
@@ -74,4 +79,7 @@
 - **`list_files` (`glob` path):** Potential issue with recursion/stats enabled
   needs investigation.
 - **Windows `chmod`/`chown`:** Effectiveness is limited by the OS.
+- **Build Error:** Persistent TypeScript error
+  `Cannot find module '@modelcontextprotocol/sdk'` prevents successful builds,
+  despite clean installs and config checks. Needs resolution.
 - **Cross-Device Moves/Copies:** May fail (`EXDEV`).

@@ -10,6 +10,7 @@ import { moveItemsToolDefinition } from './moveItems.js';
 import { copyItemsToolDefinition } from './copyItems.js';
 import { searchFilesToolDefinition } from './searchFiles.js';
 import { replaceContentToolDefinition } from './replaceContent.js';
+import { editFileDefinition } from './editFile.js';
 
 // Define the structure for a tool definition (used internally and for index.ts)
 // We need Zod here to define the schema type correctly
@@ -35,4 +36,5 @@ export const allToolDefinitions: ToolDefinition[] = [
     copyItemsToolDefinition,
     searchFilesToolDefinition,
     replaceContentToolDefinition,
+    editFileDefinition,
 ];

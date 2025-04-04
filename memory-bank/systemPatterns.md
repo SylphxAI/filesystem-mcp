@@ -35,10 +35,19 @@ graph LR
     `PROJECT_ROOT` absolute path to prevent path traversal vulnerabilities
     (e.g., `../../sensitive-file`).
   - It rejects absolute paths provided by the agent.
-- **Tool-Handler Mapping:** A `switch` statement in the `CallToolRequestSchema`
-  handler maps incoming tool names directly to their corresponding asynchronous
-  handler functions (e.g., `handleListFiles`, `handleReadContent`,
-  `handleWriteContent`).
+- **Zod for Schemas & Validation:** Uses `zod` library to define input schemas
+  for tools and perform robust validation within each handler. JSON schemas for
+  MCP listing are generated from Zod schemas.
+- **Tool Definition Aggregation:** Tool definitions (name, description, Zod
+  schema, handler function) are defined in their respective handler files and
+  aggregated in `src/handlers/index.ts` for registration in `src/index.ts`.
+- **`edit_file` Logic:**
+  - Processes multiple changes per file, applying them sequentially from
+    bottom-to-top to minimize line number conflicts.
+  - Handles insertion, text replacement, and deletion.
+  - Implements basic indentation detection (`detect-indent`) and preservation
+    for insertions/replacements.
+  - Uses `diff` library to generate unified diff output.
 - **Error Handling:**
   - Uses `try...catch` blocks within each tool handler.
   - Catches specific Node.js filesystem errors (like `ENOENT`, `EPERM`,
@@ -62,12 +71,15 @@ graph LR
 - **`Server` (from SDK):** Core MCP server class handling protocol logic.
 - **`StdioServerTransport` (from SDK):** Handles reading/writing MCP messages
   via stdio.
-- **Tool Handler Functions (`handleListFiles`, `handleStatItems`, etc.):**
-  Contain the specific logic for each tool, including argument parsing, path
-  resolution, filesystem interaction, and result formatting.
+- **Tool Handler Functions (`handleListFiles`, `handleEditFile`, etc.):**
+  Contain the specific logic for each tool, including Zod argument validation,
+  path resolution, filesystem interaction, and result formatting.
 - **`resolvePath` Helper:** Centralized security function for path validation.
 - **`formatStats` Helper:** Utility to create a consistent stats object
   structure.
 - **Node.js Modules (`fs`, `path`):** Used for actual filesystem operations and
   path manipulation.
 - **`glob` Library:** Used for pattern-based file searching and listing.
+- **`zod` Library:** Used for defining and validating tool input schemas.
+- **`diff` Library:** Used by `edit_file` to generate diff output.
+- **`detect-indent` Library:** Used by `edit_file` for indentation handling.

@@ -21,6 +21,14 @@
 - **`@types/node`:** TypeScript type definitions for Node.js built-in modules
   (`fs`, `path`, `process`, etc.).
 - **`@types/glob`:** TypeScript type definitions for the `glob` library.
+- **`zod`:** Library for schema declaration and validation. Used for all tool
+  inputs.
+- **`zod-to-json-schema`:** Utility to convert Zod schemas to JSON schemas for
+  MCP tool listing.
+- **`diff`:** Library for generating text differences. Used by `edit_file`.
+- **`detect-indent`:** Library for detecting the dominant indentation in code.
+  Used by `edit_file`.
+- **`@types/diff`:** TypeScript type definitions for the `diff` library.
 
 ## 3. Development Setup
 
