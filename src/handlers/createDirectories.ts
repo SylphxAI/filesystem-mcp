@@ -1,17 +1,35 @@
 import { promises as fs } from "fs";
+import { z } from 'zod';
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js'; // Use .js extension
+import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
 
 /**
  * Handles the 'create_directories' MCP tool request.
  * Creates multiple specified directories (including intermediate ones).
  */
-export const handleCreateDirectories = async (args: any) => {
-    const pathsToCreate = args?.paths;
-    if (!Array.isArray(pathsToCreate) || pathsToCreate.length === 0 || !pathsToCreate.every(p => typeof p === 'string')) {
-        throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: paths (must be a non-empty array of strings)');
-    }
 
+// Define Zod schema for arguments
+const CreateDirsArgsSchema = z.object({
+  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }),
+}).strict();
+
+// Infer TypeScript type from schema
+type CreateDirsArgs = z.infer<typeof CreateDirsArgsSchema>;
+
+export const handleCreateDirectories = async (args: unknown) => {
+    // Validate and parse arguments
+    let parsedArgs: CreateDirsArgs;
+    try {
+        parsedArgs = CreateDirsArgsSchema.parse(args);
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            throw new McpError(ErrorCode.InvalidParams, `Invalid arguments: ${error.errors.map(e => `${e.path.join('.')} (${e.message})`).join(', ')}`);
+        }
+        throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
+    }
+    const { paths: pathsToCreate } = parsedArgs;
+
+    // Define result structure
     // Define result structure
     type CreateDirResult = {
         path: string;
@@ -73,7 +91,7 @@ export const handleCreateDirectories = async (args: any) => {
     });
 
     // Sort results by original path order for predictability
-    outputResults.sort((a, b) => pathsToCreate.indexOf(a.path) - pathsToCreate.indexOf(b.path));
+    outputResults.sort((a, b) => pathsToCreate.indexOf(a.path ?? '') - pathsToCreate.indexOf(b.path ?? '')); // Handle potential undefined path
 
     return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
 };

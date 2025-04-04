@@ -1,22 +1,44 @@
 import { promises as fs } from "fs";
+import { z } from 'zod';
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { resolvePath } from '../utils/pathUtils.js'; // Use .js extension
+import { resolvePath } from '../utils/pathUtils.js';
 
 /**
  * Handles the 'replace_content' MCP tool request.
  * Replaces content within files across multiple specified paths.
  */
-export const handleReplaceContent = async (args: any) => {
-    const relativePaths = args?.paths;
-    const operations = args?.operations;
 
-    if (!Array.isArray(relativePaths) || relativePaths.length === 0 || !relativePaths.every(p => typeof p === 'string')) {
-        throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: paths (must be a non-empty array of strings)');
-    }
-    if (!Array.isArray(operations) || operations.length === 0 || !operations.every((op: any) => typeof op === 'object' && typeof op.search === 'string' && typeof op.replace === 'string')) {
-        throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: operations (must be a non-empty array of {search: string, replace: string, use_regex?: boolean, ignore_case?: boolean} objects)');
-    }
+// Define Zod schema for individual replace operations
+const ReplaceOperationSchema = z.object({
+  search: z.string(), // Cannot be empty, but Zod defaults handle this if needed
+  replace: z.string(),
+  use_regex: z.boolean().optional().default(false),
+  ignore_case: z.boolean().optional().default(false),
+}).strict();
 
+// Define Zod schema for the main arguments object
+const ReplaceContentArgsSchema = z.object({
+  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }),
+  operations: z.array(ReplaceOperationSchema).min(1, { message: "Operations array cannot be empty" }),
+}).strict();
+
+// Infer TypeScript type from schema
+type ReplaceContentArgs = z.infer<typeof ReplaceContentArgsSchema>;
+
+export const handleReplaceContent = async (args: unknown) => {
+    // Validate and parse arguments
+    let parsedArgs: ReplaceContentArgs;
+    try {
+        parsedArgs = ReplaceContentArgsSchema.parse(args);
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            throw new McpError(ErrorCode.InvalidParams, `Invalid arguments: ${error.errors.map(e => `${e.path.join('.')} (${e.message})`).join(', ')}`);
+        }
+        throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
+    }
+    const { paths: relativePaths, operations } = parsedArgs;
+
+    // Define result structure
     // Define result structure
     type ReplaceResult = {
         file: string;
@@ -96,7 +118,7 @@ export const handleReplaceContent = async (args: any) => {
     }
 
     // Sort results by original path order for predictability
-    fileProcessingResults.sort((a, b) => relativePaths.indexOf(a.file) - relativePaths.indexOf(b.file));
+    fileProcessingResults.sort((a, b) => relativePaths.indexOf(a.file ?? '') - relativePaths.indexOf(b.file ?? '')); // Handle potential undefined path
 
     return {
         content: [{

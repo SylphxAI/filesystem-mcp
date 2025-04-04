@@ -1,17 +1,35 @@
 import { promises as fs } from "fs";
+import { z } from 'zod';
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { resolvePath } from '../utils/pathUtils.js'; // Use .js extension
+import { resolvePath } from '../utils/pathUtils.js';
 
 /**
  * Handles the 'read_content' MCP tool request.
  * Reads content from multiple specified files.
  */
-export const handleReadContent = async (args: any) => {
-  const relativePaths = args?.paths;
-  if (!Array.isArray(relativePaths) || relativePaths.length === 0 || !relativePaths.every(p => typeof p === 'string')) {
-      throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: paths (must be a non-empty array of strings)');
-  }
 
+// Define Zod schema for arguments
+const ReadContentArgsSchema = z.object({
+  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }),
+}).strict();
+
+// Infer TypeScript type from schema
+type ReadContentArgs = z.infer<typeof ReadContentArgsSchema>;
+
+export const handleReadContent = async (args: unknown) => {
+  // Validate and parse arguments
+  let parsedArgs: ReadContentArgs;
+  try {
+      parsedArgs = ReadContentArgsSchema.parse(args);
+  } catch (error) {
+      if (error instanceof z.ZodError) {
+          throw new McpError(ErrorCode.InvalidParams, `Invalid arguments: ${error.errors.map(e => `${e.path.join('.')} (${e.message})`).join(', ')}`);
+      }
+      throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
+  }
+  const { paths: relativePaths } = parsedArgs;
+
+  // Define result structure
   // Define result structure
   type ReadResult = {
       path: string;
@@ -53,7 +71,7 @@ export const handleReadContent = async (args: any) => {
   });
 
   // Sort results by original path order for predictability
-  outputContents.sort((a, b) => relativePaths.indexOf(a.path) - relativePaths.indexOf(b.path));
+  outputContents.sort((a, b) => relativePaths.indexOf(a.path ?? '') - relativePaths.indexOf(b.path ?? '')); // Handle potential undefined path in sort
 
   return { content: [{ type: "text", text: JSON.stringify(outputContents, null, 2) }] };
 };

@@ -1,17 +1,37 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { z } from 'zod';
 import { glob } from 'glob';
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js'; // Use .js extension
+import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
 
 /**
  * Handles the 'search_files' MCP tool request.
  * Searches for a regex pattern within files in a specified directory.
  */
-export const handleSearchFiles = async (args: any) => {
-    const relativePath = args?.path ?? ".";
-    const regexString = args?.regex;
-    const filePattern = args?.file_pattern ?? "*";
+
+// Define Zod schema for arguments
+const SearchFilesArgsSchema = z.object({
+  path: z.string().optional().default("."),
+  regex: z.string().min(1, { message: "Regex pattern cannot be empty" }),
+  file_pattern: z.string().optional().default("*"),
+}).strict();
+
+// Infer TypeScript type from schema
+type SearchFilesArgs = z.infer<typeof SearchFilesArgsSchema>;
+
+export const handleSearchFiles = async (args: unknown) => {
+    // Validate and parse arguments
+    let parsedArgs: SearchFilesArgs;
+    try {
+        parsedArgs = SearchFilesArgsSchema.parse(args);
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            throw new McpError(ErrorCode.InvalidParams, `Invalid arguments: ${error.errors.map(e => `${e.path.join('.')} (${e.message})`).join(', ')}`);
+        }
+        throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
+    }
+    const { path: relativePath, regex: regexString, file_pattern: filePattern } = parsedArgs;
 
     if (typeof regexString !== 'string' || regexString.trim() === '') {
         throw new McpError(ErrorCode.InvalidParams, 'Missing or invalid required parameter: regex');

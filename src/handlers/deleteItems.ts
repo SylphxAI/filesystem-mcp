@@ -1,17 +1,35 @@
 import { promises as fs } from "fs";
+import { z } from 'zod';
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js'; // Use .js extension
+import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
 
 /**
  * Handles the 'delete_items' MCP tool request.
  * Deletes multiple specified files or directories.
  */
-export const handleDeleteItems = async (args: any) => {
-    const pathsToDelete = args?.paths;
-    if (!Array.isArray(pathsToDelete) || pathsToDelete.length === 0 || !pathsToDelete.every(p => typeof p === 'string')) {
-        throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: paths (must be a non-empty array of strings)');
-    }
 
+// Define Zod schema for arguments
+const DeleteItemsArgsSchema = z.object({
+  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }),
+}).strict();
+
+// Infer TypeScript type from schema
+type DeleteItemsArgs = z.infer<typeof DeleteItemsArgsSchema>;
+
+export const handleDeleteItems = async (args: unknown) => {
+    // Validate and parse arguments
+    let parsedArgs: DeleteItemsArgs;
+    try {
+        parsedArgs = DeleteItemsArgsSchema.parse(args);
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            throw new McpError(ErrorCode.InvalidParams, `Invalid arguments: ${error.errors.map(e => `${e.path.join('.')} (${e.message})`).join(', ')}`);
+        }
+        throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
+    }
+    const { paths: pathsToDelete } = parsedArgs;
+
+    // Define result structure
     // Define result structure
     type DeleteResult = {
         path: string;
@@ -53,7 +71,7 @@ export const handleDeleteItems = async (args: any) => {
     });
 
      // Sort results by original path order for predictability
-    outputResults.sort((a, b) => pathsToDelete.indexOf(a.path) - pathsToDelete.indexOf(b.path));
+    outputResults.sort((a, b) => pathsToDelete.indexOf(a.path ?? '') - pathsToDelete.indexOf(b.path ?? '')); // Handle potential undefined path
 
     return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
 };

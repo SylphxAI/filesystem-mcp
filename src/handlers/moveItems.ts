@@ -1,18 +1,42 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { z } from 'zod';
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js'; // Use .js extension
+import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
 
 /**
  * Handles the 'move_items' MCP tool request.
  * Moves or renames multiple specified files/directories.
  */
-export const handleMoveItems = async (args: any) => {
-    const operations = args?.operations;
-    if (!Array.isArray(operations) || operations.length === 0 || !operations.every((op: any) => typeof op === 'object' && typeof op.source === 'string' && typeof op.destination === 'string')) {
-        throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: operations (must be a non-empty array of {source: string, destination: string} objects)');
-    }
 
+// Define Zod schema for individual operations
+const MoveOperationSchema = z.object({
+  source: z.string(),
+  destination: z.string(),
+}).strict();
+
+// Define Zod schema for the main arguments object
+const MoveItemsArgsSchema = z.object({
+  operations: z.array(MoveOperationSchema).min(1, { message: "Operations array cannot be empty" }),
+}).strict();
+
+// Infer TypeScript type from schema
+type MoveItemsArgs = z.infer<typeof MoveItemsArgsSchema>;
+
+export const handleMoveItems = async (args: unknown) => {
+    // Validate and parse arguments
+    let parsedArgs: MoveItemsArgs;
+    try {
+        parsedArgs = MoveItemsArgsSchema.parse(args);
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            throw new McpError(ErrorCode.InvalidParams, `Invalid arguments: ${error.errors.map(e => `${e.path.join('.')} (${e.message})`).join(', ')}`);
+        }
+        throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
+    }
+    const { operations } = parsedArgs;
+
+    // Define result structure
     // Define result structure
     type MoveResult = {
         source: string;
@@ -69,10 +93,15 @@ export const handleMoveItems = async (args: any) => {
             return { source: op?.source?.replace(/\\/g, '/') ?? 'unknown', destination: op?.destination?.replace(/\\/g, '/') ?? 'unknown', success: false, error: 'Unexpected error during processing.' };
         }
     });
-
-    // Sort results by original operation order for predictability
-    // Note: Sorting based on source path might be sufficient if order matters
-    // outputResults.sort((a, b) => operations.findIndex(op => op.source === a.source) - operations.findIndex(op => op.source === b.source));
+// Sort results based on the original order in the input 'operations' array
+outputResults.sort((a, b) => {
+    const indexA = operations.findIndex(op => op.source.replace(/\\/g, '/') === (a.source ?? ''));
+    const indexB = operations.findIndex(op => op.source.replace(/\\/g, '/') === (b.source ?? ''));
+    // Handle cases where source might be missing in error results (though unlikely)
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+});
 
     return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
 };

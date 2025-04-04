@@ -1,18 +1,39 @@
 import { promises as fs, Stats } from "fs"; // Use promise-based fs, import Stats type
 import path from "path";
-import { glob, Path, GlobOptions } from 'glob'; // Add GlobOptions
+import { z } from 'zod';
+import { glob, Path, GlobOptions } from 'glob';
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js'; // Use .js extension for ES modules
-import { formatStats } from '../utils/statsUtils.js'; // Use .js extension for ES modules
+import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
+import { formatStats } from '../utils/statsUtils.js';
 
 /**
  * Handles the 'list_files' MCP tool request.
  * Lists files and directories, optionally recursively and with stats.
  */
-export const handleListFiles = async (args: any) => {
-  const relativeInputPath = args?.path ?? ".";
-  const recursive = args?.recursive ?? false;
-  const includeStats = args?.include_stats ?? false; // User's request
+
+// Define Zod schema for arguments
+const ListFilesArgsSchema = z.object({
+  path: z.string().optional().default("."),
+  recursive: z.boolean().optional().default(false),
+  include_stats: z.boolean().optional().default(false),
+}).strict(); // Use strict to prevent unknown properties
+
+// Infer TypeScript type from schema
+type ListFilesArgs = z.infer<typeof ListFilesArgsSchema>;
+
+export const handleListFiles = async (args: unknown) => { // Use unknown instead of any
+  // Validate and parse arguments
+  let parsedArgs: ListFilesArgs;
+  try {
+    parsedArgs = ListFilesArgsSchema.parse(args);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new McpError(ErrorCode.InvalidParams, `Invalid arguments: ${error.errors.map(e => `${e.path.join('.')} (${e.message})`).join(', ')}`);
+    }
+    throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
+  }
+
+  const { path: relativeInputPath, recursive, include_stats: includeStats } = parsedArgs;
   const targetAbsolutePath = resolvePath(relativeInputPath); // Absolute path of the item requested
 
   // Removed debugLogs array declaration

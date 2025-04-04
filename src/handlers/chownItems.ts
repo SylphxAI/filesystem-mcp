@@ -1,27 +1,41 @@
 import { promises as fs } from "fs";
+import { z } from 'zod';
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js'; // Use .js extension
+import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
 
 /**
  * Handles the 'chown_items' MCP tool request.
  * Changes owner (UID) and group (GID) for multiple specified files/directories.
  * Note: This may have limited effect or require specific permissions on non-POSIX systems like Windows.
  */
-export const handleChownItems = async (args: any) => {
-    const relativePaths = args?.paths;
-    const uid = args?.uid;
-    const gid = args?.gid;
 
-    if (!Array.isArray(relativePaths) || relativePaths.length === 0 || !relativePaths.every(p => typeof p === 'string')) {
-        throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: paths (must be a non-empty array of strings)');
-    }
-    if (typeof uid !== 'number') {
-        throw new McpError(ErrorCode.InvalidParams, 'Invalid or missing required parameter: uid (must be a number)');
-    }
-    if (typeof gid !== 'number') {
-        throw new McpError(ErrorCode.InvalidParams, 'Invalid or missing required parameter: gid (must be a number)');
-    }
+// Define Zod schema for arguments
+const ChownItemsArgsSchema = z.object({
+  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }),
+  uid: z.number().int({ message: "UID must be an integer" }),
+  gid: z.number().int({ message: "GID must be an integer" }),
+}).strict();
 
+// Infer TypeScript type from schema
+type ChownItemsArgs = z.infer<typeof ChownItemsArgsSchema>;
+
+export const handleChownItems = async (args: unknown) => {
+    // Validate and parse arguments
+    let parsedArgs: ChownItemsArgs;
+    try {
+        parsedArgs = ChownItemsArgsSchema.parse(args);
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            throw new McpError(ErrorCode.InvalidParams, `Invalid arguments: ${error.errors.map(e => `${e.path.join('.')} (${e.message})`).join(', ')}`);
+        }
+        throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
+    }
+    const { paths: relativePaths, uid, gid } = parsedArgs;
+
+    // Note: fs.chown might not work reliably or as expected on Windows.
+    // It might require administrator privileges or specific system configurations.
+
+    // Define result structure
     // Define result structure
     type ChownResult = {
         path: string;
@@ -67,7 +81,7 @@ export const handleChownItems = async (args: any) => {
     });
 
     // Sort results by original path order for predictability
-    outputResults.sort((a, b) => relativePaths.indexOf(a.path) - relativePaths.indexOf(b.path));
+    outputResults.sort((a, b) => relativePaths.indexOf(a.path ?? '') - relativePaths.indexOf(b.path ?? '')); // Handle potential undefined path
 
     return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
 };

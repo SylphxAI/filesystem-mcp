@@ -1,18 +1,43 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { z } from 'zod';
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js'; // Use .js extension
+import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
 
 /**
  * Handles the 'write_content' MCP tool request.
  * Writes or appends content to multiple specified files.
  */
-export const handleWriteContent = async (args: any) => {
-  const filesToWrite = args?.items;
-  if (!Array.isArray(filesToWrite) || filesToWrite.length === 0 || !filesToWrite.every((f: any) => typeof f === 'object' && typeof f.path === 'string' && typeof f.content === 'string')) {
-      throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: items (must be a non-empty array of {path: string, content: string, append?: boolean} objects)');
-  }
 
+// Define Zod schema for individual items
+const WriteItemSchema = z.object({
+  path: z.string(),
+  content: z.string(),
+  append: z.boolean().optional().default(false),
+}).strict();
+
+// Define Zod schema for the main arguments object
+const WriteContentArgsSchema = z.object({
+  items: z.array(WriteItemSchema).min(1, { message: "Items array cannot be empty" }),
+}).strict();
+
+// Infer TypeScript type from schema
+type WriteContentArgs = z.infer<typeof WriteContentArgsSchema>;
+
+export const handleWriteContent = async (args: unknown) => {
+  // Validate and parse arguments
+  let parsedArgs: WriteContentArgs;
+  try {
+      parsedArgs = WriteContentArgsSchema.parse(args);
+  } catch (error) {
+      if (error instanceof z.ZodError) {
+          throw new McpError(ErrorCode.InvalidParams, `Invalid arguments: ${error.errors.map(e => `${e.path.join('.')} (${e.message})`).join(', ')}`);
+      }
+      throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
+  }
+  const { items: filesToWrite } = parsedArgs;
+
+  // Define result structure
   // Define result structure
   type WriteResult = {
       path: string;
@@ -62,9 +87,13 @@ export const handleWriteContent = async (args: any) => {
   });
 
   // Sort results by original path order for predictability
+  // Sort results based on the original order in the input 'items' array
   outputResults.sort((a, b) => {
-      const indexA = filesToWrite.findIndex(f => f.path.replace(/\\/g, '/') === a.path);
-      const indexB = filesToWrite.findIndex(f => f.path.replace(/\\/g, '/') === b.path);
+      const indexA = filesToWrite.findIndex(f => f.path.replace(/\\/g, '/') === (a.path ?? ''));
+      const indexB = filesToWrite.findIndex(f => f.path.replace(/\\/g, '/') === (b.path ?? ''));
+      // Handle cases where path might be missing in error results (though unlikely)
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
       return indexA - indexB;
   });
 

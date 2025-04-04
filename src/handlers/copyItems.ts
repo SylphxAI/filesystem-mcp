@@ -1,18 +1,42 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { z } from 'zod';
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js'; // Use .js extension
+import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
 
 /**
  * Handles the 'copy_items' MCP tool request.
  * Copies multiple specified files/directories.
  */
-export const handleCopyItems = async (args: any) => {
-    const operations = args?.operations;
-    if (!Array.isArray(operations) || operations.length === 0 || !operations.every((op: any) => typeof op === 'object' && typeof op.source === 'string' && typeof op.destination === 'string')) {
-        throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: operations (must be a non-empty array of {source: string, destination: string} objects)');
-    }
 
+// Define Zod schema for individual operations
+const CopyOperationSchema = z.object({
+  source: z.string(),
+  destination: z.string(),
+}).strict();
+
+// Define Zod schema for the main arguments object
+const CopyItemsArgsSchema = z.object({
+  operations: z.array(CopyOperationSchema).min(1, { message: "Operations array cannot be empty" }),
+}).strict();
+
+// Infer TypeScript type from schema
+type CopyItemsArgs = z.infer<typeof CopyItemsArgsSchema>;
+
+export const handleCopyItems = async (args: unknown) => {
+    // Validate and parse arguments
+    let parsedArgs: CopyItemsArgs;
+    try {
+        parsedArgs = CopyItemsArgsSchema.parse(args);
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            throw new McpError(ErrorCode.InvalidParams, `Invalid arguments: ${error.errors.map(e => `${e.path.join('.')} (${e.message})`).join(', ')}`);
+        }
+        throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
+    }
+    const { operations } = parsedArgs;
+
+    // Define result structure
     // Define result structure
     type CopyResult = {
         source: string;
@@ -80,9 +104,15 @@ export const handleCopyItems = async (args: any) => {
             return { source: op?.source?.replace(/\\/g, '/') ?? 'unknown', destination: op?.destination?.replace(/\\/g, '/') ?? 'unknown', success: false, error: 'Unexpected error during processing.' };
         }
     });
-
-    // Sort results by original operation order for predictability
-    // outputResults.sort((a, b) => operations.findIndex(op => op.source === a.source) - operations.findIndex(op => op.source === b.source));
+// Sort results based on the original order in the input 'operations' array
+outputResults.sort((a, b) => {
+    const indexA = operations.findIndex(op => op.source.replace(/\\/g, '/') === (a.source ?? ''));
+    const indexB = operations.findIndex(op => op.source.replace(/\\/g, '/') === (b.source ?? ''));
+    // Handle cases where source might be missing in error results (though unlikely)
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+});
 
     return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
 };

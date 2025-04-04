@@ -1,21 +1,34 @@
 import { promises as fs } from "fs";
+import { z } from 'zod';
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js'; // Use .js extension
+import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
 
 /**
  * Handles the 'chmod_items' MCP tool request.
  * Changes permissions mode for multiple specified files/directories.
  */
-export const handleChmodItems = async (args: any) => {
-    const relativePaths = args?.paths;
-    const modeString = args?.mode;
 
-    if (!Array.isArray(relativePaths) || relativePaths.length === 0 || !relativePaths.every(p => typeof p === 'string')) {
-        throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: paths (must be a non-empty array of strings)');
+// Define Zod schema for arguments
+const ChmodItemsArgsSchema = z.object({
+  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }),
+  mode: z.string().regex(/^[0-7]{3,4}$/, { message: "Mode must be an octal string like '755' or '0755'" }),
+}).strict();
+
+// Infer TypeScript type from schema
+type ChmodItemsArgs = z.infer<typeof ChmodItemsArgsSchema>;
+
+export const handleChmodItems = async (args: unknown) => {
+    // Validate and parse arguments
+    let parsedArgs: ChmodItemsArgs;
+    try {
+        parsedArgs = ChmodItemsArgsSchema.parse(args);
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            throw new McpError(ErrorCode.InvalidParams, `Invalid arguments: ${error.errors.map(e => `${e.path.join('.')} (${e.message})`).join(', ')}`);
+        }
+        throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
     }
-    if (typeof modeString !== 'string' || !/^[0-7]{3,4}$/.test(modeString)) {
-        throw new McpError(ErrorCode.InvalidParams, 'Invalid required parameter: mode (must be an octal string like \'755\')');
-    }
+    const { paths: relativePaths, mode: modeString } = parsedArgs;
     const mode = parseInt(modeString, 8);
 
     // Define result structure
@@ -59,7 +72,7 @@ export const handleChmodItems = async (args: any) => {
     });
 
     // Sort results by original path order for predictability
-    outputResults.sort((a, b) => relativePaths.indexOf(a.path) - relativePaths.indexOf(b.path));
+    outputResults.sort((a, b) => relativePaths.indexOf(a.path ?? '') - relativePaths.indexOf(b.path ?? '')); // Handle potential undefined path
 
     return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
 };
