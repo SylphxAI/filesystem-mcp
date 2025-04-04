@@ -1,0 +1,22 @@
+# Git files
+.git
+.gitignore
+
+# Node modules
+node_modules
+
+# Source files (we only need the build output)
+src
+
+# Build artifacts/config
+build
+tsconfig.json
+
+# Docker files
+Dockerfile
+.dockerignore
+
+# Documentation / Other
+README.md
+memory-bank
+.vscode
