@@ -8,15 +8,17 @@ import { resolvePath } from '../utils/pathUtils.js';
  * Reads content from multiple specified files.
  */
 
-// Define Zod schema for arguments
-const ReadContentArgsSchema = z.object({
-  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }),
+// Define Zod schema and export it
+export const ReadContentArgsSchema = z.object({
+  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }).describe("Array of relative file paths to read."),
 }).strict();
 
-// Infer TypeScript type from schema
+// Infer TypeScript type
 type ReadContentArgs = z.infer<typeof ReadContentArgsSchema>;
 
-export const handleReadContent = async (args: unknown) => {
+// Removed duplicated non-exported schema/type definitions
+
+const handleReadContentFunc = async (args: unknown) => {
   // Validate and parse arguments
   let parsedArgs: ReadContentArgs;
   try {
@@ -74,4 +76,12 @@ export const handleReadContent = async (args: unknown) => {
   outputContents.sort((a, b) => relativePaths.indexOf(a.path ?? '') - relativePaths.indexOf(b.path ?? '')); // Handle potential undefined path in sort
 
   return { content: [{ type: "text", text: JSON.stringify(outputContents, null, 2) }] };
+};
+
+// Export the complete tool definition
+export const readContentToolDefinition = {
+    name: "read_content",
+    description: "Read content from multiple specified files.",
+    schema: ReadContentArgsSchema,
+    handler: handleReadContentFunc,
 };

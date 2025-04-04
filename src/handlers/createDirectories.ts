@@ -8,15 +8,17 @@ import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
  * Creates multiple specified directories (including intermediate ones).
  */
 
-// Define Zod schema for arguments
-const CreateDirsArgsSchema = z.object({
-  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }),
+// Define Zod schema and export it
+export const CreateDirsArgsSchema = z.object({
+  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }).describe("An array of relative directory paths to create."),
 }).strict();
 
-// Infer TypeScript type from schema
+// Infer TypeScript type
 type CreateDirsArgs = z.infer<typeof CreateDirsArgsSchema>;
 
-export const handleCreateDirectories = async (args: unknown) => {
+// Removed duplicated non-exported schema/type definitions
+
+const handleCreateDirectoriesFunc = async (args: unknown) => {
     // Validate and parse arguments
     let parsedArgs: CreateDirsArgs;
     try {
@@ -94,4 +96,12 @@ export const handleCreateDirectories = async (args: unknown) => {
     outputResults.sort((a, b) => pathsToCreate.indexOf(a.path ?? '') - pathsToCreate.indexOf(b.path ?? '')); // Handle potential undefined path
 
     return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
+};
+
+// Export the complete tool definition
+export const createDirectoriesToolDefinition = {
+    name: "create_directories",
+    description: "Create multiple specified directories (including intermediate ones).",
+    schema: CreateDirsArgsSchema,
+    handler: handleCreateDirectoriesFunc,
 };

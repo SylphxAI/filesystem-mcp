@@ -8,22 +8,24 @@ import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
  * Handles the 'copy_items' MCP tool request.
  * Copies multiple specified files/directories.
  */
+// Removed extra comment marker
 
-// Define Zod schema for individual operations
-const CopyOperationSchema = z.object({
-  source: z.string(),
-  destination: z.string(),
+// Define Zod schema for individual operations and export it
+export const CopyOperationSchema = z.object({
+ source: z.string().describe("Relative path of the source."),
+ destination: z.string().describe("Relative path of the destination."),
 }).strict();
 
-// Define Zod schema for the main arguments object
-const CopyItemsArgsSchema = z.object({
-  operations: z.array(CopyOperationSchema).min(1, { message: "Operations array cannot be empty" }),
+// Define Zod schema for the main arguments object and export it
+export const CopyItemsArgsSchema = z.object({
+ operations: z.array(CopyOperationSchema).min(1, { message: "Operations array cannot be empty" }).describe("Array of {source, destination} objects."),
 }).strict();
 
-// Infer TypeScript type from schema
+// Infer TypeScript type
 type CopyItemsArgs = z.infer<typeof CopyItemsArgsSchema>;
+// Removed duplicated non-exported schema/type definitions comment
 
-export const handleCopyItems = async (args: unknown) => {
+const handleCopyItemsFunc = async (args: unknown) => {
     // Validate and parse arguments
     let parsedArgs: CopyItemsArgs;
     try {
@@ -36,7 +38,6 @@ export const handleCopyItems = async (args: unknown) => {
     }
     const { operations } = parsedArgs;
 
-    // Define result structure
     // Define result structure
     type CopyResult = {
         source: string;
@@ -115,4 +116,12 @@ outputResults.sort((a, b) => {
 });
 
     return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
+};
+
+// Export the complete tool definition
+export const copyItemsToolDefinition = {
+    name: "copy_items",
+    description: "Copy multiple specified files/directories.",
+    schema: CopyItemsArgsSchema,
+    handler: handleCopyItemsFunc,
 };

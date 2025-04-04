@@ -9,17 +9,19 @@ import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
  * Note: This may have limited effect or require specific permissions on non-POSIX systems like Windows.
  */
 
-// Define Zod schema for arguments
-const ChownItemsArgsSchema = z.object({
-  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }),
-  uid: z.number().int({ message: "UID must be an integer" }),
-  gid: z.number().int({ message: "GID must be an integer" }),
+// Define Zod schema and export it
+export const ChownItemsArgsSchema = z.object({
+  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }).describe("An array of relative paths."),
+  uid: z.number().int({ message: "UID must be an integer" }).describe("User ID."),
+  gid: z.number().int({ message: "GID must be an integer" }).describe("Group ID."),
 }).strict();
 
-// Infer TypeScript type from schema
+// Infer TypeScript type
 type ChownItemsArgs = z.infer<typeof ChownItemsArgsSchema>;
 
-export const handleChownItems = async (args: unknown) => {
+// Removed duplicated non-exported schema/type definitions
+
+const handleChownItemsFunc = async (args: unknown) => {
     // Validate and parse arguments
     let parsedArgs: ChownItemsArgs;
     try {
@@ -84,4 +86,12 @@ export const handleChownItems = async (args: unknown) => {
     outputResults.sort((a, b) => relativePaths.indexOf(a.path ?? '') - relativePaths.indexOf(b.path ?? '')); // Handle potential undefined path
 
     return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
+};
+
+// Export the complete tool definition
+export const chownItemsToolDefinition = {
+    name: "chown_items",
+    description: "Change owner (UID) and group (GID) for multiple specified files/directories.",
+    schema: ChownItemsArgsSchema,
+    handler: handleChownItemsFunc,
 };

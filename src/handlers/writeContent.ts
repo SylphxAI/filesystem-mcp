@@ -8,23 +8,25 @@ import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
  * Handles the 'write_content' MCP tool request.
  * Writes or appends content to multiple specified files.
  */
+// Removed extra comment marker
 
-// Define Zod schema for individual items
-const WriteItemSchema = z.object({
-  path: z.string(),
-  content: z.string(),
-  append: z.boolean().optional().default(false),
+// Define Zod schema for individual items and export it
+export const WriteItemSchema = z.object({
+ path: z.string().describe("Relative path for the file."),
+ content: z.string().describe("Content to write."),
+ append: z.boolean().optional().default(false).describe("Append content instead of overwriting."),
 }).strict();
 
-// Define Zod schema for the main arguments object
-const WriteContentArgsSchema = z.object({
-  items: z.array(WriteItemSchema).min(1, { message: "Items array cannot be empty" }),
+// Define Zod schema for the main arguments object and export it
+export const WriteContentArgsSchema = z.object({
+ items: z.array(WriteItemSchema).min(1, { message: "Items array cannot be empty" }).describe("Array of {path, content, append?} objects."),
 }).strict();
 
-// Infer TypeScript type from schema
+// Infer TypeScript type
 type WriteContentArgs = z.infer<typeof WriteContentArgsSchema>;
+// Removed duplicated non-exported schema/type definitions comment
 
-export const handleWriteContent = async (args: unknown) => {
+const handleWriteContentFunc = async (args: unknown) => {
   // Validate and parse arguments
   let parsedArgs: WriteContentArgs;
   try {
@@ -37,7 +39,6 @@ export const handleWriteContent = async (args: unknown) => {
   }
   const { items: filesToWrite } = parsedArgs;
 
-  // Define result structure
   // Define result structure
   type WriteResult = {
       path: string;
@@ -99,4 +100,12 @@ export const handleWriteContent = async (args: unknown) => {
 
 
   return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
+};
+
+// Export the complete tool definition
+export const writeContentToolDefinition = {
+    name: "write_content",
+    description: "Write or append content to multiple specified files (creating directories if needed).",
+    schema: WriteContentArgsSchema,
+    handler: handleWriteContentFunc,
 };

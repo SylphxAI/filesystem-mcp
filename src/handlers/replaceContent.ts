@@ -8,24 +8,26 @@ import { resolvePath } from '../utils/pathUtils.js';
  * Replaces content within files across multiple specified paths.
  */
 
-// Define Zod schema for individual replace operations
-const ReplaceOperationSchema = z.object({
-  search: z.string(), // Cannot be empty, but Zod defaults handle this if needed
-  replace: z.string(),
-  use_regex: z.boolean().optional().default(false),
-  ignore_case: z.boolean().optional().default(false),
+// Removed extra comment marker
+
+// Define Zod schema for individual replace operations and export it
+export const ReplaceOperationSchema = z.object({
+ search: z.string().describe("Text or regex pattern to search for."),
+ replace: z.string().describe("Text to replace matches with."),
+ use_regex: z.boolean().optional().default(false).describe("Treat search as regex."),
+ ignore_case: z.boolean().optional().default(false).describe("Ignore case during search."),
 }).strict();
 
-// Define Zod schema for the main arguments object
-const ReplaceContentArgsSchema = z.object({
-  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }),
-  operations: z.array(ReplaceOperationSchema).min(1, { message: "Operations array cannot be empty" }),
+// Define Zod schema for the main arguments object and export it
+export const ReplaceContentArgsSchema = z.object({
+ paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }).describe("An array of relative file paths to perform replacements on."),
+ operations: z.array(ReplaceOperationSchema).min(1, { message: "Operations array cannot be empty" }).describe("An array of search/replace operations to apply to each file."),
 }).strict();
 
-// Infer TypeScript type from schema
+// Infer TypeScript type
 type ReplaceContentArgs = z.infer<typeof ReplaceContentArgsSchema>;
 
-export const handleReplaceContent = async (args: unknown) => {
+const handleReplaceContentFunc = async (args: unknown) => {
     // Validate and parse arguments
     let parsedArgs: ReplaceContentArgs;
     try {
@@ -38,7 +40,6 @@ export const handleReplaceContent = async (args: unknown) => {
     }
     const { paths: relativePaths, operations } = parsedArgs;
 
-    // Define result structure
     // Define result structure
     type ReplaceResult = {
         file: string;
@@ -126,4 +127,12 @@ export const handleReplaceContent = async (args: unknown) => {
             text: JSON.stringify({ message: `Replace content operations completed on specified paths.`, results: fileProcessingResults }, null, 2)
         }]
     };
+};
+
+// Export the complete tool definition
+export const replaceContentToolDefinition = {
+    name: "replace_content",
+    description: "Replace content within files across multiple specified paths.",
+    schema: ReplaceContentArgsSchema,
+    handler: handleReplaceContentFunc,
 };

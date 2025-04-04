@@ -9,15 +9,17 @@ import { formatStats } from '../utils/statsUtils.js';
  * Gets detailed status information for multiple specified paths.
  */
 
-// Define Zod schema for arguments
-const StatItemsArgsSchema = z.object({
-  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }),
+// Define Zod schema and export it
+export const StatItemsArgsSchema = z.object({
+  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }).describe("An array of relative paths (files or directories) to get status for."),
 }).strict();
 
-// Infer TypeScript type from schema
+// Infer TypeScript type
 type StatItemsArgs = z.infer<typeof StatItemsArgsSchema>;
 
-export const handleStatItems = async (args: unknown) => {
+// Removed duplicated non-exported schema/type definitions
+
+const handleStatItemsFunc = async (args: unknown) => {
     // Validate and parse arguments
     let parsedArgs: StatItemsArgs;
     try {
@@ -61,5 +63,12 @@ export const handleStatItems = async (args: unknown) => {
     results.sort((a, b) => pathsToStat.indexOf(a.path) - pathsToStat.indexOf(b.path));
 
     return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
-}; // <<< Add missing closing brace
-// Removed extra closing brace
+};
+
+// Export the complete tool definition
+export const statItemsToolDefinition = {
+    name: "stat_items",
+    description: "Get detailed status information for multiple specified paths.",
+    schema: StatItemsArgsSchema,
+    handler: handleStatItemsFunc,
+};

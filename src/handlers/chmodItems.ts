@@ -8,16 +8,18 @@ import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
  * Changes permissions mode for multiple specified files/directories.
  */
 
-// Define Zod schema for arguments
-const ChmodItemsArgsSchema = z.object({
-  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }),
-  mode: z.string().regex(/^[0-7]{3,4}$/, { message: "Mode must be an octal string like '755' or '0755'" }),
+// Define Zod schema and export it
+export const ChmodItemsArgsSchema = z.object({
+  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }).describe("An array of relative paths."),
+  mode: z.string().regex(/^[0-7]{3,4}$/, { message: "Mode must be an octal string like '755' or '0755'" }).describe("The permission mode as an octal string (e.g., '755', '644')."),
 }).strict();
 
-// Infer TypeScript type from schema
+// Infer TypeScript type
 type ChmodItemsArgs = z.infer<typeof ChmodItemsArgsSchema>;
 
-export const handleChmodItems = async (args: unknown) => {
+// Removed duplicated non-exported schema/type definitions
+
+const handleChmodItemsFunc = async (args: unknown) => {
     // Validate and parse arguments
     let parsedArgs: ChmodItemsArgs;
     try {
@@ -38,7 +40,6 @@ export const handleChmodItems = async (args: unknown) => {
         mode?: string; // Include mode on success
         error?: string;
     };
-
     const results = await Promise.allSettled(relativePaths.map(async (relativePath): Promise<ChmodResult> => {
         const pathOutput = relativePath.replace(/\\/g, '/'); // Ensure consistent path separators early
         try {
@@ -75,4 +76,12 @@ export const handleChmodItems = async (args: unknown) => {
     outputResults.sort((a, b) => relativePaths.indexOf(a.path ?? '') - relativePaths.indexOf(b.path ?? '')); // Handle potential undefined path
 
     return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
+};
+
+// Export the complete tool definition
+export const chmodItemsToolDefinition = {
+    name: "chmod_items",
+    description: "Change permissions mode for multiple specified files/directories (POSIX-style).",
+    schema: ChmodItemsArgsSchema,
+    handler: handleChmodItemsFunc,
 };

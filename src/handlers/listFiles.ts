@@ -1,27 +1,25 @@
-import { promises as fs, Stats } from "fs"; // Use promise-based fs, import Stats type
+import { promises as fs, Stats } from "fs";
 import path from "path";
-import { z } from 'zod';
+import { z } from 'zod'; // Keep Zod for error checking
 import { glob, Path, GlobOptions } from 'glob';
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
 import { formatStats } from '../utils/statsUtils.js';
+// Import the shared schema and type // Removed this line
+// Define Zod schema and export it
+export const ListFilesArgsSchema = z.object({
+  path: z.string().optional().default(".").describe("Relative path of the directory."),
+  recursive: z.boolean().optional().default(false).describe("List directories recursively."),
+  include_stats: z.boolean().optional().default(false).describe("Include detailed stats for each listed item."),
+}).strict();
 
+// Infer TypeScript type
+type ListFilesArgs = z.infer<typeof ListFilesArgsSchema>;
 /**
  * Handles the 'list_files' MCP tool request.
  * Lists files and directories, optionally recursively and with stats.
  */
-
-// Define Zod schema for arguments
-const ListFilesArgsSchema = z.object({
-  path: z.string().optional().default("."),
-  recursive: z.boolean().optional().default(false),
-  include_stats: z.boolean().optional().default(false),
-}).strict(); // Use strict to prevent unknown properties
-
-// Infer TypeScript type from schema
-type ListFilesArgs = z.infer<typeof ListFilesArgsSchema>;
-
-export const handleListFiles = async (args: unknown) => { // Use unknown instead of any
+const handleListFilesFunc = async (args: unknown) => {
   // Validate and parse arguments
   let parsedArgs: ListFilesArgs;
   try {
@@ -183,4 +181,12 @@ export const handleListFiles = async (args: unknown) => { // Use unknown instead
     console.error(`[Filesystem MCP] Error in listFiles for ${targetAbsolutePath}:`, error); // Keep this console log for server-side debugging
     throw new McpError(ErrorCode.InternalError, `Failed to process path: ${error.message}`, { cause: error }); // Remove logs from error details
   }
+};
+
+// Export the complete tool definition
+export const listFilesToolDefinition = {
+    name: "list_files",
+    description: "List files/directories. Can optionally include stats and list recursively.",
+    schema: ListFilesArgsSchema,
+    handler: handleListFilesFunc,
 };

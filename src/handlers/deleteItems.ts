@@ -8,15 +8,17 @@ import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
  * Deletes multiple specified files or directories.
  */
 
-// Define Zod schema for arguments
-const DeleteItemsArgsSchema = z.object({
-  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }),
+// Define Zod schema and export it
+export const DeleteItemsArgsSchema = z.object({
+  paths: z.array(z.string()).min(1, { message: "Paths array cannot be empty" }).describe("An array of relative paths (files or directories) to delete."),
 }).strict();
 
-// Infer TypeScript type from schema
+// Infer TypeScript type
 type DeleteItemsArgs = z.infer<typeof DeleteItemsArgsSchema>;
 
-export const handleDeleteItems = async (args: unknown) => {
+// Removed duplicated non-exported schema/type definitions
+
+const handleDeleteItemsFunc = async (args: unknown) => {
     // Validate and parse arguments
     let parsedArgs: DeleteItemsArgs;
     try {
@@ -74,4 +76,12 @@ export const handleDeleteItems = async (args: unknown) => {
     outputResults.sort((a, b) => pathsToDelete.indexOf(a.path ?? '') - pathsToDelete.indexOf(b.path ?? '')); // Handle potential undefined path
 
     return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
+};
+
+// Export the complete tool definition
+export const deleteItemsToolDefinition = {
+    name: "delete_items",
+    description: "Delete multiple specified files or directories.",
+    schema: DeleteItemsArgsSchema,
+    handler: handleDeleteItemsFunc,
 };

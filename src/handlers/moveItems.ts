@@ -8,22 +8,24 @@ import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
  * Handles the 'move_items' MCP tool request.
  * Moves or renames multiple specified files/directories.
  */
+// Removed extra comment marker
 
-// Define Zod schema for individual operations
-const MoveOperationSchema = z.object({
-  source: z.string(),
-  destination: z.string(),
+// Define Zod schema for individual operations and export it
+export const MoveOperationSchema = z.object({
+ source: z.string().describe("Relative path of the source."),
+ destination: z.string().describe("Relative path of the destination."),
 }).strict();
 
-// Define Zod schema for the main arguments object
-const MoveItemsArgsSchema = z.object({
-  operations: z.array(MoveOperationSchema).min(1, { message: "Operations array cannot be empty" }),
+// Define Zod schema for the main arguments object and export it
+export const MoveItemsArgsSchema = z.object({
+ operations: z.array(MoveOperationSchema).min(1, { message: "Operations array cannot be empty" }).describe("Array of {source, destination} objects."),
 }).strict();
 
-// Infer TypeScript type from schema
+// Infer TypeScript type
 type MoveItemsArgs = z.infer<typeof MoveItemsArgsSchema>;
+// Removed duplicated non-exported schema/type definitions comment
 
-export const handleMoveItems = async (args: unknown) => {
+const handleMoveItemsFunc = async (args: unknown) => {
     // Validate and parse arguments
     let parsedArgs: MoveItemsArgs;
     try {
@@ -36,7 +38,6 @@ export const handleMoveItems = async (args: unknown) => {
     }
     const { operations } = parsedArgs;
 
-    // Define result structure
     // Define result structure
     type MoveResult = {
         source: string;
@@ -104,4 +105,12 @@ outputResults.sort((a, b) => {
 });
 
     return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
+};
+
+// Export the complete tool definition
+export const moveItemsToolDefinition = {
+    name: "move_items",
+    description: "Move or rename multiple specified files/directories.",
+    schema: MoveItemsArgsSchema,
+    handler: handleMoveItemsFunc,
 };

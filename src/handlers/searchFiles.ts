@@ -10,17 +10,19 @@ import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
  * Searches for a regex pattern within files in a specified directory.
  */
 
-// Define Zod schema for arguments
-const SearchFilesArgsSchema = z.object({
-  path: z.string().optional().default("."),
-  regex: z.string().min(1, { message: "Regex pattern cannot be empty" }),
-  file_pattern: z.string().optional().default("*"),
+// Define Zod schema and export it
+export const SearchFilesArgsSchema = z.object({
+  path: z.string().optional().default(".").describe("Relative path of the directory to search in."),
+  regex: z.string().min(1, { message: "Regex pattern cannot be empty" }).describe("The regex pattern to search for."),
+  file_pattern: z.string().optional().default("*").describe("Glob pattern to filter files (e.g., '*.ts'). Defaults to all files ('*')."),
 }).strict();
 
-// Infer TypeScript type from schema
+// Infer TypeScript type
 type SearchFilesArgs = z.infer<typeof SearchFilesArgsSchema>;
 
-export const handleSearchFiles = async (args: unknown) => {
+// Removed duplicated non-exported schema/type definitions
+
+const handleSearchFilesFunc = async (args: unknown) => {
     // Validate and parse arguments
     let parsedArgs: SearchFilesArgs;
     try {
@@ -113,4 +115,12 @@ export const handleSearchFiles = async (args: unknown) => {
     }
 
     return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
+};
+
+// Export the complete tool definition
+export const searchFilesToolDefinition = {
+    name: "search_files",
+    description: "Search for a regex pattern within files in a specified directory (read-only).",
+    schema: SearchFilesArgsSchema,
+    handler: handleSearchFilesFunc,
 };
