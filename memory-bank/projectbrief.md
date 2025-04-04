@@ -16,22 +16,24 @@ and secure manner, operating relative to a defined project root directory.
   traversal attempts must be prevented.
 - **Core Filesystem Tools:** Implement a comprehensive set of tools for common
   filesystem tasks:
-  - `list_files`: List files and directories, with options for recursion and
-    including stats.
-  - `read_file`: Read the content of a specific file.
-  - `write_file`: Write content to a specific file (creating directories if
-    needed, overwriting existing files).
-  - `read_multiple_files`: Read content from multiple files efficiently.
-  - `write_multiple_files`: Write content to multiple files efficiently.
-  - `delete_items`: Delete files or directories.
-  - `create_directories`: Create directories (including intermediate ones).
-  - `search_and_replace`: Perform search and replace operations within a single
-    file.
-  - `search_files`: Search for regex patterns across files in a directory.
-  - `search_and_replace_multiple_files`: Perform search and replace across
-    multiple files.
-  - `chmod`: Change file/directory permissions (POSIX-style).
-  - `move_item`: Move or rename files/directories.
+  - `list_files`: List files/directories within a specified directory (options
+    for recursion, stats).
+  - `stat_items`: Get detailed status information for multiple specified paths.
+  - `read_content`: Read content from multiple specified files.
+  - `write_content`: Write or append content to multiple specified files
+    (creating directories if needed).
+  - `delete_items`: Delete multiple specified files or directories.
+  - `create_directories`: Create multiple specified directories (including
+    intermediate ones).
+  - `chmod_items`: Change permissions for multiple specified files/directories.
+  - `chown_items`: Change owner (UID) and group (GID) for multiple specified
+    files/directories.
+  - `move_items`: Move or rename multiple specified files/directories.
+  - `copy_items`: Copy multiple specified files/directories.
+  - `search_files`: Search for regex patterns within files in a specified
+    directory.
+  - `replace_content`: Search and replace content within files across multiple
+    specified paths (files or directories).
 - **Technology Stack:** Use Node.js and TypeScript. Leverage the
   `@modelcontextprotocol/sdk` for MCP implementation and `glob` for file
   searching/listing.

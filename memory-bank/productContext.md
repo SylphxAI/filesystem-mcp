@@ -16,9 +16,9 @@ following problems:
   the boundaries of the designated project root directory, preventing accidental
   or malicious access to sensitive system files outside the project scope.
 - **Efficiency:** It provides the agent with a dedicated set of tools
-  (`list_files`, `read_file`, `write_file`, `move_item`, etc.) to perform common
-  filesystem tasks directly, reducing the need for constant user intervention
-  for basic operations.
+  (`list_files`, `read_content`, `write_content`, `move_items`, `copy_items`,
+  etc.) to perform common filesystem tasks directly, reducing the need for
+  constant user intervention for basic operations.
 - **Control:** Operations are performed relative to the project root, ensuring
   predictability and consistency regardless of where the user's terminal is
   currently focused.

@@ -1,59 +1,78 @@
-# Active Context: Filesystem MCP Server (Initial Creation)
+# Active Context: Filesystem MCP Server (Toolset Refinement)
 
 ## 1. Current Work Focus
 
-The immediate focus has been the initial creation and implementation of the
-Filesystem MCP server based on the user's request. This involved:
+The focus has shifted from initial implementation to refining and consolidating
+the server's toolset based on user feedback and discussion. This involved:
 
-- Setting up the Node.js/TypeScript project structure.
-- Defining and implementing the core set of filesystem tools requested in the
-  `projectbrief.md`.
-- Iteratively debugging and refining the `list_files` tool, particularly
-  addressing issues with path resolution and type handling when using the `glob`
-  library with recursion and stats options.
-- Adding the `move_item` tool based on user feedback after the initial
-  completion attempt.
-- Ensuring the server builds correctly and responds to basic MCP requests.
+- Reviewing the initially implemented tools.
+- Discussing potential omissions (like copy, stat, chown).
+- Evaluating different consolidation strategies (e.g., single `manage_items` vs.
+  more granular tools).
+- Agreeing on a final set of tools designed for clarity and comprehensive batch
+  processing capabilities.
 
 ## 2. Recent Changes/Decisions
 
-- **Path Resolution Strategy:** Adopted a strategy where `glob` is always run
-  from `PROJECT_ROOT` and returns absolute paths. `path.relative` is then used
-  to calculate the correct relative path for output, and `fs.stat` uses the
-  absolute path from `glob`. This resolved issues with inconsistent relative
-  paths during recursion, especially on Windows.
-- **Type Handling for `glob`:** Corrected the type checking logic in
-  `handleListFiles` to properly identify the structure of objects returned by
-  `glob` when `stat: true` or `withFileTypes: true` are used, avoiding
-  `instanceof` checks on TypeScript types.
-- **Added `move_item`:** Incorporated the `move_item` tool using `fs.rename` to
-  handle both renaming files/directories and moving them into existing
-  directories. Basic error handling for `ENOENT` and permissions errors was
-  included.
-- **Server Version:** Incremented server version to `0.1.1` after adding the
-  `move_item` tool.
+- **Refined and Consolidated Toolset (v0.2.0):** A final set of 12 tools has
+  been defined, aiming for clarity, comprehensive functionality, and batch
+  processing support where applicable:
+  - `list_files`: List directory contents.
+  - `stat_items`: Get status for multiple specified paths. (New)
+  - `read_content`: Read content from multiple files (via `paths` array).
+  - `write_content`: Write/append content to multiple files (via `items` array).
+  - `delete_items`: Delete multiple files/directories (via `paths` array).
+  - `create_directories`: Create multiple directories (via `paths` array).
+  - `chmod_items`: Change mode for multiple items (via `paths` array).
+  - `chown_items`: Change owner/group for multiple items (via `paths` array).
+    (New)
+  - `move_items`: Move/rename multiple items (via `operations` array).
+  - `copy_items`: Copy multiple items (via `operations` array). (New)
+  - `search_files`: Search content within files in a directory (read-only).
+  - `replace_content`: Replace content within files across multiple specified
+    paths (via `paths` array).
+- **Batch Operations:** Explicitly designed tools (`stat_items`, `read_content`,
+  `write_content`, `delete_items`, `create_directories`, `chmod_items`,
+  `chown_items`, `move_items`, `copy_items`, `replace_content`) to handle
+  multiple items/operations through array inputs for efficiency.
+- **Search vs. Replace Separation:** Maintained `search_files` (read-only) and
+  `replace_content` (write) as separate tools for clarity and safety.
+- **Server Version:** Conceptually updated to `v0.2.0` to reflect the
+  significant toolset changes (actual implementation pending).
+- **Path Resolution Strategy:** (Remains unchanged) Uses `PROJECT_ROOT` and
+  absolute paths internally via `glob`, converting back to relative paths for
+  output.
+- **Type Handling for `glob`:** (Remains unchanged) Corrected logic in
+  `handleListFiles`.
 
 ## 3. Next Steps / Considerations
 
-- **Testing:** While basic functionality and the problematic `list_files` case
-  have been tested, more comprehensive testing of all tools with various edge
-  cases (empty files, special characters in paths, large directories, permission
-  issues, moving across different drives if applicable) would be beneficial.
-- **Error Handling Refinement:** Could potentially add more specific error
-  handling, e.g., for `EXDEV` errors during `move_item` (cross-device move
-  requires copy+delete).
-- **Configuration:** Currently, `PROJECT_ROOT` is determined based on the
-  script's location. Consider if a more explicit configuration method (e.g.,
-  environment variable, command-line argument) is needed for different
-  deployment scenarios.
-- **`.clinerules`:** No project-specific rules have been identified or added to
-  `.clinerules` yet.
+- **Implementation:** Implement the changes to the toolset:
+  - Add handlers for `stat_items`, `chown_items`, `copy_items`.
+  - Modify existing handlers (`read_file` -> `read_content`, `write_file` ->
+    `write_content`, `delete_items`, `create_directories`, `chmod` ->
+    `chmod_items`, `move_item` -> `move_items`, `search_and_replace*` ->
+    `replace_content`) to support batch operations via array inputs as defined.
+  - Update tool definitions and registration in `index.ts`.
+- **Testing:** Comprehensive testing of the _new consolidated toolset_ is
+  crucial, focusing on:
+  - Correct handling of batch operations (all items processed, correct
+    results/errors reported per item).
+  - Edge cases for each tool (empty arrays, non-existent paths, permissions,
+    special characters).
+  - Functionality of the new tools (`stat_items`, `chown_items`, `copy_items`).
+- **Error Handling Refinement:** Review and potentially refine error handling
+  for batch operations (how to report partial success/failure) and for new tools
+  (`chown` errors, copy errors). Consider `EXDEV` for `move_items`/`copy_items`.
+- **Configuration:** (Remains unchanged) Consider if explicit `PROJECT_ROOT`
+  configuration is needed.
+- **`.clinerules`:** (Remains unchanged) No project-specific rules identified
+  yet.
 
 ## 4. Active Decisions
 
-- The current set of tools fulfills the initial requirements plus the added
-  `move_item` request.
-- The stdio transport mechanism is sufficient for the intended use case (child
-  process).
-- The security model based on `resolvePath` is deemed adequate for preventing
-  path traversal within the defined constraints.
+- The final toolset consists of the 12 tools listed above, designed for clarity
+  and batch processing.
+- `search_files` and `replace_content` remain separate.
+- The stdio transport mechanism is sufficient.
+- The security model based on `resolvePath` is adequate.

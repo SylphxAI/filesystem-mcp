@@ -35,7 +35,8 @@ graph LR
   - It rejects absolute paths provided by the agent.
 - **Tool-Handler Mapping:** A `switch` statement in the `CallToolRequestSchema`
   handler maps incoming tool names directly to their corresponding asynchronous
-  handler functions (e.g., `handleListFiles`, `handleReadFile`).
+  handler functions (e.g., `handleListFiles`, `handleReadContent`,
+  `handleWriteContent`).
 - **Error Handling:**
   - Uses `try...catch` blocks within each tool handler.
   - Catches specific Node.js filesystem errors (like `ENOENT`, `EPERM`,
@@ -59,9 +60,9 @@ graph LR
 - **`Server` (from SDK):** Core MCP server class handling protocol logic.
 - **`StdioServerTransport` (from SDK):** Handles reading/writing MCP messages
   via stdio.
-- **Tool Handler Functions (`handleListFiles`, etc.):** Contain the specific
-  logic for each tool, including argument parsing, path resolution, filesystem
-  interaction, and result formatting.
+- **Tool Handler Functions (`handleListFiles`, `handleStatItems`, etc.):**
+  Contain the specific logic for each tool, including argument parsing, path
+  resolution, filesystem interaction, and result formatting.
 - **`resolvePath` Helper:** Centralized security function for path validation.
 - **`formatStats` Helper:** Utility to create a consistent stats object
   structure.
