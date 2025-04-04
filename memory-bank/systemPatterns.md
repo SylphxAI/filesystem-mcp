@@ -27,8 +27,10 @@ graph LR
 - **Strict Path Resolution:** A dedicated `resolvePath` function is used for
   _every_ path received from the agent.
   - It normalizes the path.
-  - It resolves the path relative to a dynamically determined `PROJECT_ROOT`
-    (calculated based on the server script's location).
+  - It resolves the path relative to the server process's current working
+    directory (`process.cwd()`), which is treated as the `PROJECT_ROOT`.
+    **Crucially, this requires the process launching the server (e.g., the agent
+    host) to set the correct `cwd` for the target project.**
   - It explicitly checks if the resolved absolute path still starts with the
     `PROJECT_ROOT` absolute path to prevent path traversal vulnerabilities
     (e.g., `../../sensitive-file`).

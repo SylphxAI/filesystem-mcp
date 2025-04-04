@@ -18,11 +18,12 @@ project root directory.
 ## ⭐ Why Use This Server?
 
 - **🛡️ Secure & Convenient Project Root Focus:**
-  - All operations are **strictly confined to the project root directory**,
-    preventing unauthorized access.
-  - Uses **relative paths** from the project root, eliminating the need for the
-    AI or user to manage complex absolute paths or worry about the current
-    working directory (CWD).
+  - All operations are **strictly confined to the project root directory**
+    (determined by the server's launch context), preventing unauthorized access.
+  - Uses **relative paths** from the project root. **Important:** The server
+    determines its project root from its own Current Working Directory (`cwd`)
+    at launch. The process starting the server (e.g., your MCP host) **must**
+    set the `cwd` to your intended project directory.
 - **⚡ Optimized & Consolidated Tools:**
   - Most tools support **batch operations** (e.g., reading multiple files,
     deleting multiple items) in a single request.
@@ -84,9 +85,10 @@ If you prefer using Bun, you can use `bunx` instead:
 ```
 
 **That's it!** Restart your MCP Host environment (if necessary) for the settings
-to take effect. Your AI agent can now use the filesystem tools. The server
-automatically determines the project root based on where the host environment
-runs it (typically your open project folder).
+to take effect. Your AI agent can now use the filesystem tools. **Important:**
+The server uses its own Current Working Directory (`cwd`) as the project root.
+Ensure your MCP Host (e.g., Cline/VSCode) is configured to launch the `npx` or
+`bunx` command with the `cwd` set to your active project's root directory.
 
 ---
 
@@ -163,6 +165,8 @@ must mount your project directory to `/app` inside the container.**
       "args": ["/path/to/cloned/repo/filesystem-mcp/build/index.js"],
       "name": "Filesystem (Local Build)"
     }
+    
+    **Note:** When running a local build directly with `node`, ensure you launch the command from the directory you intend to be the project root, as the server will use `process.cwd()` to determine its operational scope.
   }
 }
 ```

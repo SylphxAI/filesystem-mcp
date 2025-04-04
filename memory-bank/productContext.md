@@ -13,15 +13,18 @@ This Filesystem MCP server acts as a secure and controlled bridge, solving the
 following problems:
 
 - **Security:** It confines the agent's filesystem operations strictly within
-  the boundaries of the designated project root directory, preventing accidental
-  or malicious access to sensitive system files outside the project scope.
+  the boundaries of the project root directory (determined by the server's
+  launch context), preventing accidental or malicious access to sensitive system
+  files outside the project scope.
 - **Efficiency:** It provides the agent with a dedicated set of tools
   (`list_files`, `read_content`, `write_content`, `move_items`, `copy_items`,
   etc.) to perform common filesystem tasks directly, reducing the need for
   constant user intervention for basic operations.
-- **Control:** Operations are performed relative to the project root, ensuring
-  predictability and consistency regardless of where the user's terminal is
-  currently focused.
+- **Control:** Operations are performed relative to the project root (determined
+  by the server's current working directory at launch), ensuring predictability
+  and consistency within that specific project context. **Note:** For
+  multi-project support, the system launching the server must set the correct
+  working directory for each project instance.
 - **Standardization:** It uses the Model Context Protocol (MCP), providing a
   standardized way for the agent and the server to communicate about filesystem
   capabilities and operations.
@@ -34,9 +37,10 @@ following problems:
   stdio).
 - Upon receiving a `call_tool` request for a filesystem operation:
   1. It validates the request parameters against the tool's schema.
-  2. It resolves all provided relative paths against the `PROJECT_ROOT`.
+  2. It resolves all provided relative paths against the `PROJECT_ROOT` (which
+     is the server process's current working directory, `process.cwd()`).
   3. It performs security checks to ensure paths do not attempt to escape the
-     `PROJECT_ROOT`.
+     `PROJECT_ROOT` (the server's `cwd`).
   4. It executes the corresponding Node.js filesystem function (`fs.readFile`,
      `fs.writeFile`, `fs.rename`, `glob`, etc.).
   5. It formats the result (or error) according to MCP specifications and sends

@@ -3,7 +3,7 @@
 ## 1. Core Technologies
 
 - **Runtime:** Node.js (Version should be compatible with used libraries, likely
-  >= 18)
+  > = 18)
 - **Language:** TypeScript (Compiled to JavaScript for execution)
 - **Package Manager:** npm (Node Package Manager)
 
@@ -60,3 +60,9 @@
 - **Security Model:** Security relies entirely on the `resolvePath` function
   correctly preventing access outside the `PROJECT_ROOT`. No other sandboxing
   mechanism is implemented.
+- **Project Root Determination:** The effective `PROJECT_ROOT` for path
+  resolution is the server process's current working directory
+  (`process.cwd()`). This means the system launching the server (e.g., the agent
+  host environment) **must** set the correct working directory corresponding to
+  the target project at launch time to ensure the server operates on the
+  intended files.

@@ -2,14 +2,11 @@ import path from "path";
 import { fileURLToPath } from 'url';
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 
-// Calculate PROJECT_ROOT relative to the build output directory
-const __filename = fileURLToPath(import.meta.url);
-// Assuming this util file will be in build/utils/, __dirname is build/utils/
-// Go up two levels to reach the intended project root (filesystem/)
-const __dirname = path.dirname(__filename);
-export const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
+// Use the server's current working directory as the project root.
+// This relies on the process launching the server to set the CWD correctly.
+export const PROJECT_ROOT = process.cwd();
 
-console.log(`[Filesystem MCP - pathUtils] Project Root determined as: ${PROJECT_ROOT}`);
+console.log(`[Filesystem MCP - pathUtils] Project Root determined from CWD: ${PROJECT_ROOT}`);
 
 /**
  * Resolves a user-provided relative path against the project root,

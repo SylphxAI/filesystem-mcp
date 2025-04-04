@@ -1,12 +1,15 @@
-# Progress: Filesystem MCP Server (v0.4.11 - Final Docs & CI/CD)
+# Progress: Filesystem MCP Server (v0.5.0 - Dynamic Project Root via CWD)
 
 ## 1. What Works
 
 - **Server Initialization:** The MCP server starts, connects via stdio, and
   identifies itself correctly.
 - **Tool Listing:** Responds correctly to `list_tools` requests.
-- **Path Security:** The `resolvePath` function prevents path traversal and
-  rejects absolute paths.
+- **Path Security:** The `resolvePath` function prevents path traversal outside
+  the determined `PROJECT_ROOT` and rejects absolute paths.
+- **Project Root Determination:** Logic updated to use the server's current
+  working directory (`process.cwd()`) as the `PROJECT_ROOT`, enabling operation
+  relative to the agent's context _if launched correctly_.
 - **Basic Error Handling:** Handles common errors like `ENOENT`.
 - **Core Tool Functionality (v0.2.0+):** Most tools (`create_directories`,
   `write_content`, `stat_items`, `read_content`, `move_items`, `copy_items`,
@@ -27,45 +30,48 @@
     - Building and pushing Docker image to Docker Hub (`shtse8/filesystem-mcp`)
       on `main` branch pushes.
 - **Versioning:** Package version consistently incremented to trigger releases
-  (currently `0.4.11`).
+  (currently `0.4.13` - needs update for `0.5.0`).
 
 ## 2. What's Left to Build / Test
 
-- **Resolve `list_files` Issue (Glob Path):** Fix or thoroughly investigate the
-  `glob`-based execution path within `handleListFiles` used when
-  `recursive: true` or `include_stats: true`.
-- **Comprehensive Testing:**
-  - Test `list_files` with recursion and stats once the underlying issue is
-    resolved/understood.
-  - Test `chmod_items` and `chown_items` in a suitable environment (verify
-    permissions changes, document OS differences).
-  - Test edge cases for all tools (empty arrays, special characters, permissions
-    errors, large numbers of items, large files).
-  - Test cross-device operations for `move_items` and `copy_items` (potential
-    `EXDEV` errors).
-- **Refine Batch Error Handling:** Review and potentially improve reporting for
-  partial success/failure in batch operations.
+- **Test Dynamic Root Logic:** Verify the server operates correctly when
+  launched with different `cwd` settings representing different projects.
+- **Launcher Integration Testing:** Confirm the system launching the server sets
+  the `cwd` appropriately.
+- **Update `README.md`:** Document the new requirement for the launcher to set
+  the `cwd`.
+- **Versioning:** Update `package.json` to `0.5.0` and potentially create a git
+  tag.
+- **CI/CD Verification:** Ensure the pipeline works with the changes.
+- **Resolve `list_files` Issue (Glob Path):** (Lower priority) Investigate the
+  `glob`-based execution path within `handleListFiles`.
+- **Comprehensive Testing (Post-Root Change):** Re-test core functionality, edge
+  cases, permissions (`chmod`/`chown`), cross-device moves/copies in the context
+  of the dynamic root.
+- **Refine Batch Error Handling:** Review reporting for partial success/failure.
 - **Code Cleanup:** Remove any remaining debugging logs.
-- **Update Other Memory Bank Files:** Review `systemPatterns.md` and
-  `techContext.md` for consistency with Docker/CI additions.
 
 ## 3. Current Status
 
-- **Core Functionality Implemented:** All defined tools are implemented.
+- **Project Root Logic Updated:** Server now uses `process.cwd()` for the
+  project root.
+- **Core Functionality Implemented:** All defined tools are implemented and
+  passed basic tests with the previous fixed-root logic.
 - **Deployment Automated:** Publishing to npm and Docker Hub is handled by
   GitHub Actions.
-- **Documentation Finalized:** `README.md` is comprehensive, reflects current
-  usage recommendations (including `bunx`), and uses standard-compliant JSON
-  examples.
-- **Primary Blocker:** The advanced functionality of `list_files`
-  (recursion/stats via `glob`) remains the main known functional issue requiring
-  investigation.
+- **Documentation Updated (Internal):** Memory Bank files (`systemPatterns`,
+  `productContext`, `techContext`, `activeContext`, `progress`) updated to
+  reflect the new root logic.
+- **Primary Blocker:** Need to test the new dynamic root behavior thoroughly and
+  ensure the launcher integration works as expected. `README.md` needs updating
+  for public documentation.
 
 ## 4. Known Issues / Areas for Improvement
 
-- **`list_files` (`glob` path):** May fail or return incorrect results when
-  recursion or stats are enabled. Needs investigation.
-- **Windows `chmod`/`chown`:** Effectiveness is limited by the OS; behavior
-  needs clear documentation.
-- **Cross-Device Moves/Copies:** May fail (`EXDEV`); needs testing and potential
-  fallback logic.
+- **Launcher Dependency:** Server functionality is now critically dependent on
+  the launching process setting the correct `cwd` for the target project.
+  Incorrect `cwd` will lead to operations on the wrong directory.
+- **`list_files` (`glob` path):** Potential issue with recursion/stats enabled
+  needs investigation.
+- **Windows `chmod`/`chown`:** Effectiveness is limited by the OS.
+- **Cross-Device Moves/Copies:** May fail (`EXDEV`).
