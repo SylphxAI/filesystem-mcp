@@ -84,25 +84,7 @@ Example configuration snippet (e.g., in `mcp_settings.json` for Roo/Cline):
       "args": [
         "c:\\path\\to\\your\\project\\filesystem-mcp\\build\\index.js"
       ],
-      "disabled": false,
-      "alwaysAllow": [
-        "list_files",
-        "stat_items",
-        "read_content",
-        "write_content",
-        "delete_items",
-        "create_directories",
-        "chmod_items",
-        "chown_items",
-        "move_items",
-        "copy_items",
-        "search_files",
-        "replace_content"
-      ],
-      "env": {
-        // Optional: Used by some hosts to trigger restarts on change
-        "RELOAD_TRIGGER": "some_value"
-      }
+      "disabled": false
     }
   }
 }
