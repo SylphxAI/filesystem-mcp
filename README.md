@@ -68,7 +68,7 @@ npm run build
 The build command also sets execute permissions on the output script
 (`build/index.js`).
 
-## Installation & Usage
+## Installation & Usage with MCP Host
 
 This server is typically run as a background process managed by an MCP host
 environment (like the Roo/Cline VSCode extension). Configuration usually
@@ -91,6 +91,43 @@ Example configuration snippet (e.g., in `mcp_settings.json` for Roo/Cline):
 ```
 
 Replace the path in `"args"` with the correct absolute path to the compiled
-`build/index.js` on your system. The `alwaysAllow` list specifies which tools
-the agent can use without explicit user confirmation each time (configure
-according to your security preferences).
+`build/index.js` on your system.
+
+## Usage as a Standalone Package (via npm)
+
+This package is published to npm as `@shtse8/filesystem-mcp`. You can run it
+directly using `npx` or install it globally.
+
+**Using `npx` (Recommended for temporary use or testing):**
+
+```bash
+npx @shtse8/filesystem-mcp
+```
+
+This will download and run the server, communicating over stdio. Your MCP host
+environment needs to be configured to launch it this way (e.g., by setting the
+`command` to `npx` and `args` to `["@shtse8/filesystem-mcp"]` in the host's
+settings).
+
+**Global Installation:**
+
+```bash
+npm install -g @shtse8/filesystem-mcp
+```
+
+After global installation, you can run the server using the command:
+
+```bash
+filesystem-mcp
+```
+
+Your MCP host environment would need to be configured to launch this command
+(e.g., `command` set to `filesystem-mcp` with no `args`).
+
+## Publishing (via GitHub Actions)
+
+This repository uses a GitHub Action defined in `.github/workflows/publish.yml`
+to automatically publish the package to npm upon pushes to the `main` branch.
+
+It requires an `NPM_TOKEN` secret to be configured in the GitHub repository
+settings for authentication with npm.
