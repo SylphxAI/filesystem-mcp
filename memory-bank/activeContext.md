@@ -11,6 +11,7 @@ accuracy and standard compliance.
   feedback:
   - Added npm and Docker Hub badges.
   - Restructured to prioritize `npx` usage as the recommended quick start.
+  - Added instructions and example for using `bunx` as an alternative to `npx`.
   - Added a dedicated section highlighting key features/selling points (security
     via relative paths, efficiency via batch operations).
   - Included detailed instructions for Docker usage, emphasizing volume
@@ -49,5 +50,5 @@ accuracy and standard compliance.
 - `npx` is the primary recommended usage method in the documentation.
 - Docker support is implemented and automated via GitHub Actions.
 - The `Dockerfile` build process is corrected.
-- The `README.md` structure and content are finalized, with JSON examples
-  adhering to standard JSON (no comments).
+- The `README.md` structure and content are finalized, including `bunx`
+  instructions, with JSON examples adhering to standard JSON (no comments).

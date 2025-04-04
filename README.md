@@ -65,6 +65,24 @@ using `npx`.
 }
 ```
 
+**(Alternative) Using `bunx`:**
+
+If you prefer using Bun, you can use `bunx` instead:
+
+```json
+{
+  "mcpServers": {
+    "filesystem-mcp": {
+      "command": "bunx",
+      "args": [
+        "@shtse8/filesystem-mcp"
+      ],
+      "name": "Filesystem (bunx)"
+    }
+  }
+}
+```
+
 **That's it!** Restart your MCP Host environment (if necessary) for the settings
 to take effect. Your AI agent can now use the filesystem tools. The server
 automatically determines the project root based on where the host environment

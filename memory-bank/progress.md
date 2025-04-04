@@ -14,9 +14,9 @@
   have passed basic functional tests. Batch operations are supported where
   applicable.
 - **Documentation (`README.md`):** Significantly improved with clear usage
-  instructions (prioritizing `npx`), feature highlights, Docker instructions,
-  and contribution guidelines. JSON examples now correctly **omit comments** for
-  standard JSON compliance.
+  instructions (prioritizing `npx`, adding `bunx` alternative), feature
+  highlights, Docker instructions, and contribution guidelines. JSON examples
+  now correctly **omit comments** for standard JSON compliance.
 - **Dockerization:**
   - `Dockerfile` created using multi-stage builds.
   - `.dockerignore` configured correctly.
@@ -55,7 +55,8 @@
 - **Deployment Automated:** Publishing to npm and Docker Hub is handled by
   GitHub Actions.
 - **Documentation Finalized:** `README.md` is comprehensive, reflects current
-  usage recommendations, and uses standard-compliant JSON examples.
+  usage recommendations (including `bunx`), and uses standard-compliant JSON
+  examples.
 - **Primary Blocker:** The advanced functionality of `list_files`
   (recursion/stats via `glob`) remains the main known functional issue requiring
   investigation.
