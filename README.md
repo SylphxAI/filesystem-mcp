@@ -76,8 +76,7 @@ Example configuration snippet (e.g., in `mcp_settings.json` for Roo/Cline):
       "command": "npx",
       "args": [
         "@shtse8/filesystem-mcp"
-      ],
-      "disabled": false
+      ]
     }
   }
 }
@@ -99,8 +98,7 @@ Example configuration snippet:
       "command": "node",
       "args": [
         "c:\\path\\to\\your\\cloned\\repo\\filesystem-mcp\\build\\index.js"
-      ],
-      "disabled": false
+      ]
     }
   }
 }
