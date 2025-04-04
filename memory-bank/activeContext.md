@@ -1,9 +1,10 @@
-# Active Context: Filesystem MCP Server (v0.5.0 - Dynamic Project Root via CWD)
+# Active Context: Filesystem MCP Server (v0.5.1 - Batch Error Handling & Docs)
 
 ## 1. Current Work Focus
 
-The focus shifted from the project root logic (which was updated) to
-implementing a new advanced editing tool (`edit_file`).
+The focus was on verifying and ensuring consistent batch error handling across
+all relevant tools, fixing issues found during testing, and updating
+documentation.
 
 ## 2. Recent Changes/Decisions
 
@@ -55,6 +56,21 @@ implementing a new advanced editing tool (`edit_file`).
 - **Memory Bank Updated:** Updated `projectbrief.md`, `systemPatterns.md`,
   `techContext.md`, and `progress.md` to include the new `edit_file` tool and
   related dependencies/patterns.
+- **Verified Batch Error Handling:** Confirmed that all tools handling multiple
+  items/operations (`chmodItems`, `chownItems`, `copyItems`,
+  `createDirectories`, `deleteItems`, `edit_file`, `moveItems`, `readContent`,
+  `replaceContent`, `statItems`, `writeContent`) attempt all operations and
+  return detailed individual results ("continue on error" behavior).
+- **Fixed `edit_file` Return Structure:** Corrected the return statement in
+  `handleEditFile` to conform to the standard MCP response structure
+  (`{ content: [...] }`) and updated the function's return type annotation.
+  Rebuilt the project.
+- **Tested `edit_file`:** Successfully tested the `edit_file` tool with multiple
+  files and mixed outcomes (success, skipped, fail) using the local build,
+  confirming the individual result reporting.
+- **Updated `README.md`:** Added `edit_file` to the features list and expanded
+  the section with more detailed descriptions of each tool's capabilities.
+- **Incremented Version:** Updated `package.json` to version `0.5.1`.
 
 ## 3. Next Steps / Considerations
 
@@ -64,19 +80,19 @@ implementing a new advanced editing tool (`edit_file`).
 - **Verify Launcher Integration:** Confirm that the system launching the MCP
   server (e.g., Cline extension) correctly sets the `cwd` for each project
   context.
-- **Update `progress.md`:** Reflect the change in project root logic and the
-  current testing status.
-- **Update `README.md`:** Add documentation explaining the new requirement for
-  the launcher to set the `cwd`.
-- **Consider Versioning:** Decide if this change warrants a major/minor version
-  bump (likely yes, e.g., `0.5.0`). Update `package.json`.
+- **Update `progress.md`:** (Done) Reflected the completion of batch error
+  handling verification, `edit_file` fixes/testing, documentation updates, and
+  version bump.
+- **Update `README.md`:** (Done) Added detailed features. `cwd` requirement was
+  already documented.
+- **Versioning:** (Done) Updated `package.json` to `0.5.1`.
 - **CI/CD:** Ensure CI/CD pipeline still functions correctly after the changes.
 - **Resolve `list_files` Issue (Glob Path):** (Previous issue, lower priority
   now) Investigate the `glob`-based execution path within `handleListFiles`.
 - **Implement `edit_file` Regex Support:** Add logic for handling
   `use_regex: true`.
-- **Resolve Build Error:** Find the root cause of the persistent `tsc` error
-  preventing the SDK module from being found.
+- **Resolve Build Error:** (Resolved - The previous build error seems to be gone
+  after fixing the `edit_file` return type).
 
 ## 4. Active Decisions
 
@@ -88,4 +104,6 @@ implementing a new advanced editing tool (`edit_file`).
 - **Project Root Source:** The server now uses `process.cwd()` as the project
   root, requiring the launcher to set it appropriately.
 - **`edit_file` Implemented (Basic):** The core structure and basic
-  text/insertion logic for the new tool are in place.
+  text/insertion logic for the new tool are in place. Return structure fixed.
+- **Batch Error Handling:** Confirmed all relevant tools use "continue on error"
+  and provide detailed individual results.

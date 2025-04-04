@@ -29,6 +29,11 @@ project root directory.
     deleting multiple items) in a single request.
   - Designed to **reduce AI-server round trips**, minimizing token usage and
     latency compared to executing individual commands for each file operation.
+  - **Reliable Batch Processing:** All tools supporting multiple items (e.g.,
+    `read_content`, `delete_items`, `edit_file`) attempt every operation and
+    return a detailed result for each, indicating success or failure with
+    specific error messages. This allows for robust error handling and follow-up
+    actions.
 - **🚀 Easy Integration:** Get started quickly using `npx` with minimal
   configuration.
 - **🐳 Containerized Option:** Also available as a Docker image for consistent
@@ -92,17 +97,62 @@ Ensure your MCP Host (e.g., Cline/VSCode) is configured to launch the `npx` or
 
 ---
 
-## ✨ Features
+## ✨ Amazing Features & Tools
 
-Provides a comprehensive, batch-capable toolset:
+This server equips your AI agent with a powerful and efficient filesystem
+toolkit:
 
-- 📁 **Listing & Status:** `list_files`, `stat_items`
-- 📄 **Content Manipulation:** `read_content`, `write_content` (incl. append)
-- ✏️ **Search & Replace:** `search_files` (regex), `replace_content`
-- 🏗️ **Directory Management:** `create_directories`
-- 🗑️ **Deletion:** `delete_items` (recursive)
-- ↔️ **Moving & Copying:** `move_items`, `copy_items`
-- 🔒 **Permissions:** `chmod_items`, `chown_items` (POSIX focused)
+- 📁 **Explore & Inspect (`list_files`, `stat_items`):**
+  - `list_files`: Effortlessly list files and directories. Go deep with
+    **recursive listing** or get detailed **file statistics** (size, type,
+    timestamps) included directly in the results. Perfect for understanding
+    project structure.
+  - `stat_items`: Get detailed status information (size, type, permissions,
+    timestamps) for **multiple files or directories** in a single call.
+
+- 📄 **Read & Write Content (`read_content`, `write_content`):**
+  - `read_content`: Read the full content of **multiple files** simultaneously.
+    Ideal for fetching source code or configuration files efficiently.
+  - `write_content`: Write content to **multiple files**, automatically creating
+    necessary parent directories. Supports both **overwriting** and
+    **appending** modes per file.
+
+- ✏️ **Precision Editing & Searching (`edit_file`, `search_files`,
+  `replace_content`):**
+  - `edit_file`: Perform **surgical edits** across **multiple files**. Supports
+    precise **insertion**, pattern-based **replacement**, and **deletion** of
+    text blocks. Intelligently **preserves indentation** and provides **diff
+    output** for review. _The ultimate tool for targeted code modifications!_
+  - `search_files`: Unleash the power of **regex search** across entire
+    directories. Find specific code patterns, comments, or any text, complete
+    with surrounding context lines for each match. Filter by file patterns
+    (e.g., `*.ts`).
+  - `replace_content`: Perform **search-and-replace** operations (text or regex)
+    across **multiple files** at once.
+
+- 🏗️ **Manage Directories (`create_directories`):**
+  - Create **multiple directories** in one go, including any necessary
+    intermediate parent directories (`mkdir -p` style).
+
+- 🗑️ **Delete Safely (`delete_items`):**
+  - Remove **multiple files or directories recursively** with a single command.
+    Handles non-existent paths gracefully.
+
+- ↔️ **Move & Copy (`move_items`, `copy_items`):**
+  - `move_items`: Rename or move **multiple files and directories**.
+    Automatically creates destination parent directories if needed.
+  - `copy_items`: Copy **multiple files and directories recursively**. Ensures
+    destination directories exist.
+
+- 🔒 **Control Permissions (`chmod_items`, `chown_items`):**
+  - `chmod_items`: Change POSIX-style permissions (e.g., '755') for **multiple
+    files/directories**.
+  - `chown_items`: Change owner (UID) and group (GID) for **multiple
+    files/directories** (effectiveness depends on OS and user privileges).
+
+**Key Benefit:** All tools accepting multiple paths/operations process each item
+individually and return a detailed status report, ensuring you know exactly what
+succeeded and what failed, even within a single batch request!
 
 ---
 

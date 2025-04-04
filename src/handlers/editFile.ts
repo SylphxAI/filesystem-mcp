@@ -63,7 +63,10 @@ function applyIndentation(content: string, indent: string): string[] {
 
 // Remove the manually defined interfaces as they are now inferred from Zod schemas
 
-async function handleEditFile(rawArgs: unknown): Promise<EditFileResult> {
+// Define the expected MCP response structure type
+type McpToolResponse = { content: Array<{ type: 'text', text: string }> };
+
+async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
     // Validate input using the Zod schema
     const validationResult = EditFileArgsSchema.safeParse(rawArgs);
     if (!validationResult.success) {
@@ -287,7 +290,8 @@ async function handleEditFile(rawArgs: unknown): Promise<EditFileResult> {
         }
     } // End loop through files
 
-    return { results };
+    // Wrap the results in the standard MCP content structure
+    return { content: [{ type: "text", text: JSON.stringify({ results }, null, 2) }] };
 }
 
 // --- Tool Definition Export ---
