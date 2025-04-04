@@ -1,168 +1,171 @@
 # Filesystem MCP Server (@shtse8/filesystem-mcp)
 
 [![npm version](https://badge.fury.io/js/%40shtse8%2Ffilesystem-mcp.svg)](https://badge.fury.io/js/%40shtse8%2Ffilesystem-mcp)
+[![Docker Pulls](https://img.shields.io/docker/pulls/shtse8/filesystem-mcp.svg)](https://hub.docker.com/r/shtse8/filesystem-mcp)
 
-<!-- Add other badges here if applicable (e.g., license, build status) -->
+<!-- Add other badges like License, Build Status if applicable -->
 
-A Model Context Protocol (MCP) server designed to provide controlled access to a
-user's filesystem relative to a defined project root directory.
+**Empower your AI agents (like Cline/Claude) with secure and controlled access
+to your project files.**
 
-This server allows AI agents (like Cline/Claude) to interact with project files
-securely and efficiently, performing common filesystem operations without
-requiring direct, unrestricted access.
+This Node.js server implements the
+[Model Context Protocol (MCP)](https://docs.modelcontextprotocol.com/) to
+provide a robust set of filesystem tools, operating safely within a defined
+project root directory.
 
-## Features
+---
 
-Provides a comprehensive set of tools for filesystem manipulation:
+## ✨ Features
 
-- **`list_files`**: List files and directories within a specified relative path.
-  - Supports recursive listing (`recursive: true`).
-  - Supports including detailed file statistics (`include_stats: true`).
-- **`stat_items`**: Get detailed status information (size, dates, permissions,
-  etc.) for multiple specified relative paths.
-- **`read_content`**: Read the UTF-8 content of multiple specified files.
-- **`write_content`**: Write or append UTF-8 content to multiple specified
-  files. Automatically creates necessary parent directories.
-- **`delete_items`**: Delete multiple specified files or directories
-  recursively.
-- **`create_directories`**: Create multiple specified directories, including any
-  necessary intermediate parent directories.
-- **`chmod_items`**: Change the permission mode (e.g., '755', '644') for
-  multiple specified files or directories (Behavior may vary on non-POSIX
-  systems like Windows).
-- **`chown_items`**: Change the owner (UID) and group (GID) for multiple
-  specified files or directories (Primarily for POSIX systems; may have limited
-  effect or require specific permissions on Windows).
-- **`move_items`**: Move or rename multiple specified files or directories.
-- **`copy_items`**: Copy multiple specified files or directories recursively.
-- **`search_files`**: Search for a regex pattern within files in a specified
-  directory (optionally filtered by a file pattern). Returns matches with line
-  numbers and context.
-- **`replace_content`**: Perform search-and-replace operations (text or regex)
-  within multiple specified files.
+- **Secure by Design:** All operations are strictly confined to the project root
+  directory, preventing unauthorized access.
+- **Comprehensive Toolset:** Offers a wide range of filesystem operations:
+  - 📁 **Listing & Status:** `list_files`, `stat_items`
+  - 📄 **Content Manipulation:** `read_content`, `write_content` (incl. append)
+  - ✏️ **Search & Replace:** `search_files` (regex), `replace_content`
+  - 🏗️ **Directory Management:** `create_directories`
+  - 🗑️ **Deletion:** `delete_items` (recursive)
+  - ↔️ **Moving & Copying:** `move_items`, `copy_items`
+  - 🔒 **Permissions:** `chmod_items`, `chown_items` (POSIX focused)
+- **Modern Tech:** Built with TypeScript, Node.js, and the
+  `@modelcontextprotocol/sdk`.
+- **Input Validation:** Uses Zod schemas for reliable tool argument validation.
+- **Containerized:** Available as a Docker image on Docker Hub for easy
+  deployment.
 
-## Key Characteristics
+---
 
-- **Security:** All paths provided to tools _must_ be relative to the project
-  root. The server strictly enforces this boundary, preventing path traversal
-  attacks and access outside the designated project directory.
-- **Technology:** Built with Node.js and TypeScript. Uses the
-  `@modelcontextprotocol/sdk` for MCP communication and `glob` for pattern
-  matching.
-- **Validation:** Uses Zod schemas for robust runtime validation of all incoming
-  tool arguments.
-- **Modularity:** Code is organized with handlers, schemas, and types colocated
-  in `src/handlers/`, utilities in `src/utils/`, and main server setup in
-  `src/index.ts`.
+## 🚀 Quick Start: Usage with MCP Host (Recommended: Docker)
 
-## Installation & Usage with MCP Host
+The easiest way to use this server is via Docker, configured directly in your
+MCP host environment (e.g., Roo/Cline's `mcp_settings.json`).
 
-This server is typically run as a background process managed by an MCP host
-environment (like the Roo/Cline VSCode extension). Configuration usually
-involves pointing the host environment to the compiled server script or using
-`npx`.
+**1. Ensure Docker is running.**
 
-**Option 1: Using `npx` (Recommended)**
+**2. Configure your MCP Host:**
 
-Configure your MCP host to run the server using `npx`. This ensures you always
-use the latest published version.
-
-Example configuration snippet (e.g., in `mcp_settings.json` for Roo/Cline):
+Modify your MCP host's settings (e.g., `mcp_settings.json`) to run the Docker
+container. **Crucially, you must mount your project directory to `/app` inside
+the container.**
 
 ```json
+{
+  "mcpServers": {
+    "filesystem-mcp": {
+      // Use 'docker' as the command
+      "command": "docker",
+      // Arguments for 'docker run'
+      "args": [
+        "run",
+        "-i", // Keep STDIN open for stdio communication
+        "--rm", // Automatically remove the container on exit
+        // Mount your project directory to /app in the container
+        // IMPORTANT: Replace '/path/to/your/project' with the ACTUAL path on your machine
+        "-v",
+        "/path/to/your/project:/app",
+        // Specify the Docker image from Docker Hub
+        "shtse8/filesystem-mcp:latest" // Or a specific version like shtse8/filesystem-mcp:0.4.3
+      ],
+      // Optional: Set a friendly name for the server in your host UI
+      "name": "Filesystem (Docker)"
+      // "disabled": false // Usually not needed unless you want to temporarily disable it
+    }
+  }
+}
+```
+
+**Explanation of `docker run` arguments:**
+
+- `run`: Executes the container.
+- `-i`: Keeps STDIN open, essential for MCP communication over stdio.
+- `--rm`: Cleans up the container after it stops.
+- `-v "/path/to/your/project:/app"`: **The most important part!** Mounts your
+  local project directory into the container at `/app`. The server inside the
+  container will treat `/app` as its root and operate on your mounted files.
+  **Remember to use the correct absolute path for your system.**
+- `shtse8/filesystem-mcp:latest`: Specifies the Docker image to use. Docker will
+  automatically pull it from Docker Hub if it's not present locally.
+
+**3. Restart your MCP Host environment** (if necessary) for the settings to take
+effect.
+
+Your AI agent can now use the filesystem tools provided by the server running
+inside Docker!
+
+---
+
+## 🛠️ Alternative Usage Options
+
+While Docker is recommended, other options exist:
+
+### Option 2: Using `npx`
+
+Runs the latest version directly from npm. Good for quick tests.
+
+```json
+// mcp_settings.json example
 {
   "mcpServers": {
     "filesystem-mcp": {
       "command": "npx",
-      "args": [
-        "@shtse8/filesystem-mcp"
-      ]
+      "args": ["@shtse8/filesystem-mcp"],
+      "name": "Filesystem (npx)"
     }
   }
 }
 ```
 
-**Option 2: Local Build**
+### Option 3: Local Build
 
-1. Clone the repository.
-2. Install dependencies: `npm install`
-3. Build the server: `npm run build`
-4. Configure your MCP host to point to the local build output.
+For development or specific needs.
 
-Example configuration snippet:
+1. Clone: `git clone https://github.com/shtse8/filesystem-mcp.git`
+2. Install: `cd filesystem-mcp && npm install`
+3. Build: `npm run build`
+4. Configure MCP Host:
 
 ```json
+// mcp_settings.json example
 {
   "mcpServers": {
     "filesystem-mcp": {
       "command": "node",
-      "args": [
-        "c:\\path\\to\\your\\cloned\\repo\\filesystem-mcp\\build\\index.js"
-      ]
+      // Use the absolute path to the build output
+      "args": ["/path/to/cloned/repo/filesystem-mcp/build/index.js"],
+      "name": "Filesystem (Local Build)"
     }
   }
 }
 ```
 
-_(Replace the path in `"args"` with the correct absolute path)_
+---
 
-**Option 3: Global Installation**
-
-```bash
-npm install -g @shtse8/filesystem-mcp
-```
-
-Then configure your MCP host to run the command `filesystem-mcp`.
-
-**Option 4: Using Docker**
-
-Build the Docker image:
-
-```bash
-docker build -t shtse8/filesystem-mcp .
-```
-
-Run the server in a container, mounting your project directory as the working
-directory inside the container. The server determines the project root based on
-its working directory.
-
-**Important:** You need to mount the directory that you want the MCP server to
-operate on into the container's `/app` directory (or wherever the `WORKDIR` is
-set in the Dockerfile). The server will treat this mounted directory as its
-root.
-
-Example command to run the container interactively (replace
-`/path/to/your/project` with the actual path on your host machine):
-
-```bash
-docker run -i --rm -v "/path/to/your/project:/app" shtse8/filesystem-mcp
-```
-
-- `-i`: Keep STDIN open even if not attached (needed for MCP over stdio).
-- `--rm`: Automatically remove the container when it exits.
-- `-v "/path/to/your/project:/app"`: Mounts your host project directory to
-  `/app` inside the container. **This is crucial for the server to access your
-  files.**
-
-Your MCP host environment needs to be configured to launch the server using this
-`docker run` command (e.g., set `command` to `docker` and `args` to the rest of
-the command parts).
-
-## Development
+## 💻 Development
 
 1. Clone the repository.
 2. Install dependencies: `npm install`
-3. Build the server: `npm run build` (compiles TypeScript to `build/`)
+3. Build: `npm run build` (compiles TypeScript to `build/`)
 4. Watch for changes: `npm run watch` (optional, recompiles on save)
 
-## Publishing (via GitHub Actions)
+---
 
-This repository uses a GitHub Action defined in `.github/workflows/publish.yml`
-to automatically publish the package to npm upon pushes to the `main` branch. It
-requires an `NPM_TOKEN` secret to be configured in the GitHub repository
-settings.
+## 🚢 Publishing (via GitHub Actions)
 
-## Contributing
+This repository uses GitHub Actions (`.github/workflows/publish.yml`) to
+automatically:
 
-Contributions are welcome! Please feel free to open an issue or submit a pull
-request.
+1. Publish the package to
+   [npm](https://www.npmjs.com/package/@shtse8/filesystem-mcp) on pushes to
+   `main`.
+2. Build and push a Docker image to
+   [Docker Hub](https://hub.docker.com/r/shtse8/filesystem-mcp) on pushes to
+   `main`.
+
+Requires `NPM_TOKEN`, `DOCKERHUB_USERNAME`, and `DOCKERHUB_TOKEN` secrets
+configured in the GitHub repository settings.
+
+---
+
+## 🙌 Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request.
