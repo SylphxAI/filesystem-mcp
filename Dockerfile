@@ -2,16 +2,21 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy package files and install production dependencies
+# Copy package files and install ALL dependencies (including dev for build)
 # Using package-lock.json ensures reproducible installs
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci
 
-# Copy source code and build the TypeScript project
+# Copy source code
 COPY tsconfig.json ./
 COPY src ./src
+
+# Build the TypeScript project
 RUN npm run build
 # The build script already includes chmod +x for the output
+
+# Remove development dependencies after build
+RUN npm prune --omit=dev
 
 # Stage 2: Create the final lightweight image
 FROM node:20-alpine
