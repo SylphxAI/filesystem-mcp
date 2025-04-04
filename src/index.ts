@@ -55,20 +55,20 @@ const formatStats = (relativePath: string, absolutePath: string, stats: Stats) =
     };
 };
 
-// --- Tool Definitions ---
-// (Concise definitions)
-const listFilesTool = { name: "list_files", description: "List files/directories or get stats for a single item. Can optionally include stats for listed items and list recursively.", inputSchema: { type: "object", properties: { path: { type: "string", description: "Relative path of the file or directory.", default: "." }, recursive: { type: "boolean", description: "List directories recursively.", default: false }, include_stats: { type: "boolean", description: "Include detailed stats for each listed item.", default: false } }, required: [] } };
-const readFileTool = { name: "read_file", description: "Read the content of a file relative to the project root.", inputSchema: { type: "object", properties: { path: { type: "string", description: "Relative path of the file." } }, required: ["path"] } };
-const writeFileTool = { name: "write_file", description: "Write content to a file relative to the project root. Creates directories if needed. Overwrites existing files.", inputSchema: { type: "object", properties: { path: { type: "string", description: "Relative path for the file." }, content: { type: "string", description: "Content to write." } }, required: ["path", "content"] } };
-const readMultipleFilesTool = { name: "read_multiple_files", description: "Read the content of multiple files relative to the project root.", inputSchema: { type: "object", properties: { paths: { type: "array", items: { type: "string" }, description: "Array of relative file paths." } }, required: ["paths"] } };
-const writeMultipleFilesTool = { name: "write_multiple_files", description: "Write content to multiple files relative to the project root.", inputSchema: { type: "object", properties: { files: { type: "array", items: { type: "object", properties: { path: { type: "string", description: "Relative path." }, content: { type: "string", description: "Content." } }, required: ["path", "content"] }, description: "Array of {path, content} objects." } }, required: ["files"] } };
-const deleteItemsTool = { name: "delete_items", description: "Delete multiple files or directories relative to the project root.", inputSchema: { type: "object", properties: { paths: { type: "array", items: { type: "string" }, description: "An array of relative paths (files or directories) to delete." } }, required: ["paths"] } };
-const createDirectoriesTool = { name: "create_directories", description: "Create multiple directories relative to the project root.", inputSchema: { type: "object", properties: { paths: { type: "array", items: { type: "string" }, description: "An array of relative directory paths to create (including intermediate directories)." } }, required: ["paths"] } };
-const searchAndReplaceTool = { name: "search_and_replace", description: "Perform search and replace operations on a single file relative to the project root.", inputSchema: { type: "object", properties: { path: { type: "string", description: "Relative path of the file to modify." }, operations: { type: "array", items: { type: "object", properties: { search: { type: "string", description: "Text or regex pattern to search for." }, replace: { type: "string", description: "Text to replace matches with." }, use_regex: { type: "boolean", description: "Treat search as regex.", default: false }, ignore_case: { type: "boolean", description: "Ignore case during search.", default: false }, start_line: { type: "number", description: "Start line number (1-based) for replacement range." }, end_line: { type: "number", description: "End line number (1-based, inclusive) for replacement range." } }, required: ["search", "replace"] }, description: "An array of search/replace operations." } }, required: ["path", "operations"] } };
-const searchFilesTool = { name: "search_files", description: "Search for a regex pattern within files in a specified directory relative to the project root.", inputSchema: { type: "object", properties: { path: { type: "string", description: "Relative path of the directory to search in.", default: "." }, regex: { type: "string", description: "The regex pattern to search for." }, file_pattern: { type: "string", description: "Glob pattern to filter files (e.g., '*.ts'). Defaults to all files ('*').", default: "*" } }, required: ["regex"] } };
-const searchAndReplaceMultipleFilesTool = { name: "search_and_replace_multiple_files", description: "Perform search and replace operations on multiple files within a directory.", inputSchema: { type: "object", properties: { path: { type: "string", description: "Relative path of the directory to search in.", default: "." }, file_pattern: { type: "string", description: "Glob pattern to filter files (e.g., '*.ts'). Defaults to all files ('*').", default: "*" }, operations: { type: "array", items: { type: "object", properties: { search: { type: "string", description: "Text or regex pattern to search for." }, replace: { type: "string", description: "Text to replace matches with." }, use_regex: { type: "boolean", description: "Treat search as regex.", default: false }, ignore_case: { type: "boolean", description: "Ignore case during search.", default: false } }, required: ["search", "replace"] }, description: "An array of search/replace operations to apply to each file." } }, required: ["operations"] } };
-const chmodTool = { name: "chmod", description: "Change the permissions mode of a file or directory (POSIX-style). Accepts octal string like '755'.", inputSchema: { type: "object", properties: { path: { type: "string", description: "Relative path of the file or directory." }, mode: { type: "string", description: "The permission mode as an octal string (e.g., '755', '644')." } }, required: ["path", "mode"] } };
-const moveItemTool = { name: "move_item", description: "Move or rename a file or directory relative to the project root.", inputSchema: { type: "object", properties: { source: { type: "string", description: "Relative path of the source file or directory." }, destination: { type: "string", description: "Relative path of the destination." } }, required: ["source", "destination"] } };
+// --- Tool Definitions (v0.2.0) ---
+
+const listFilesTool = { name: "list_files", description: "List files/directories. Can optionally include stats and list recursively.", inputSchema: { type: "object", properties: { path: { type: "string", description: "Relative path of the directory.", default: "." }, recursive: { type: "boolean", description: "List directories recursively.", default: false }, include_stats: { type: "boolean", description: "Include detailed stats for each listed item.", default: false } }, required: [] } };
+const statItemsTool = { name: "stat_items", description: "Get detailed status information for multiple specified paths.", inputSchema: { type: "object", properties: { paths: { type: "array", items: { type: "string" }, description: "An array of relative paths (files or directories) to get status for." } }, required: ["paths"] } };
+const readContentTool = { name: "read_content", description: "Read content from multiple specified files.", inputSchema: { type: "object", properties: { paths: { type: "array", items: { type: "string" }, description: "Array of relative file paths to read." } }, required: ["paths"] } };
+const writeContentTool = { name: "write_content", description: "Write or append content to multiple specified files (creating directories if needed).", inputSchema: { type: "object", properties: { items: { type: "array", items: { type: "object", properties: { path: { type: "string", description: "Relative path for the file." }, content: { type: "string", description: "Content to write." }, append: { type: "boolean", description: "Append content instead of overwriting.", default: false } }, required: ["path", "content"] }, description: "Array of {path, content, append?} objects." } }, required: ["items"] } };
+const deleteItemsTool = { name: "delete_items", description: "Delete multiple specified files or directories.", inputSchema: { type: "object", properties: { paths: { type: "array", items: { type: "string" }, description: "An array of relative paths (files or directories) to delete." } }, required: ["paths"] } };
+const createDirectoriesTool = { name: "create_directories", description: "Create multiple specified directories (including intermediate ones).", inputSchema: { type: "object", properties: { paths: { type: "array", items: { type: "string" }, description: "An array of relative directory paths to create." } }, required: ["paths"] } };
+const chmodItemsTool = { name: "chmod_items", description: "Change permissions mode for multiple specified files/directories (POSIX-style).", inputSchema: { type: "object", properties: { paths: { type: "array", items: { type: "string" }, description: "An array of relative paths." }, mode: { type: "string", description: "The permission mode as an octal string (e.g., '755', '644')." } }, required: ["paths", "mode"] } };
+const chownItemsTool = { name: "chown_items", description: "Change owner (UID) and group (GID) for multiple specified files/directories.", inputSchema: { type: "object", properties: { paths: { type: "array", items: { type: "string" }, description: "An array of relative paths." }, uid: { type: "number", description: "User ID." }, gid: { type: "number", description: "Group ID." } }, required: ["paths", "uid", "gid"] } };
+const moveItemsTool = { name: "move_items", description: "Move or rename multiple specified files/directories.", inputSchema: { type: "object", properties: { operations: { type: "array", items: { type: "object", properties: { source: { type: "string", description: "Relative path of the source." }, destination: { type: "string", description: "Relative path of the destination." } }, required: ["source", "destination"] }, description: "Array of {source, destination} objects." } }, required: ["operations"] } };
+const copyItemsTool = { name: "copy_items", description: "Copy multiple specified files/directories.", inputSchema: { type: "object", properties: { operations: { type: "array", items: { type: "object", properties: { source: { type: "string", description: "Relative path of the source." }, destination: { type: "string", description: "Relative path of the destination." } }, required: ["source", "destination"] }, description: "Array of {source, destination} objects." } }, required: ["operations"] } };
+const searchFilesTool = { name: "search_files", description: "Search for a regex pattern within files in a specified directory (read-only).", inputSchema: { type: "object", properties: { path: { type: "string", description: "Relative path of the directory to search in.", default: "." }, regex: { type: "string", description: "The regex pattern to search for." }, file_pattern: { type: "string", description: "Glob pattern to filter files (e.g., '*.ts'). Defaults to all files ('*').", default: "*" } }, required: ["regex"] } };
+const replaceContentTool = { name: "replace_content", description: "Replace content within files across multiple specified paths.", inputSchema: { type: "object", properties: { paths: { type: "array", items: { type: "string" }, description: "An array of relative file paths to perform replacements on." }, operations: { type: "array", items: { type: "object", properties: { search: { type: "string", description: "Text or regex pattern to search for." }, replace: { type: "string", description: "Text to replace matches with." }, use_regex: { type: "boolean", description: "Treat search as regex.", default: false }, ignore_case: { type: "boolean", description: "Ignore case during search.", default: false } }, required: ["search", "replace"] }, description: "An array of search/replace operations to apply to each file." } }, required: ["paths", "operations"] } };
 
 // --- Tool Handlers ---
 
@@ -168,43 +168,29 @@ const handleListFiles = async (args: any) => {
   }
 };
 
-const handleReadFile = async (args: any) => {
-  const relativePath = args?.path;
-  if (!relativePath) throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: path');
-  const targetPath = resolvePath(relativePath);
-  try {
-    const stats = await fs.stat(targetPath);
-    if (!stats.isFile()) throw new McpError(ErrorCode.InvalidRequest, `Path is not a file: ${relativePath}`);
-    const content = await fs.readFile(targetPath, 'utf-8');
-    return { content: [{ type: "text", text: content }] };
-  } catch (error: any) {
-    if (error.code === 'ENOENT') throw new McpError(ErrorCode.InvalidRequest, `File not found: ${relativePath}`);
-    if (error instanceof McpError) throw error;
-    console.error(`[Filesystem MCP] Error reading file ${targetPath}:`, error);
-    throw new McpError(ErrorCode.InternalError, `Failed to read file: ${error.message}`);
-  }
+// Placeholder for the new stat_items handler
+const handleStatItems = async (args: any) => {
+    const pathsToStat = args?.paths;
+    if (!Array.isArray(pathsToStat) || pathsToStat.length === 0 || !pathsToStat.every(p => typeof p === 'string')) throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: paths (must be a non-empty array of strings)');
+    const results: any[] = []; // TODO: Implement actual stat logic
+    await Promise.allSettled(pathsToStat.map(async (relativePath) => {
+        try {
+            const targetPath = resolvePath(relativePath);
+            const stats = await fs.stat(targetPath);
+            results.push({ path: relativePath.replace(/\\/g, '/'), status: 'success', stats: formatStats(relativePath, targetPath, stats) });
+        } catch (error: any) {
+            if (error.code === 'ENOENT') results.push({ path: relativePath.replace(/\\/g, '/'), status: 'error', error: 'Path not found' });
+            else if (error instanceof McpError) results.push({ path: relativePath.replace(/\\/g, '/'), status: 'error', error: error.message });
+            else {
+                console.error(`[Filesystem MCP] Error stating item ${relativePath}:`, error);
+                results.push({ path: relativePath.replace(/\\/g, '/'), status: 'error', error: `Failed to get stats: ${error.message}` });
+            }
+        }
+    }));
+    return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
 };
 
-const handleWriteFile = async (args: any) => {
-  const relativePath = args?.path;
-  const content = args?.content;
-  if (typeof relativePath !== 'string' || relativePath.trim() === '') throw new McpError(ErrorCode.InvalidParams, 'Missing or invalid required parameter: path');
-  if (typeof content !== 'string') throw new McpError(ErrorCode.InvalidParams, 'Missing or invalid required parameter: content (must be a string)');
-  const targetPath = resolvePath(relativePath);
-  if (targetPath === PROJECT_ROOT) throw new McpError(ErrorCode.InvalidRequest, 'Writing directly to the project root is not allowed.');
-  try {
-    const targetDir = path.dirname(targetPath);
-    await fs.mkdir(targetDir, { recursive: true });
-    await fs.writeFile(targetPath, content, 'utf-8');
-    return { content: [{ type: "text", text: `Successfully wrote to file: ${relativePath}` }] };
-  } catch (error: any) {
-    if (error instanceof McpError) throw error;
-    console.error(`[Filesystem MCP] Error writing file ${targetPath}:`, error);
-    throw new McpError(ErrorCode.InternalError, `Failed to write file: ${error.message}`);
-  }
-};
-
-const handleReadMultipleFiles = async (args: any) => {
+const handleReadContent = async (args: any) => { // Renamed from handleReadMultipleFiles
   const relativePaths = args?.paths;
   if (!Array.isArray(relativePaths) || relativePaths.length === 0 || !relativePaths.every(p => typeof p === 'string')) throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: paths (must be a non-empty array of strings)');
   const results = await Promise.allSettled(relativePaths.map(async (relativePath) => {
@@ -225,23 +211,28 @@ const handleReadMultipleFiles = async (args: any) => {
   return { content: [{ type: "text", text: JSON.stringify(outputContents, null, 2) }] };
 };
 
-const handleWriteMultipleFiles = async (args: any) => {
+const handleWriteContent = async (args: any) => { // Renamed from handleWriteMultipleFiles
   const filesToWrite = args?.files;
-  if (!Array.isArray(filesToWrite) || filesToWrite.length === 0 || !filesToWrite.every(f => typeof f === 'object' && typeof f.path === 'string' && typeof f.content === 'string')) throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: files (must be a non-empty array of {path: string, content: string} objects)');
+  if (!Array.isArray(filesToWrite) || filesToWrite.length === 0 || !filesToWrite.every(f => typeof f === 'object' && typeof f.path === 'string' && typeof f.content === 'string')) throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: items (must be a non-empty array of {path: string, content: string, append?: boolean} objects)');
   const results = await Promise.allSettled(filesToWrite.map(async (file) => {
     const relativePath = file.path;
     const content = file.content;
     const targetPath = resolvePath(relativePath);
+    const append = file.append ?? false; // Check for append flag
     if (targetPath === PROJECT_ROOT) return { path: relativePath, success: false, error: 'Writing directly to the project root is not allowed.' };
     try {
       const targetDir = path.dirname(targetPath);
       await fs.mkdir(targetDir, { recursive: true });
-      await fs.writeFile(targetPath, content, 'utf-8');
-      return { path: relativePath, success: true };
+      if (append) {
+        await fs.appendFile(targetPath, content, 'utf-8');
+      } else {
+        await fs.writeFile(targetPath, content, 'utf-8');
+      }
+      return { path: relativePath, success: true, operation: append ? 'appended' : 'written' };
     } catch (error: any) {
       if (error instanceof McpError) return { path: relativePath, success: false, error: error.message };
       console.error(`[Filesystem MCP] Error writing file ${targetPath} in write_multiple_files:`, error);
-      return { path: relativePath, success: false, error: `Failed to write file: ${error.message}` };
+      return { path: relativePath, success: false, error: `Failed to ${append ? 'append' : 'write'} file: ${error.message}` };
     }
   }));
   const outputResults = results.map(result => result.status === 'fulfilled' ? result.value : { path: 'unknown', success: false, error: 'Unexpected error during processing.' });
@@ -297,71 +288,7 @@ const handleCreateDirectories = async (args: any) => {
     return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
 };
 
-const handleSearchAndReplace = async (args: any) => {
-    const relativePath = args?.path;
-    const operations = args?.operations;
-    if (typeof relativePath !== 'string' || relativePath.trim() === '') throw new McpError(ErrorCode.InvalidParams, 'Missing or invalid required parameter: path');
-    if (!Array.isArray(operations) || operations.length === 0 || !operations.every((op: any) => typeof op === 'object' && typeof op.search === 'string' && typeof op.replace === 'string')) throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: operations (must be a non-empty array of {search: string, replace: string, ...} objects)');
-    const targetPath = resolvePath(relativePath);
-    let fileContent = '';
-    try {
-        const stats = await fs.stat(targetPath);
-        if (!stats.isFile()) throw new McpError(ErrorCode.InvalidRequest, `Path is not a file: ${relativePath}`);
-        fileContent = await fs.readFile(targetPath, 'utf-8');
-    } catch (error: any) {
-        if (error.code === 'ENOENT') throw new McpError(ErrorCode.InvalidRequest, `File not found: ${relativePath}`);
-        if (error instanceof McpError) throw error;
-        console.error(`[Filesystem MCP] Error reading file ${targetPath} for search/replace:`, error);
-        throw new McpError(ErrorCode.InternalError, `Failed to read file for search/replace: ${error.message}`);
-    }
-    let modifiedContent = fileContent;
-    const results: { operation: number; replacements: number; error?: string }[] = [];
-    let operationIndex = 0;
-    for (const op of operations) {
-        operationIndex++;
-        let replacementsCount = 0;
-        try {
-            const searchPattern = op.search;
-            const replacementText = op.replace;
-            const useRegex = op.use_regex ?? false;
-            const ignoreCase = op.ignore_case ?? false;
-            const startLine = op.start_line;
-            const endLine = op.end_line;
-            let regexFlags = 'g';
-            if (ignoreCase) regexFlags += 'i';
-            const searchRegex = useRegex ? new RegExp(searchPattern, regexFlags) : new RegExp(searchPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), regexFlags);
-            if (startLine !== undefined || endLine !== undefined) {
-                const lines = modifiedContent.split('\n');
-                const effectiveStartLine = startLine === undefined ? 1 : Math.max(1, startLine);
-                const effectiveEndLine = endLine === undefined ? lines.length : Math.min(lines.length, endLine);
-                if (effectiveStartLine > effectiveEndLine) throw new Error(`Start line (${startLine}) cannot be greater than end line (${endLine}).`);
-                for (let i = effectiveStartLine - 1; i < effectiveEndLine; i++) {
-                    const originalLine = lines[i];
-                    let lineReplacements = 0;
-                    lines[i] = lines[i].replace(searchRegex, (...args) => { lineReplacements++; return replacementText; });
-                    replacementsCount += lineReplacements;
-                }
-                modifiedContent = lines.join('\n');
-            } else {
-                 const matches = modifiedContent.match(searchRegex);
-                 replacementsCount = matches ? matches.length : 0;
-                 modifiedContent = modifiedContent.replace(searchRegex, replacementText);
-            }
-            results.push({ operation: operationIndex, replacements: replacementsCount });
-        } catch (error: any) {
-            console.error(`[Filesystem MCP] Error during search/replace operation ${operationIndex} on ${relativePath}:`, error);
-            results.push({ operation: operationIndex, replacements: 0, error: `Operation failed: ${error.message}` });
-        }
-    }
-    if (modifiedContent !== fileContent) {
-        try { await fs.writeFile(targetPath, modifiedContent, 'utf-8'); }
-        catch (error: any) {
-            console.error(`[Filesystem MCP] Error writing modified file ${targetPath}:`, error);
-            throw new McpError(ErrorCode.InternalError, `Failed to write modified file: ${error.message}`);
-        }
-    }
-    return { content: [{ type: "text", text: JSON.stringify({ message: `Search and replace completed on ${relativePath}.`, results: results }, null, 2) }] };
-};
+// Removed handleSearchAndReplace (superseded by handleReplaceContent)
 
 const handleSearchFiles = async (args: any) => {
     const relativePath = args?.path ?? ".";
@@ -406,25 +333,27 @@ const handleSearchFiles = async (args: any) => {
     return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
 };
 
-const handleSearchAndReplaceMultipleFiles = async (args: any) => {
-    const relativePath = args?.path ?? ".";
-    const filePattern = args?.file_pattern ?? "*";
+const handleReplaceContent = async (args: any) => { // Renamed from handleSearchAndReplaceMultipleFiles
+    const relativePaths = args?.paths;
     const operations = args?.operations;
-    if (!Array.isArray(operations) || operations.length === 0 || !operations.every((op: any) => typeof op === 'object' && typeof op.search === 'string' && typeof op.replace === 'string')) throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: operations (must be a non-empty array of {search: string, replace: string, ...} objects)');
-    const targetPath = resolvePath(relativePath);
+    if (!Array.isArray(relativePaths) || relativePaths.length === 0 || !relativePaths.every(p => typeof p === 'string')) throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: paths (must be a non-empty array of strings)');
+    if (!Array.isArray(operations) || operations.length === 0 || !operations.every((op: any) => typeof op === 'object' && typeof op.search === 'string' && typeof op.replace === 'string')) throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: operations (must be a non-empty array of {search: string, replace: string, use_regex?: boolean, ignore_case?: boolean} objects)');
     const fileProcessingResults: { file: string; replacements: number; modified: boolean; error?: string }[] = [];
     try {
-        const globPattern = path.join(targetPath, '**', filePattern).replace(/\\/g, '/');
-        const files = await glob(globPattern, { nodir: true, dot: true, ignore: [path.join(targetPath, '**/node_modules/**').replace(/\\/g, '/')] });
-        for (const filePath of files) {
-            const fileRelativePath = path.relative(PROJECT_ROOT, filePath).replace(/\\/g, '/');
+        for (const relativePath of relativePaths) {
+            const targetPath = resolvePath(relativePath);
             let fileContent = '';
             let originalContent = '';
             let totalReplacements = 0;
             let modified = false;
             let fileError: string | undefined = undefined;
             try {
-                originalContent = await fs.readFile(filePath, 'utf-8');
+                const stats = await fs.stat(targetPath);
+                if (!stats.isFile()) {
+                    fileError = 'Path is not a file';
+                    continue; // Skip to next path
+                }
+                originalContent = await fs.readFile(targetPath, 'utf-8');
                 fileContent = originalContent;
                 for (const op of operations) {
                     let replacementsInOp = 0;
@@ -444,87 +373,162 @@ const handleSearchAndReplaceMultipleFiles = async (args: any) => {
                 }
                 if (fileContent !== originalContent) {
                     modified = true;
-                    await fs.writeFile(filePath, fileContent, 'utf-8');
+                    await fs.writeFile(targetPath, fileContent, 'utf-8');
                 }
             } catch (error: any) {
-                 console.error(`[Filesystem MCP] Error processing file ${fileRelativePath} for multi-replace:`, error);
-                 fileError = `Failed to process file: ${error.message}`;
+                 if (error.code === 'ENOENT') fileError = 'File not found';
+                 else {
+                    console.error(`[Filesystem MCP] Error processing file ${relativePath} for replace_content:`, error);
+                    fileError = `Failed to process file: ${error.message}`;
+                 }
             } finally {
-                 fileProcessingResults.push({ file: fileRelativePath, replacements: totalReplacements, modified, error: fileError });
+                 fileProcessingResults.push({ file: relativePath.replace(/\\/g, '/'), replacements: totalReplacements, modified, error: fileError });
             }
-        }
+        } // End loop through relativePaths
     } catch (error: any) {
         if (error instanceof McpError) throw error;
-        console.error(`[Filesystem MCP] Error during multi-file search/replace in ${targetPath}:`, error);
-        throw new McpError(ErrorCode.InternalError, `Failed during multi-file search/replace: ${error.message}`);
+        console.error(`[Filesystem MCP] Error during replace_content:`, error);
+        throw new McpError(ErrorCode.InternalError, `Failed during replace_content: ${error.message}`);
     }
     return {
         content: [{
             type: "text",
-            text: JSON.stringify({ message: `Multi-file search and replace completed in '${relativePath}' matching '${filePattern}'.`, results: fileProcessingResults }, null, 2)
+            text: JSON.stringify({ message: `Replace content operations completed on specified paths.`, results: fileProcessingResults }, null, 2)
         }]
     };
 };
 
-const handleChmod = async (args: any) => {
-    const relativePath = args?.path;
+const handleChmodItems = async (args: any) => { // Renamed from handleChmod
+    const relativePaths = args?.paths;
     const modeString = args?.mode;
-    if (typeof relativePath !== 'string' || relativePath.trim() === '') throw new McpError(ErrorCode.InvalidParams, 'Missing or invalid required parameter: path');
+    if (!Array.isArray(relativePaths) || relativePaths.length === 0 || !relativePaths.every(p => typeof p === 'string')) throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: paths (must be a non-empty array of strings)');
     if (typeof modeString !== 'string' || !/^[0-7]{3,4}$/.test(modeString)) throw new McpError(ErrorCode.InvalidParams, 'Invalid required parameter: mode (must be an octal string like \'755\')');
-    const targetPath = resolvePath(relativePath);
-    if (targetPath === PROJECT_ROOT) throw new McpError(ErrorCode.InvalidRequest, 'Changing permissions of the project root is not allowed.');
-    try {
-        const mode = parseInt(modeString, 8);
-        await fs.chmod(targetPath, mode);
-        return { content: [{ type: "text", text: `Successfully changed mode of ${relativePath} to ${modeString}` }] };
-    } catch (error: any) {
-        if (error.code === 'ENOENT') throw new McpError(ErrorCode.InvalidRequest, `Path not found: ${relativePath}`);
-        if (error instanceof McpError) throw error;
-        console.error(`[Filesystem MCP] Error changing mode for ${targetPath}:`, error);
-        throw new McpError(ErrorCode.InternalError, `Failed to change mode: ${error.message}`);
-    }
+    const mode = parseInt(modeString, 8);
+    const results = await Promise.allSettled(relativePaths.map(async (relativePath) => {
+        const targetPath = resolvePath(relativePath);
+        if (targetPath === PROJECT_ROOT) return { path: relativePath, success: false, error: 'Changing permissions of the project root is not allowed.' };
+        try {
+            await fs.chmod(targetPath, mode);
+            return { path: relativePath, success: true, mode: modeString };
+        } catch (error: any) {
+            if (error.code === 'ENOENT') return { path: relativePath, success: false, error: 'Path not found' };
+            if (error instanceof McpError) return { path: relativePath, success: false, error: error.message };
+            console.error(`[Filesystem MCP] Error changing mode for ${targetPath}:`, error);
+            return { path: relativePath, success: false, error: `Failed to change mode: ${error.message}` };
+        }
+    }));
+    const outputResults = results.map(result => result.status === 'fulfilled' ? result.value : { path: 'unknown', success: false, error: 'Unexpected error during processing.' });
+    return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
 };
 
-const handleMoveItem = async (args: any) => {
-    const sourceRelative = args?.source;
-    const destinationRelative = args?.destination;
-    if (typeof sourceRelative !== 'string' || sourceRelative.trim() === '') throw new McpError(ErrorCode.InvalidParams, 'Missing or invalid required parameter: source');
-    if (typeof destinationRelative !== 'string' || destinationRelative.trim() === '') throw new McpError(ErrorCode.InvalidParams, 'Missing or invalid required parameter: destination');
+// Placeholder for the new chown_items handler
+const handleChownItems = async (args: any) => {
+    const relativePaths = args?.paths;
+    const uid = args?.uid;
+    const gid = args?.gid;
+    if (!Array.isArray(relativePaths) || relativePaths.length === 0 || !relativePaths.every(p => typeof p === 'string')) throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: paths (must be a non-empty array of strings)');
+    if (typeof uid !== 'number') throw new McpError(ErrorCode.InvalidParams, 'Invalid or missing required parameter: uid (must be a number)');
+    if (typeof gid !== 'number') throw new McpError(ErrorCode.InvalidParams, 'Invalid or missing required parameter: gid (must be a number)');
 
-    const sourceAbsolute = resolvePath(sourceRelative);
-    const destinationAbsolute = resolvePath(destinationRelative);
-
-    if (sourceAbsolute === PROJECT_ROOT) throw new McpError(ErrorCode.InvalidRequest, 'Moving the project root is not allowed.');
-    if (destinationAbsolute === PROJECT_ROOT) throw new McpError(ErrorCode.InvalidRequest, 'Moving an item directly into the project root is not allowed.');
-
-    try {
-        // Ensure destination directory exists if moving into a directory
-        const destStats = await fs.stat(destinationAbsolute).catch(() => null);
-        if (destStats?.isDirectory()) {
-             // If destination is a directory, move the source *into* it
-             const finalDestination = path.join(destinationAbsolute, path.basename(sourceAbsolute));
-             await fs.rename(sourceAbsolute, finalDestination);
-             return { content: [{ type: "text", text: `Successfully moved '${sourceRelative}' to '${path.relative(PROJECT_ROOT, finalDestination).replace(/\\/g, '/')}'` }] };
-        } else if (destStats?.isFile()) {
-            // Overwriting files is allowed by fs.rename by default on most systems
-            await fs.rename(sourceAbsolute, destinationAbsolute);
-            return { content: [{ type: "text", text: `Successfully moved/renamed '${sourceRelative}' to '${destinationRelative}' (overwrote existing file)` }] };
-        } else {
-             // Destination does not exist, perform rename/move
-             // Ensure parent directory of destination exists
-             const destDir = path.dirname(destinationAbsolute);
-             await fs.mkdir(destDir, { recursive: true });
-             await fs.rename(sourceAbsolute, destinationAbsolute);
-             return { content: [{ type: "text", text: `Successfully moved/renamed '${sourceRelative}' to '${destinationRelative}'` }] };
+    // Note: fs.chown might not work reliably or as expected on Windows.
+    // It might require administrator privileges or specific system configurations.
+    const results = await Promise.allSettled(relativePaths.map(async (relativePath) => {
+        const targetPath = resolvePath(relativePath);
+        if (targetPath === PROJECT_ROOT) return { path: relativePath, success: false, error: 'Changing ownership of the project root is not allowed.' };
+        try {
+            await fs.chown(targetPath, uid, gid);
+            return { path: relativePath, success: true, uid, gid };
+        } catch (error: any) {
+            if (error.code === 'ENOENT') return { path: relativePath, success: false, error: 'Path not found' };
+            if (error.code === 'EPERM') return { path: relativePath, success: false, error: 'Operation not permitted (Permissions or unsupported on OS)' };
+            if (error instanceof McpError) return { path: relativePath, success: false, error: error.message };
+            console.error(`[Filesystem MCP] Error changing ownership for ${targetPath}:`, error);
+            return { path: relativePath, success: false, error: `Failed to change ownership: ${error.message}` };
         }
-    } catch (error: any) {
-        if (error.code === 'ENOENT') throw new McpError(ErrorCode.InvalidRequest, `Source path not found: ${sourceRelative}`);
-        if (error.code === 'EPERM' || error.code === 'EACCES') throw new McpError(ErrorCode.InvalidRequest, `Permission denied moving '${sourceRelative}' to '${destinationRelative}'.`);
-        // Consider handling EXDEV (cross-device link) by copying and deleting if needed
-        if (error instanceof McpError) throw error;
-        console.error(`[Filesystem MCP] Error moving item from ${sourceAbsolute} to ${destinationAbsolute}:`, error);
-        throw new McpError(ErrorCode.InternalError, `Failed to move item: ${error.message}`);
-    }
+    }));
+    const outputResults = results.map(result => result.status === 'fulfilled' ? result.value : { path: 'unknown', success: false, error: 'Unexpected error during processing.' });
+    return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
+};
+
+const handleMoveItems = async (args: any) => { // Renamed from handleMoveItem
+    const operations = args?.operations;
+    if (!Array.isArray(operations) || operations.length === 0 || !operations.every((op: any) => typeof op === 'object' && typeof op.source === 'string' && typeof op.destination === 'string')) throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: operations (must be a non-empty array of {source: string, destination: string} objects)');
+    const results = await Promise.allSettled(operations.map(async (op) => {
+        const sourceRelative = op.source;
+        const destinationRelative = op.destination;
+
+        const sourceAbsolute = resolvePath(sourceRelative);
+        const destinationAbsolute = resolvePath(destinationRelative);
+
+        if (sourceAbsolute === PROJECT_ROOT) return { source: sourceRelative, destination: destinationRelative, success: false, error: 'Moving the project root is not allowed.' };
+        // Allow moving *to* the root directory itself as a destination, but resolvePath prevents writing *directly* as root.
+        // if (destinationAbsolute === PROJECT_ROOT) return { source: sourceRelative, destination: destinationRelative, success: false, error: 'Moving an item directly into the project root is not allowed.' };
+
+        try {
+            // Ensure parent directory of destination exists before moving
+            const destDir = path.dirname(destinationAbsolute);
+            await fs.mkdir(destDir, { recursive: true });
+
+            // Now attempt the move/rename
+            await fs.rename(sourceAbsolute, destinationAbsolute);
+            return { source: sourceRelative, destination: destinationRelative, success: true };
+        } catch (error: any) {
+            if (error.code === 'ENOENT') return { source: sourceRelative, destination: destinationRelative, success: false, error: `Source path not found: ${sourceRelative}` };
+            if (error.code === 'EPERM' || error.code === 'EACCES') return { source: sourceRelative, destination: destinationRelative, success: false, error: `Permission denied moving '${sourceRelative}' to '${destinationRelative}'.` };
+            // TODO: Consider handling EXDEV (cross-device link) by copying and deleting if needed
+            if (error instanceof McpError) return { source: sourceRelative, destination: destinationRelative, success: false, error: error.message };
+            console.error(`[Filesystem MCP] Error moving item from ${sourceAbsolute} to ${destinationAbsolute}:`, error);
+            return { source: sourceRelative, destination: destinationRelative, success: false, error: `Failed to move item: ${error.message}` };
+        }
+    }));
+    const outputResults = results.map(result => result.status === 'fulfilled' ? result.value : { source: 'unknown', destination: 'unknown', success: false, error: 'Unexpected error during processing.' });
+    return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
+};
+
+// Placeholder for the new copy_items handler
+const handleCopyItems = async (args: any) => {
+    const operations = args?.operations;
+    if (!Array.isArray(operations) || operations.length === 0 || !operations.every((op: any) => typeof op === 'object' && typeof op.source === 'string' && typeof op.destination === 'string')) throw new McpError(ErrorCode.InvalidParams, 'Invalid or empty required parameter: operations (must be a non-empty array of {source: string, destination: string} objects)');
+
+    const results = await Promise.allSettled(operations.map(async (op) => {
+        const sourceRelative = op.source;
+        const destinationRelative = op.destination;
+        const sourceAbsolute = resolvePath(sourceRelative);
+        const destinationAbsolute = resolvePath(destinationRelative);
+
+        if (sourceAbsolute === PROJECT_ROOT) return { source: sourceRelative, destination: destinationRelative, success: false, error: 'Copying the project root is not allowed.' };
+
+        try {
+            // Ensure parent directory of destination exists
+            const destDir = path.dirname(destinationAbsolute);
+            await fs.mkdir(destDir, { recursive: true });
+
+            // Perform the copy (recursive for directories)
+            // fs.cp is available in Node 16.7+
+            if (typeof fs.cp === 'function') {
+                 await fs.cp(sourceAbsolute, destinationAbsolute, { recursive: true, errorOnExist: false, force: true }); // Overwrite if exists
+            } else {
+                 // Fallback for older Node versions (less robust, especially for directories)
+                 // This basic fallback only copies files, not directories recursively.
+                 // A more robust fallback would require a recursive copy implementation.
+                 const stats = await fs.stat(sourceAbsolute);
+                 if (stats.isDirectory()) {
+                     return { source: sourceRelative, destination: destinationRelative, success: false, error: 'Recursive directory copy requires Node.js 16.7+ (fs.cp). Basic fallback cannot copy directories.' };
+                 }
+                 await fs.copyFile(sourceAbsolute, destinationAbsolute); // Default overwrites
+            }
+
+            return { source: sourceRelative, destination: destinationRelative, success: true };
+        } catch (error: any) {
+            if (error.code === 'ENOENT') return { source: sourceRelative, destination: destinationRelative, success: false, error: `Source path not found: ${sourceRelative}` };
+            if (error.code === 'EPERM' || error.code === 'EACCES') return { source: sourceRelative, destination: destinationRelative, success: false, error: `Permission denied copying '${sourceRelative}' to '${destinationRelative}'.` };
+            if (error instanceof McpError) return { source: sourceRelative, destination: destinationRelative, success: false, error: error.message };
+            console.error(`[Filesystem MCP] Error copying item from ${sourceAbsolute} to ${destinationAbsolute}:`, error);
+            return { source: sourceRelative, destination: destinationRelative, success: false, error: `Failed to copy item: ${error.message}` };
+        }
+    }));
+    const outputResults = results.map(result => result.status === 'fulfilled' ? result.value : { source: 'unknown', destination: 'unknown', success: false, error: 'Unexpected error during processing.' });
+    return { content: [{ type: "text", text: JSON.stringify(outputResults, null, 2) }] };
 };
 
 // --- Server Setup ---
@@ -532,7 +536,7 @@ const handleMoveItem = async (args: any) => {
 const server = new Server(
   {
     name: "filesystem-mcp",
-    version: "0.1.1", // Incremented version
+    version: "0.2.0", // Updated version for refined toolset
     description: "MCP Server for filesystem operations relative to the project root."
   },
   {
@@ -543,17 +547,17 @@ const server = new Server(
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   const availableTools = [
     listFilesTool,
-    readFileTool,
-    writeFileTool,
-    readMultipleFilesTool,
-    writeMultipleFilesTool,
+    statItemsTool,
+    readContentTool,
+    writeContentTool,
     deleteItemsTool,
     createDirectoriesTool,
-    searchAndReplaceTool,
+    chmodItemsTool,
+    chownItemsTool,
+    moveItemsTool,
+    copyItemsTool,
     searchFilesTool,
-    searchAndReplaceMultipleFilesTool,
-    chmodTool,
-    moveItemTool, // Added move tool
+    replaceContentTool,
   ];
   return { tools: availableTools };
 });
@@ -561,17 +565,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   switch (request.params.name) {
     case listFilesTool.name: return handleListFiles(request.params.arguments);
-    case readFileTool.name: return handleReadFile(request.params.arguments);
-    case writeFileTool.name: return handleWriteFile(request.params.arguments);
-    case readMultipleFilesTool.name: return handleReadMultipleFiles(request.params.arguments);
-    case writeMultipleFilesTool.name: return handleWriteMultipleFiles(request.params.arguments);
-    case deleteItemsTool.name: return handleDeleteItems(request.params.arguments);
-    case createDirectoriesTool.name: return handleCreateDirectories(request.params.arguments);
-    case searchAndReplaceTool.name: return handleSearchAndReplace(request.params.arguments);
-    case searchFilesTool.name: return handleSearchFiles(request.params.arguments);
-    case searchAndReplaceMultipleFilesTool.name: return handleSearchAndReplaceMultipleFiles(request.params.arguments);
-    case chmodTool.name: return handleChmod(request.params.arguments);
-    case moveItemTool.name: return handleMoveItem(request.params.arguments); // Added handler case
+    case statItemsTool.name: return handleStatItems(request.params.arguments); // New handler needed
+    case readContentTool.name: return handleReadContent(request.params.arguments); // Rename handleReadMultipleFiles
+    case writeContentTool.name: return handleWriteContent(request.params.arguments); // Rename handleWriteMultipleFiles + add append logic
+    case deleteItemsTool.name: return handleDeleteItems(request.params.arguments); // Keep as is (already handles multiple)
+    case createDirectoriesTool.name: return handleCreateDirectories(request.params.arguments); // Keep as is (already handles multiple)
+    case chmodItemsTool.name: return handleChmodItems(request.params.arguments); // Rename handleChmod + adapt for multiple paths
+    case chownItemsTool.name: return handleChownItems(request.params.arguments); // New handler needed
+    case moveItemsTool.name: return handleMoveItems(request.params.arguments); // Rename handleMoveItem + adapt for multiple operations
+    case copyItemsTool.name: return handleCopyItems(request.params.arguments); // New handler needed
+    case searchFilesTool.name: return handleSearchFiles(request.params.arguments); // Keep as is
+    case replaceContentTool.name: return handleReplaceContent(request.params.arguments); // Rename handleSearchAndReplaceMultipleFiles + adapt input
     default:
       throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
   }
