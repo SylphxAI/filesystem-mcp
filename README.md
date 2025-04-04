@@ -52,23 +52,16 @@ the container.**
 {
   "mcpServers": {
     "filesystem-mcp": {
-      // Use 'docker' as the command
       "command": "docker",
-      // Arguments for 'docker run'
       "args": [
         "run",
-        "-i", // Keep STDIN open for stdio communication
-        "--rm", // Automatically remove the container on exit
-        // Mount your project directory to /app in the container
-        // IMPORTANT: Replace '/path/to/your/project' with the ACTUAL path on your machine
+        "-i",
+        "--rm",
         "-v",
         "/path/to/your/project:/app",
-        // Specify the Docker image from Docker Hub
-        "shtse8/filesystem-mcp:latest" // Or a specific version like shtse8/filesystem-mcp:0.4.3
+        "shtse8/filesystem-mcp:latest"
       ],
-      // Optional: Set a friendly name for the server in your host UI
       "name": "Filesystem (Docker)"
-      // "disabled": false // Usually not needed unless you want to temporarily disable it
     }
   }
 }
@@ -103,7 +96,6 @@ While Docker is recommended, other options exist:
 Runs the latest version directly from npm. Good for quick tests.
 
 ```json
-// mcp_settings.json example
 {
   "mcpServers": {
     "filesystem-mcp": {
@@ -125,12 +117,10 @@ For development or specific needs.
 4. Configure MCP Host:
 
 ```json
-// mcp_settings.json example
 {
   "mcpServers": {
     "filesystem-mcp": {
       "command": "node",
-      // Use the absolute path to the build output
       "args": ["/path/to/cloned/repo/filesystem-mcp/build/index.js"],
       "name": "Filesystem (Local Build)"
     }
