@@ -114,6 +114,40 @@ npm install -g @shtse8/filesystem-mcp
 
 Then configure your MCP host to run the command `filesystem-mcp`.
 
+**Option 4: Using Docker**
+
+Build the Docker image:
+
+```bash
+docker build -t shtse8/filesystem-mcp .
+```
+
+Run the server in a container, mounting your project directory as the working
+directory inside the container. The server determines the project root based on
+its working directory.
+
+**Important:** You need to mount the directory that you want the MCP server to
+operate on into the container's `/app` directory (or wherever the `WORKDIR` is
+set in the Dockerfile). The server will treat this mounted directory as its
+root.
+
+Example command to run the container interactively (replace
+`/path/to/your/project` with the actual path on your host machine):
+
+```bash
+docker run -i --rm -v "/path/to/your/project:/app" shtse8/filesystem-mcp
+```
+
+- `-i`: Keep STDIN open even if not attached (needed for MCP over stdio).
+- `--rm`: Automatically remove the container when it exits.
+- `-v "/path/to/your/project:/app"`: Mounts your host project directory to
+  `/app` inside the container. **This is crucial for the server to access your
+  files.**
+
+Your MCP host environment needs to be configured to launch the server using this
+`docker run` command (e.g., set `command` to `docker` and `args` to the rest of
+the command parts).
+
 ## Development
 
 1. Clone the repository.
