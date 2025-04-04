@@ -1,4 +1,4 @@
-# Progress: Filesystem MCP Server (v0.4.10 - Docker & CI/CD Ready)
+# Progress: Filesystem MCP Server (v0.4.11 - Final Docs & CI/CD)
 
 ## 1. What Works
 
@@ -15,27 +15,25 @@
   applicable.
 - **Documentation (`README.md`):** Significantly improved with clear usage
   instructions (prioritizing `npx`), feature highlights, Docker instructions,
-  and contribution guidelines. JSON examples now include comments for
-  readability within Markdown.
+  and contribution guidelines. JSON examples now correctly **omit comments** for
+  standard JSON compliance.
 - **Dockerization:**
   - `Dockerfile` created using multi-stage builds.
   - `.dockerignore` configured correctly.
-  - Build process debugged and corrected.
+  - Build process debugged and corrected (using `npm ci --ignore-scripts`).
 - **CI/CD (GitHub Actions):**
   - Workflow (`.github/workflows/publish.yml`) successfully automates:
     - Publishing to npm on `main` branch pushes.
     - Building and pushing Docker image to Docker Hub (`shtse8/filesystem-mcp`)
       on `main` branch pushes.
 - **Versioning:** Package version consistently incremented to trigger releases
-  (currently `0.4.10`).
+  (currently `0.4.11`).
 
 ## 2. What's Left to Build / Test
 
 - **Resolve `list_files` Issue (Glob Path):** Fix or thoroughly investigate the
   `glob`-based execution path within `handleListFiles` used when
-  `recursive: true` or `include_stats: true`. The previous suspicion of server
-  reload issues might be less relevant now with stable CI/CD; needs focused
-  testing.
+  `recursive: true` or `include_stats: true`.
 - **Comprehensive Testing:**
   - Test `list_files` with recursion and stats once the underlying issue is
     resolved/understood.
@@ -56,8 +54,8 @@
 - **Core Functionality Implemented:** All defined tools are implemented.
 - **Deployment Automated:** Publishing to npm and Docker Hub is handled by
   GitHub Actions.
-- **Documentation Updated:** `README.md` is comprehensive and reflects current
-  usage recommendations.
+- **Documentation Finalized:** `README.md` is comprehensive, reflects current
+  usage recommendations, and uses standard-compliant JSON examples.
 - **Primary Blocker:** The advanced functionality of `list_files`
   (recursion/stats via `glob`) remains the main known functional issue requiring
   investigation.
