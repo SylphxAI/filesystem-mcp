@@ -104,15 +104,15 @@ must mount your project directory to `/app` inside the container.**
       "command": "docker",
       "args": [
         "run",
-        "-i",
-        "--rm",
+        "-i", // Keep STDIN open for stdio communication
+        "--rm", // Automatically remove the container on exit
         // IMPORTANT: Replace '/path/to/your/project' with the ACTUAL path on your machine
         "-v",
         "/path/to/your/project:/app",
         // Specify the Docker image from Docker Hub
         "shtse8/filesystem-mcp:latest" // Or a specific version
       ],
-      "name": "Filesystem (Docker)"
+      "name": "Filesystem (Docker)" // Optional friendly name
     }
   }
 }
@@ -146,7 +146,7 @@ must mount your project directory to `/app` inside the container.**
       "command": "node",
       // Use the absolute path to the build output
       "args": ["/path/to/cloned/repo/filesystem-mcp/build/index.js"],
-      "name": "Filesystem (Local Build)"
+      "name": "Filesystem (Local Build)" // Optional friendly name
     }
   }
 }

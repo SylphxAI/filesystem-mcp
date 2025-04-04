@@ -1,65 +1,72 @@
-# Progress: Filesystem MCP Server (v0.2.0 Implemented & Tested)
+# Progress: Filesystem MCP Server (v0.4.10 - Docker & CI/CD Ready)
 
 ## 1. What Works
 
 - **Server Initialization:** The MCP server starts, connects via stdio, and
-  identifies itself correctly (v0.2.0).
-- **Tool Listing:** Responds correctly to `list_tools` requests, providing
-  schemas for the new v0.2.0 toolset.
+  identifies itself correctly.
+- **Tool Listing:** Responds correctly to `list_tools` requests.
 - **Path Security:** The `resolvePath` function prevents path traversal and
-  rejects absolute paths (verified implicitly through tool usage).
-- **Basic Error Handling:** Handles common errors like `ENOENT` (verified via
-  `stat_items`).
-- **v0.2.0 Tools Implemented & Tested:**
-  - `create_directories`: Functional for multiple paths.
-  - `write_content`: Functional for multiple items, including `append` mode.
-  - `stat_items`: Functional for multiple paths, including error reporting for
-    non-existent paths.
-  - `read_content`: Functional for multiple paths.
-  - `move_items`: Functional for multiple operations (file move, file rename).
-  - `copy_items`: Functional for file and directory copies.
-  - `search_files`: Functional (read-only regex search).
-  - `replace_content`: Functional for replacing content in multiple specified
-    files.
-  - `delete_items`: Functional for multiple files/directories.
-  - `list_files` (Simple Case): Works correctly when `recursive: false` and
-    `include_stats: false` (uses `fs.readdir`).
-- **MCP Settings:** Updated `alwaysAllow` list and `RELOAD_TRIGGER` in
-  `mcp_settings.json`.
+  rejects absolute paths.
+- **Basic Error Handling:** Handles common errors like `ENOENT`.
+- **Core Tool Functionality (v0.2.0+):** Most tools (`create_directories`,
+  `write_content`, `stat_items`, `read_content`, `move_items`, `copy_items`,
+  `search_files`, `replace_content`, `delete_items`, `list_files` simple case)
+  have passed basic functional tests. Batch operations are supported where
+  applicable.
+- **Documentation (`README.md`):** Significantly improved with clear usage
+  instructions (prioritizing `npx`), feature highlights, Docker instructions,
+  and contribution guidelines. JSON examples now include comments for
+  readability within Markdown.
+- **Dockerization:**
+  - `Dockerfile` created using multi-stage builds.
+  - `.dockerignore` configured correctly.
+  - Build process debugged and corrected.
+- **CI/CD (GitHub Actions):**
+  - Workflow (`.github/workflows/publish.yml`) successfully automates:
+    - Publishing to npm on `main` branch pushes.
+    - Building and pushing Docker image to Docker Hub (`shtse8/filesystem-mcp`)
+      on `main` branch pushes.
+- **Versioning:** Package version consistently incremented to trigger releases
+  (currently `0.4.10`).
 
-## 2. What's Left to Build
+## 2. What's Left to Build / Test
 
-- **Resolve `list_files` Issue:** Fix the `glob`-based execution path within
-  `handleListFiles` used when `recursive: true` or `include_stats: true`. This
-  seems blocked by server reload issues.
+- **Resolve `list_files` Issue (Glob Path):** Fix or thoroughly investigate the
+  `glob`-based execution path within `handleListFiles` used when
+  `recursive: true` or `include_stats: true`. The previous suspicion of server
+  reload issues might be less relevant now with stable CI/CD; needs focused
+  testing.
 - **Comprehensive Testing:**
   - Test `list_files` with recursion and stats once the underlying issue is
-    resolved.
+    resolved/understood.
   - Test `chmod_items` and `chown_items` in a suitable environment (verify
-    permissions changes).
+    permissions changes, document OS differences).
   - Test edge cases for all tools (empty arrays, special characters, permissions
-    errors, large numbers of items).
-  - Test cross-device operations for `move_items` and `copy_items`.
-- **Refine Batch Error Handling:** Improve reporting for partial success/failure
-  in batch operations if needed.
-- **Code Cleanup:** Remove debugging logs from `handleListFiles` and
-  `handleWriteContent`.
+    errors, large numbers of items, large files).
+  - Test cross-device operations for `move_items` and `copy_items` (potential
+    `EXDEV` errors).
+- **Refine Batch Error Handling:** Review and potentially improve reporting for
+  partial success/failure in batch operations.
+- **Code Cleanup:** Remove any remaining debugging logs.
+- **Update Other Memory Bank Files:** Review `systemPatterns.md` and
+  `techContext.md` for consistency with Docker/CI additions.
 
 ## 3. Current Status
 
-- **Implementation Complete:** The v0.2.0 toolset is implemented in
-  `src/index.ts`.
-- **Initial Testing Done:** Most tools have passed basic functional tests.
-- **Blocking Issue:** The `list_files` tool's advanced functionality (using
-  `glob`) is not working reliably, likely due to server reload problems
-  preventing code updates from taking effect for that specific path.
+- **Core Functionality Implemented:** All defined tools are implemented.
+- **Deployment Automated:** Publishing to npm and Docker Hub is handled by
+  GitHub Actions.
+- **Documentation Updated:** `README.md` is comprehensive and reflects current
+  usage recommendations.
+- **Primary Blocker:** The advanced functionality of `list_files`
+  (recursion/stats via `glob`) remains the main known functional issue requiring
+  investigation.
 
 ## 4. Known Issues / Areas for Improvement
 
-- **`list_files` (`glob` path):** Fails or returns empty results when recursion
-  or stats are enabled. Suspected server reload issue.
-- **Windows `chmod`/`chown`:** Effectiveness will be limited by the OS. Needs
-  documentation.
-- **Cross-Device Moves/Copies:** Current implementation might fail (`EXDEV`);
-  needs testing and potential fallback logic.
-- **Large File Streaming:** (Remains an area for future enhancement if needed).
+- **`list_files` (`glob` path):** May fail or return incorrect results when
+  recursion or stats are enabled. Needs investigation.
+- **Windows `chmod`/`chown`:** Effectiveness is limited by the OS; behavior
+  needs clear documentation.
+- **Cross-Device Moves/Copies:** May fail (`EXDEV`); needs testing and potential
+  fallback logic.
