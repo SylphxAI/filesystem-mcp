@@ -2,14 +2,16 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy package files and install ALL dependencies (including dev for build)
+# Copy package files
 # Using package-lock.json ensures reproducible installs
 COPY package.json package-lock.json ./
+
+# Install ALL dependencies (including dev for build)
 RUN npm ci
 
-# Copy source code
-COPY tsconfig.json ./
-COPY src ./src
+# Copy the rest of the application source code
+# This includes tsconfig.json and the src directory
+COPY . .
 
 # Build the TypeScript project
 RUN npm run build
