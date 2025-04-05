@@ -1,9 +1,11 @@
-name: Publish to npm and Docker Hub
+name: Build, Test, Publish & Release
 
 on:
   push:
     branches:
-      - main # Or your default branch
+      - main # Trigger on push to main branch
+    tags:
+      - 'v*.*.*' # Trigger on push of version tags (e.g., v0.5.3)
 
 jobs:
   build:
@@ -17,37 +19,51 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Use Node.js 20.x or adjust as needed
+          node-version: '20'
 
       - name: Install dependencies
-        run: npm ci # Use ci for cleaner installs in CI
+        run: npm ci
 
       - name: Build project
         run: npm run build
 
       - name: Get package version
         id: get_version
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+        # Use tag name if available (for release), otherwise use package.json version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Archive build artifacts
+        id: archive_build
+        run: |
+          tar -czf build-artifacts.tar.gz build/ package.json README.md CHANGELOG.md Dockerfile .dockerignore
+          # Include any other files needed for publishing or release assets
+          echo "archive_name=build-artifacts.tar.gz" >> $GITHUB_OUTPUT
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts
-          path: |
-            build/
-            package.json
-            README.md
-            # Include any other files needed for publishing npm or docker
+          name: build-artifacts-archive # Upload the archive
+          path: ${{ steps.archive_build.outputs.archive_name }}
 
   publish-npm:
-    needs: build # Depends on the build job completing successfully
+    needs: build
     runs-on: ubuntu-latest
+    # Only run on tag pushes for actual version releases
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
-      - name: Download build artifacts
+      - name: Download build artifacts archive
         uses: actions/download-artifact@v4
         with:
-          name: build-artifacts
-          path: . # Download to the current directory
+          name: build-artifacts-archive
+          path: .
+
+      - name: Extract build artifacts
+        run: tar -xzf build-artifacts-archive/build-artifacts.tar.gz
 
       - name: Set up Node.js for npm publish
         uses: actions/setup-node@v4
@@ -56,19 +72,25 @@ jobs:
           registry-url: 'https://registry.npmjs.org/'
 
       - name: Publish to npm
+        # Assumes package.json version is correct for the tag
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-docker:
-    needs: build # Depends on the build job completing successfully
+    needs: build
     runs-on: ubuntu-latest
+    # Run on main branch pushes (for latest) and tag pushes (for versioned releases)
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     steps:
-      - name: Download build artifacts
+      - name: Download build artifacts archive
         uses: actions/download-artifact@v4
         with:
-          name: build-artifacts
-          path: . # Download to the current directory
+          name: build-artifacts-archive
+          path: .
+
+      - name: Extract build artifacts
+        run: tar -xzf build-artifacts-archive/build-artifacts.tar.gz
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -86,22 +108,57 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: shtse8/filesystem-mcp # Replace with your Docker Hub username/repo
+          images: shtse8/filesystem-mcp
+          # Use tag name for version tags, otherwise use 'latest' for main branch
           tags: |
-            type=schedule
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}},value=${{ needs.build.outputs.version }} # Use version from build job output
+            type=semver,pattern={{version}},value=${{ needs.build.outputs.version }}
             type=semver,pattern={{major}}.{{minor}},value=${{ needs.build.outputs.version }}
-            type=sha # Add git sha tag
-            latest # Add latest tag
+            type=sha,prefix=,suffix=,event=branch # Sha for main branch
+            type=sha,prefix=,suffix=,event=tag    # Sha for tags
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }} # Latest only for main branch
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: . # Context is now the directory with downloaded artifacts + Dockerfile (if included)
-          push: ${{ github.event_name != 'pull_request' }} # Only push on main branch pushes
+          context: . # Context contains extracted artifacts and Dockerfile
+          push: true # Always push when this job runs
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  create-release:
+    needs: [publish-npm, publish-docker] # Run after both publish jobs succeed
+    runs-on: ubuntu-latest
+    # Only run on tag pushes
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write # Need permission to create releases
+    steps:
+      - name: Checkout repository (needed for CHANGELOG)
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts archive
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts-archive
+          path: .
+
+      # Optional: Extract changelog section for the release body
+      # This requires a script or another action. For simplicity, we'll link to the file.
+      # - name: Extract Changelog Entry
+      #   id: changelog
+      #   run: echo "body=$(some_script_to_extract_changelog_for ${{ github.ref_name }})" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            See [CHANGELOG.md](CHANGELOG.md) for details.
+            ${{ steps.changelog.outputs.body || '' }}
+          # files: build-artifacts-archive/build-artifacts.tar.gz # Attach the archive
+          # Alternatively, extract and attach specific files if needed
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

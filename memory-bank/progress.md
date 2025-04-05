@@ -1,5 +1,5 @@
-<!-- Version: 1.6 | Last Updated: 2025-05-04 | Updated By: Cline -->
-# Progress: Filesystem MCP Server (v0.5.3 - Changelog & Release Prep)
+<!-- Version: 1.7 | Last Updated: 2025-05-04 | Updated By: Cline -->
+# Progress: Filesystem MCP Server (v0.5.3 - Auto GitHub Release)
 
 ## 1. What Works
 
@@ -22,23 +22,26 @@
   - Build process debugged and corrected.
 - **CI/CD (GitHub Actions):**
   - Workflow successfully automates publishing to npm and Docker Hub.
-  - **Parallel Publishing:** Workflow refactored to use separate, parallel jobs for npm and Docker publishing, dependent on a shared build job using artifacts.
+  - **Parallel Publishing:** Workflow refactored to use separate, parallel jobs for npm and Docker publishing.
+  - **Automatic GitHub Releases:** Workflow updated to automatically create a GitHub Release when a version tag (`v*.*.*`) is pushed.
 - **Versioning:** Package version updated to `0.5.3`.
 - **`.clinerules` Created:** Established `memory-bank/.clinerules` to capture project-specific patterns and user preferences.
 - **Changelog:** Created `CHANGELOG.md` documenting changes for v0.5.3.
 
 ## 2. What's Left to Build / Test
 
-- **Commit & Push Release:** Commit `package.json`, `CHANGELOG.md`, Memory Bank updates. Create and push `v0.5.3` tag.
-- **Monitor CI/CD:** Verify the parallel jobs run correctly and publish v0.5.3.
+- **Commit & Push Workflow Changes:** Commit the updated `.github/workflows/publish.yml` and Memory Bank files. Push to `origin main`.
+- **Monitor CI/CD (Future):** Verify the automatic GitHub Release creation works correctly on the *next* tag push (e.g., v0.5.4).
+- **Manually Create v0.5.3 Release (Optional):** If desired, manually create the GitHub Release for the existing `v0.5.3` tag.
 - **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
 - **Code Cleanup:** (Post-release task) Remove any remaining debugging logs.
 - **Comprehensive Testing:** (Post-release task) Test dynamic root logic, launcher integration, edge cases, etc.
 
 ## 3. Current Status
 
-- **Release Prep Complete:** Version bumped to `0.5.3`, `CHANGELOG.md` created, all related changes documented in Memory Bank.
-- **Ready to Commit & Push:** Waiting to commit changes and push the tag to trigger the release.
+- **Release Prep Complete:** Version bumped to `0.5.3`, `CHANGELOG.md` created.
+- **CI/CD Enhanced:** Workflow updated for parallel publishing and automatic GitHub Release creation (for future tags).
+- **Ready to Commit Workflow Changes:** Waiting to commit the updated `.github/workflows/publish.yml` and Memory Bank files.
 
 ## 4. Known Issues / Areas for Improvement
 

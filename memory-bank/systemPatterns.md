@@ -1,4 +1,4 @@
-<!-- Version: 1.5 | Last Updated: 2025-05-04 | Updated By: Cline -->
+<!-- Version: 1.6 | Last Updated: 2025-05-04 | Updated By: Cline -->
 # System Patterns: Filesystem MCP Server
 
 ## 1. Architecture Overview
@@ -69,13 +69,15 @@ graph LR
 - **TypeScript:** Provides static typing for better code maintainability, early
   error detection, and improved developer experience. Uses ES module syntax
   (`import`/`export`).
-- **CI/CD (GitHub Actions - Parallel Publishing):**
-  - The `.github/workflows/publish.yml` workflow automates publishing to npm and Docker Hub on pushes to the `main` branch.
-  - It uses a multi-job structure:
-    - A `build` job checks out code, installs dependencies, runs the build, and uploads necessary files (`build/`, `package.json`, etc.) as an artifact. It also outputs the package version.
-    - A `publish-npm` job depends on `build`, downloads the artifact, and publishes to npm.
-    - A `publish-docker` job depends on `build`, downloads the artifact, sets up Docker Buildx, logs in to Docker Hub, extracts metadata (using the version from the `build` job output), and builds/pushes the Docker image.
-  - This structure allows npm and Docker publishing to run in parallel after the build completes, speeding up the overall process.
+- **CI/CD (GitHub Actions - Parallel Publishing & Auto Release):**
+  - The `.github/workflows/publish.yml` workflow automates building, testing (implicitly via build), publishing, and release creation.
+  - **Triggers:** Runs on pushes to the `main` branch and pushes of tags matching `v*.*.*`.
+  - **Multi-Job Structure:**
+    - A `build` job checks out code, installs dependencies, runs the build, archives necessary files as an artifact, and outputs the package version.
+    - A `publish-npm` job depends on `build`, downloads the artifact, and publishes to npm (only runs on tag pushes).
+    - A `publish-docker` job depends on `build`, downloads the artifact, sets up Docker Buildx, logs in to Docker Hub, extracts metadata, and builds/pushes the Docker image (runs on both `main` and tag pushes, tagging appropriately).
+    - A `create-release` job depends on `publish-npm` and `publish-docker`, downloads the artifact, and uses `softprops/action-gh-release` to create a GitHub Release associated with the pushed tag (only runs on tag pushes). It links to `CHANGELOG.md` for release notes.
+  - This structure allows npm and Docker publishing to run in parallel, and automatically creates a GitHub Release upon successful publishing triggered by a version tag push.
 
 ## 3. Component Relationships
 
@@ -96,4 +98,4 @@ graph LR
 - **`zod` Library:** Used for defining and validating tool input schemas.
 - **`diff` Library:** Used by `edit_file` to generate diff output.
 - **`detect-indent` Library:** Used by `edit_file` for indentation handling.
-- **`.github/workflows/publish.yml`:** Defines the automated build and parallel publishing process using GitHub Actions.
+- **`.github/workflows/publish.yml`:** Defines the automated build, parallel publishing, and release creation process using GitHub Actions.
