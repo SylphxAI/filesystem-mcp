@@ -1,9 +1,9 @@
-<!-- Version: 2.6 | Last Updated: 2025-05-04 | Updated By: Cline -->
-# Active Context: Filesystem MCP Server (v0.5.6 Release Prep)
+<!-- Version: 2.7 | Last Updated: 2025-05-04 | Updated By: Cline -->
+# Active Context: Filesystem MCP Server (v0.5.6 Release Prep & Docs)
 
 ## 1. Current Work Focus
 
-Debugging CI/CD Docker build failure by adding diagnostic steps and preparing for the v0.5.6 release.
+Finalizing documentation updates (LICENSE, README badge) before committing changes and potentially re-running the v0.5.6 release process.
 
 ## 2. Recent Changes/Decisions
 
@@ -39,15 +39,16 @@ Debugging CI/CD Docker build failure by adding diagnostic steps and preparing fo
 - **Incremented Version to 0.5.6:** Updated `package.json` to version `0.5.6` due to v0.5.5 being previously published to npm.
 - **Updated Changelog for v0.5.6:** Added entry for v0.5.6 in `CHANGELOG.md`.
 - **Added CI/CD Diagnostics:** Added `ls -la` steps in the `publish-docker` job in `.github/workflows/publish.yml` to help diagnose artifact download and extraction issues.
+- **Added `LICENSE` File:** Created `LICENSE` file with MIT license text.
+- **Updated `README.md`:** Added Glama.ai badge.
 
 ## 3. Next Steps / Considerations
 
-- **Update `progress.md`:** Reflect the addition of CI/CD diagnostic steps.
-- **Update `systemPatterns.md`:** Reflect the addition of CI/CD diagnostic steps.
-- **Commit Changes:** Commit the updated `Dockerfile`, `publish.yml`, and Memory Bank updates.
+- **Update `progress.md`:** Reflect the addition of `LICENSE` and README badge.
+- **Commit Changes:** Commit the new `LICENSE` file, updated `README.md`, and Memory Bank updates.
 - **Push Commit:** Push the changes to `origin main`.
-- **Re-run Release Process:** Delete remote/local `v0.5.6` tag, re-tag the latest commit, and push the tag again to trigger the fixed workflow.
-- **Monitor CI/CD:** Analyze the output of the new `ls -la` steps in the `publish-docker` job to understand the file structure after download/extraction and identify the root cause of the "package-lock.json not found" error.
+- **(Optional) Re-run Release Process:** If needed, delete remote/local `v0.5.6` tag, re-tag the latest commit, and push the tag again to trigger the fixed workflow.
+- **Monitor CI/CD:** Analyze the output of the diagnostic `ls -la` steps in the `publish-docker` job if the release is re-run.
 - **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
 
 ## 4. Active Decisions
@@ -65,3 +66,5 @@ Debugging CI/CD Docker build failure by adding diagnostic steps and preparing fo
 - **Dockerfile:** Refactored to copy pre-built code and install production dependencies only.
 - **Release Version:** Set to `0.5.6`.
 - **Changelog:** Updated for `v0.5.6`.
+- **License:** Added MIT `LICENSE` file.
+- **README Badge:** Added Glama.ai badge.

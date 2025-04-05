@@ -4,6 +4,9 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/shtse8/filesystem-mcp.svg)](https://hub.docker.com/r/shtse8/filesystem-mcp)
 
 <!-- Add other badges like License, Build Status if applicable -->
+<a href="https://glama.ai/mcp/servers/@shtse8/filesystem-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@shtse8/filesystem-mcp/badge" />
+</a>
 
 **Empower your AI agents (like Cline/Claude) with secure, efficient, and
 token-saving access to your project files.**

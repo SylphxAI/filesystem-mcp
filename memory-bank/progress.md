@@ -1,5 +1,5 @@
-<!-- Version: 2.6 | Last Updated: 2025-05-04 | Updated By: Cline -->
-# Progress: Filesystem MCP Server (v0.5.6 Release Prep)
+<!-- Version: 2.7 | Last Updated: 2025-05-04 | Updated By: Cline -->
+# Progress: Filesystem MCP Server (v0.5.6 Release Prep & Docs)
 
 ## 1. What Works
 
@@ -14,7 +14,7 @@
 - **Core Tool Functionality (v0.2.0+):** Most tools (`create_directories`, `write_content`, `stat_items`, `read_content`, `move_items`, `copy_items`, `search_files`, `replace_content`, `delete_items`, `list_files` simple case) have passed basic functional tests.
 - **Reliable Batch Error Handling:** All tools supporting multiple items/operations (e.g., `delete_items`, `edit_file`, `write_content`) now consistently attempt all items and return detailed individual results (success/failure/skipped + error message).
 - **`edit_file` Tool (Basic Implementation):** Added new tool with support for insertion, text search/replace/delete, indentation preservation, and diff output. Zod schema defined and integrated. Tested with multiple files and mixed outcomes (success/skipped/fail). Return structure fixed for MCP compliance.
-- **Documentation (`README.md`):** Significantly improved with clear usage instructions, detailed feature descriptions, Docker instructions, and contribution guidelines.
+- **Documentation (`README.md`):** Significantly improved with clear usage instructions, detailed feature descriptions, Docker instructions, contribution guidelines, and **Glama.ai badge added**.
 - **Tool Descriptions:** Descriptions for `write_content` and `edit_file` now include notes recommending edit tools for modifications.
 - **Dockerization:**
   - `Dockerfile` created using multi-stage builds, copies pre-built code, installs production dependencies only.
@@ -28,12 +28,13 @@
 - **Versioning:** Package version updated to `0.5.6`.
 - **`.clinerules` Created:** Established `memory-bank/.clinerules` to capture project-specific patterns and user preferences.
 - **Changelog:** Updated `CHANGELOG.md` with entry for v0.5.6.
+- **License:** Added MIT `LICENSE` file.
 
 ## 2. What's Left to Build / Test
 
-- **Commit & Push CI/CD Diagnostics:** Commit the updated `Dockerfile`, `publish.yml`, and Memory Bank files. Push to `origin main`.
-- **Re-run Release Process:** Delete remote/local `v0.5.6` tag, re-tag the latest commit, and push the tag again to trigger the fixed workflow.
-- **Monitor CI/CD:** Analyze the output of the new `ls -la` steps in the `publish-docker` job to understand the file structure and confirm the fix for the "package-lock.json not found" error. Verify all jobs succeed.
+- **Commit & Push Changes:** Commit the new `LICENSE` file, updated `README.md`, `Dockerfile`, `publish.yml`, and Memory Bank files. Push to `origin main`.
+- **(Optional) Re-run Release Process:** If needed, delete remote/local `v0.5.6` tag, re-tag the latest commit, and push the tag again to trigger the fixed workflow.
+- **Monitor CI/CD:** Analyze the output of the new `ls -la` steps in the `publish-docker` job if the release is re-run. Verify all jobs succeed.
 - **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
 - **Code Cleanup:** (Post-release task) Remove any remaining debugging logs (including the added `ls -la` steps if successful).
 - **Comprehensive Testing:** (Post-release task) Test dynamic root logic, launcher integration, edge cases, etc.
@@ -43,7 +44,8 @@
 - **Release Prep Complete:** Version bumped to `0.5.6`, `CHANGELOG.md` updated.
 - **CI/CD Simplified & Fixed:** Refactored to a single workflow (`publish.yml`) with conditional logic, corrected artifact handling, and added diagnostic steps.
 - **Dockerfile Refactored:** Updated to use pre-built code.
-- **Ready to Commit Diagnostics:** Waiting to commit the updated `Dockerfile`, `publish.yml`, and Memory Bank files.
+- **Documentation Updated:** Added `LICENSE` file and Glama.ai badge to `README.md`.
+- **Ready to Commit:** Waiting to commit all recent changes.
 
 ## 4. Known Issues / Areas for Improvement
 
