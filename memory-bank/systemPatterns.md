@@ -1,4 +1,4 @@
-<!-- Version: 1.1 | Last Updated: 2025-05-04 | Updated By: Cline -->
+<!-- Version: 1.2 | Last Updated: 2025-05-04 | Updated By: Cline -->
 # System Patterns: Filesystem MCP Server
 
 ## 1. Architecture Overview
@@ -38,7 +38,7 @@ graph LR
   - It rejects absolute paths provided by the agent.
   - **Enhanced Error Reporting:** Throws `McpError` with detailed messages on
     failure, including the original path, resolved path (if applicable), and
-    project root to aid debugging.
+    project root to aid debugging. Includes console logging for diagnostics.
 - **Zod for Schemas & Validation:** Uses `zod` library to define input schemas
   for tools and perform robust validation within each handler. JSON schemas for
   MCP listing are generated from Zod schemas.
@@ -55,7 +55,8 @@ graph LR
 - **Error Handling:**
   - Uses `try...catch` blocks within each tool handler.
   - Catches specific Node.js filesystem errors (like `ENOENT`, `EPERM`,
-    `EACCES`) and maps them to appropriate MCP error codes (`InvalidRequest`).
+    `EACCES`) and maps them to appropriate MCP error codes (`InvalidRequest`) or returns detailed error messages in the result object.
+  - **Enhanced `ENOENT` Reporting:** Specifically in `readContent.ts`, `ENOENT` errors now include the resolved path, relative path, and project root in the returned error message for better context.
   - Uses custom `McpError` objects for standardized error reporting back to the
     agent (including enhanced details from `resolvePath`).
   - Logs unexpected errors to the server's console (`stderr`) for debugging.
@@ -77,7 +78,7 @@ graph LR
   via stdio.
 - **Tool Handler Functions (`handleListFiles`, `handleEditFile`, etc.):**
   Contain the specific logic for each tool, including Zod argument validation,
-  path resolution, filesystem interaction, and result formatting.
+  path resolution, filesystem interaction, and result formatting (including enhanced error details).
 - **`resolvePath` Helper:** Centralized security function for path validation with enhanced error reporting.
 - **`formatStats` Helper:** Utility to create a consistent stats object
   structure.

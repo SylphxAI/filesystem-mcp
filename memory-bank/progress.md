@@ -1,4 +1,4 @@
-<!-- Version: 1.1 | Last Updated: 2025-05-04 | Updated By: Cline -->
+<!-- Version: 1.2 | Last Updated: 2025-05-04 | Updated By: Cline -->
 # Progress: Filesystem MCP Server (v0.5.2 - Enhanced Path Error Reporting)
 
 ## 1. What Works
@@ -6,9 +6,11 @@
 - **Server Initialization:** The MCP server starts, connects via stdio, and identifies itself correctly.
 - **Tool Listing:** Responds correctly to `list_tools` requests.
 - **Path Security:** The `resolvePath` function prevents path traversal outside the determined `PROJECT_ROOT` and rejects absolute paths.
-- **Enhanced Path Error Reporting:** Error messages from `resolvePath` now include user path, resolved path, and project root for better debugging context.
+- **Enhanced Path Error Reporting:**
+    - Error messages from `resolvePath` now include user path, resolved path, and project root for better debugging context.
+    - `readContent` handler now returns detailed error messages for `ENOENT` (File not found) errors, including resolved path, relative path, and project root.
 - **Project Root Determination:** Logic updated to use the server's current working directory (`process.cwd()`) as the `PROJECT_ROOT`, enabling operation relative to the agent's context _if launched correctly_.
-- **Basic Error Handling:** Handles common errors like `ENOENT`.
+- **Basic Error Handling:** Handles common errors like `ENOENT` (with enhanced reporting).
 - **Core Tool Functionality (v0.2.0+):** Most tools (`create_directories`, `write_content`, `stat_items`, `read_content`, `move_items`, `copy_items`, `search_files`, `replace_content`, `delete_items`, `list_files` simple case) have passed basic functional tests.
 - **Reliable Batch Error Handling:** All tools supporting multiple items/operations (e.g., `delete_items`, `edit_file`, `write_content`) now consistently attempt all items and return detailed individual results (success/failure/skipped + error message).
 - **`edit_file` Tool (Basic Implementation):** Added new tool with support for insertion, text search/replace/delete, indentation preservation, and diff output. Zod schema defined and integrated. Tested with multiple files and mixed outcomes (success/skipped/fail). Return structure fixed for MCP compliance.
@@ -26,6 +28,8 @@
 
 ## 2. What's Left to Build / Test
 
+- **Rebuild & Restart Server:** Need to rebuild (`npm run build`) and restart the server.
+- **Test Error Reporting:** Verify enhanced error messages in `read_content` and `resolvePath` are returned correctly.
 - **Test Dynamic Root Logic:** Verify the server operates correctly when launched with different `cwd` settings representing different projects.
 - **Launcher Integration Testing:** Confirm the system launching the server sets the `cwd` appropriately.
 - **Versioning:** Update `package.json` to `0.5.2` and potentially create a git tag.
@@ -38,10 +42,10 @@
 ## 3. Current Status
 
 - **Project Root Logic Updated:** Server now uses `process.cwd()` for the project root.
-- **Core Functionality Implemented:** All defined tools are implemented and passed basic tests. Batch error handling confirmed. Path error reporting enhanced.
+- **Core Functionality Implemented:** All defined tools are implemented and passed basic tests. Batch error handling confirmed. Path error reporting enhanced in `pathUtils` and `readContent`.
 - **Deployment Automated:** Publishing to npm and Docker Hub is handled by GitHub Actions.
 - **Documentation Updated (Internal & Public):** Memory Bank files (`systemPatterns`, `productContext`, `techContext`, `activeContext`, `progress`, `.clinerules`) updated. `README.md` updated.
-- **Primary Blocker:** Need to test the dynamic root behavior thoroughly and ensure the launcher integration works as expected before releasing `0.5.2`.
+- **Primary Blocker:** Need to rebuild, restart, and test the enhanced error reporting. Then, test the dynamic root behavior thoroughly and ensure the launcher integration works as expected before releasing `0.5.2`.
 
 ## 4. Known Issues / Areas for Improvement
 

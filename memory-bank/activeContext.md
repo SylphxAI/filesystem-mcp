@@ -1,4 +1,4 @@
-<!-- Version: 1.1 | Last Updated: 2025-05-04 | Updated By: Cline -->
+<!-- Version: 1.2 | Last Updated: 2025-05-04 | Updated By: Cline -->
 # Active Context: Filesystem MCP Server (v0.5.2 - Enhanced Path Error Reporting)
 
 ## 1. Current Work Focus
@@ -21,15 +21,18 @@ The focus is on improving the clarity of error messages related to path resoluti
 - **Tested `edit_file`:** Successfully tested with mixed outcomes.
 - **Updated `README.md`:** Added `edit_file` details.
 - **Incremented Version:** Updated `package.json` to version `0.5.1`.
-- **Enhanced Path Error Reporting:** Modified `src/utils/pathUtils.ts` to include the user-provided path, resolved path, and project root in error messages for absolute path and path traversal issues, improving debugging context (especially for devcontainer scenarios).
-- **Created `.clinerules`:** Created `memory-bank/.clinerules` to document the user preference for prioritizing edit tools (`apply_diff`, `insert_content`, `search_and_replace`) over `write_to_file` for modifying existing files to improve performance.
+- **Enhanced Path Error Reporting (`pathUtils.ts`):** Modified `src/utils/pathUtils.ts` to include the user-provided path, resolved path, and project root in error messages for absolute path and path traversal issues, improving debugging context. Added console logging for received path and project root.
+- **Created `.clinerules`:** Created `memory-bank/.clinerules` to document the user preference for prioritizing edit tools over `write_to_file`.
+- **Enhanced `readContent` Error Reporting:** Modified `src/handlers/readContent.ts` to include resolved path, relative path, and project root in the error message when an `ENOENT` (File not found) error occurs after successful path resolution. Corrected TypeScript errors related to variable scope and import during implementation.
 
 ## 3. Next Steps / Considerations
 
+- **Rebuild & Restart Server:** Need to rebuild the server (`npm run build`) and restart it to apply the latest changes.
+- **Test Error Reporting:** Trigger `read_content` with a non-existent file within the project to verify the enhanced `ENOENT` error message is returned correctly. Trigger path traversal or absolute path errors to verify `pathUtils.ts` enhanced messages.
 - **Test New Project Root Logic:** Thoroughly test the server's behavior with different `cwd` settings.
 - **Verify Launcher Integration:** Confirm the launching system sets `cwd` correctly.
-- **Update `progress.md`:** Reflect the enhanced error reporting and `.clinerules` creation.
-- **Update `systemPatterns.md`:** Update `resolvePath` description.
+- **Update `progress.md`:** Reflect the enhanced `readContent` error reporting.
+- **Update `systemPatterns.md`:** Update error handling description.
 - **Versioning:** Increment `package.json` to `0.5.2` and potentially tag the release.
 - **CI/CD:** Ensure pipeline functions correctly.
 - **Implement `edit_file` Regex Support:** Add logic for `use_regex: true`.
@@ -42,5 +45,5 @@ The focus is on improving the clarity of error messages related to path resoluti
 - Project Root Source: Uses `process.cwd()`.
 - `edit_file` Implemented (Basic).
 - Batch Error Handling: Confirmed "continue on error".
-- **Path Error Messages:** Enhanced with more context.
+- **Path Error Messages:** Enhanced with more context in `pathUtils.ts` and `readContent.ts` for `ENOENT`.
 - **Tool Preference:** Documented preference for edit tools in `.clinerules`.

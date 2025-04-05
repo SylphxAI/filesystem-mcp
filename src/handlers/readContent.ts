@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import { z } from 'zod';
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { resolvePath } from '../utils/pathUtils.js';
+import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
 
 /**
  * Handles the 'read_content' MCP tool request.
@@ -41,6 +41,7 @@ const handleReadContentFunc = async (args: unknown) => {
 
   const results = await Promise.allSettled(relativePaths.map(async (relativePath): Promise<ReadResult> => {
     const pathOutput = relativePath.replace(/\\/g, '/'); // Ensure consistent path separators early
+    let targetPath: string = ''; // Declare outside try block for catch scope
     try {
       const targetPath = resolvePath(relativePath);
       const stats = await fs.stat(targetPath);
@@ -51,7 +52,8 @@ const handleReadContentFunc = async (args: unknown) => {
       return { path: pathOutput, content: content };
     } catch (error: any) {
       if (error.code === 'ENOENT') {
-          return { path: pathOutput, error: `File not found` };
+          // Include more context for ENOENT errors
+          return { path: pathOutput, error: `File not found at resolved path '${targetPath}' (from relative path '${relativePath}', project root: '${PROJECT_ROOT}')` };
       }
       if (error instanceof McpError) {
           return { path: pathOutput, error: error.message };
