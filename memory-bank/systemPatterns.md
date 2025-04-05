@@ -1,4 +1,4 @@
-<!-- Version: 1.2 | Last Updated: 2025-05-04 | Updated By: Cline -->
+<!-- Version: 1.3 | Last Updated: 2025-05-04 | Updated By: Cline -->
 # System Patterns: Filesystem MCP Server
 
 ## 1. Architecture Overview
@@ -45,6 +45,7 @@ graph LR
 - **Tool Definition Aggregation:** Tool definitions (name, description, Zod
   schema, handler function) are defined in their respective handler files and
   aggregated in `src/handlers/index.ts` for registration in `src/index.ts`.
+  - **Description Updates:** Descriptions (e.g., for `write_content`) are updated based on user feedback and best practices (like recommending edit tools over full writes for modifications).
 - **`edit_file` Logic:**
   - Processes multiple changes per file, applying them sequentially from
     bottom-to-top to minimize line number conflicts.

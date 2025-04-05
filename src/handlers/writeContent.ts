@@ -105,7 +105,7 @@ const handleWriteContentFunc = async (args: unknown) => {
 // Export the complete tool definition
 export const writeContentToolDefinition = {
     name: "write_content",
-    description: "Write or append content to multiple specified files (creating directories if needed).",
+    description: "Write or append content to multiple specified files (creating directories if needed). NOTE: For modifying existing files, prefer using 'edit_file' or 'replace_content' for better performance, especially with large files. Use 'write_content' primarily for creating new files or complete overwrites.",
     schema: WriteContentArgsSchema,
     handler: handleWriteContentFunc,
 };
