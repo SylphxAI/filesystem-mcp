@@ -1,4 +1,4 @@
-<!-- Version: 1.3 | Last Updated: 2025-05-04 | Updated By: Cline -->
+<!-- Version: 1.4 | Last Updated: 2025-05-04 | Updated By: Cline -->
 # Progress: Filesystem MCP Server (v0.5.2 - Enhanced Error Reporting & Descriptions)
 
 ## 1. What Works
@@ -15,7 +15,7 @@
 - **Reliable Batch Error Handling:** All tools supporting multiple items/operations (e.g., `delete_items`, `edit_file`, `write_content`) now consistently attempt all items and return detailed individual results (success/failure/skipped + error message).
 - **`edit_file` Tool (Basic Implementation):** Added new tool with support for insertion, text search/replace/delete, indentation preservation, and diff output. Zod schema defined and integrated. Tested with multiple files and mixed outcomes (success/skipped/fail). Return structure fixed for MCP compliance.
 - **Documentation (`README.md`):** Significantly improved with clear usage instructions, detailed feature descriptions, Docker instructions, and contribution guidelines.
-- **Tool Descriptions:** The description for the `write_content` tool now includes a note recommending edit tools for modifications.
+- **Tool Descriptions:** Descriptions for `write_content` and `edit_file` now include notes recommending edit tools for modifications.
 - **Dockerization:**
   - `Dockerfile` created using multi-stage builds.
   - `.dockerignore` configured correctly.
@@ -28,7 +28,7 @@
 ## 2. What's Left to Build / Test
 
 - **Rebuild & Restart Server:** Need to rebuild (`npm run build`) and restart the server.
-- **Test Error Reporting:** Verify enhanced error messages are returned correctly.
+- **Test Error Reporting & Descriptions:** Verify enhanced error messages and updated tool descriptions.
 - **Test Dynamic Root Logic:** Verify the server operates correctly when launched with different `cwd` settings.
 - **Launcher Integration Testing:** Confirm the system launching the server sets the `cwd` appropriately.
 - **Versioning:** Update `package.json` to `0.5.2` and potentially create a git tag.

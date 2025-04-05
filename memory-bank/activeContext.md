@@ -1,4 +1,4 @@
-<!-- Version: 1.3 | Last Updated: 2025-05-04 | Updated By: Cline -->
+<!-- Version: 1.4 | Last Updated: 2025-05-04 | Updated By: Cline -->
 # Active Context: Filesystem MCP Server (v0.5.2 - Enhanced Error Reporting & Descriptions)
 
 ## 1. Current Work Focus
@@ -24,16 +24,17 @@ The focus is on improving the clarity of error messages, documenting user prefer
 - **Enhanced Path Error Reporting (`pathUtils.ts`):** Modified `src/utils/pathUtils.ts` to include more context in path-related error messages and added console logging.
 - **Created `.clinerules`:** Created `memory-bank/.clinerules` to document the user preference for prioritizing edit tools over `write_to_file`.
 - **Enhanced `readContent` Error Reporting:** Modified `src/handlers/readContent.ts` to include more context in `ENOENT` error messages.
-- **Updated `writeContent` Description:** Modified the description for the `write_content` tool in `src/handlers/writeContent.ts` to explicitly recommend using edit tools (`edit_file`, `replace_content`) for modifying existing files due to performance considerations, reserving `write_content` primarily for new files or full overwrites.
+- **Updated `writeContent` Description:** Modified the description for the `write_content` tool in `src/handlers/writeContent.ts` to explicitly recommend using edit tools.
+- **Updated `editFile` Description:** Modified the description for the `edit_file` tool in `src/handlers/editFile.ts` to reinforce that it is the recommended tool for modifications, especially complex ones.
 
 ## 3. Next Steps / Considerations
 
 - **Rebuild & Restart Server:** Need to rebuild (`npm run build`) and restart the server.
-- **Test Error Reporting:** Verify enhanced error messages are returned correctly.
+- **Test Error Reporting & Descriptions:** Verify enhanced error messages and updated tool descriptions.
 - **Test New Project Root Logic:** Thoroughly test behavior with different `cwd` settings.
 - **Verify Launcher Integration:** Confirm the launching system sets `cwd` correctly.
-- **Update `progress.md`:** Reflect the `writeContent` description update.
-- **Update `systemPatterns.md`:** Reflect the `writeContent` description update.
+- **Update `progress.md`:** Reflect the `editFile` description update.
+- **Update `systemPatterns.md`:** Reflect the `editFile` description update.
 - **Versioning:** Increment `package.json` to `0.5.2` and potentially tag the release.
 - **CI/CD:** Ensure pipeline functions correctly.
 - **Implement `edit_file` Regex Support:** Add logic for `use_regex: true`.
@@ -48,4 +49,4 @@ The focus is on improving the clarity of error messages, documenting user prefer
 - Batch Error Handling: Confirmed "continue on error".
 - **Path Error Messages:** Enhanced with more context.
 - **Tool Preference:** Documented preference for edit tools in `.clinerules`.
-- **`writeContent` Description:** Updated to recommend edit tools for modifications.
+- **Tool Descriptions:** Updated `writeContent` and `editFile` descriptions to guide usage.

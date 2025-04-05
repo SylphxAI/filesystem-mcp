@@ -298,7 +298,7 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
 
 export const editFileDefinition: ToolDefinition = {
     name: 'edit_file',
-    description: 'Make selective edits to one or more files using advanced pattern matching and formatting options. Supports insertion, deletion, and replacement with indentation preservation and diff output.',
+    description: 'Make selective edits to one or more files using advanced pattern matching and formatting options. Supports insertion, deletion, and replacement with indentation preservation and diff output. Recommended for modifying existing files, especially for complex changes or when precise control is needed.',
     schema: EditFileArgsSchema,
     handler: handleEditFile,
 };
