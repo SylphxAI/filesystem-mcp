@@ -10,8 +10,8 @@ on:
 
 jobs:
   build-check:
-    # Use the reusable build workflow for checks
+    # Use the reusable build workflow for checks AND artifact generation
     uses: ./.github/workflows/build-reusable.yml
     with:
       ref: ${{ github.ref }} # Pass the ref that triggered the workflow
-      upload_artifact: false # No need to upload artifacts for CI checks
+      upload_artifact: true # Upload artifacts for potential release workflow

@@ -1,0 +1,74 @@
+name: Reusable Build Workflow
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'The git ref (branch, tag, or sha) to checkout'
+        required: true
+        type: string
+      upload_artifact:
+        description: 'Whether to upload build artifacts'
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      version:
+        description: 'The determined package version'
+        value: ${{ jobs.build.outputs.version }}
+      artifact_name:
+        description: 'The name of the uploaded artifact (if uploaded)'
+        value: ${{ jobs.build.outputs.artifact_name }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      artifact_name: build-artifacts-archive # Consistent name
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Get package version
+        id: get_version
+        # Use tag name if available (passed ref), otherwise use package.json version
+        # Note: This assumes tag name format is 'vX.Y.Z'
+        run: |
+          VERSION=""
+          if [[ "${{ github.ref_type }}" == "tag" && "${{ inputs.ref }}" == refs/tags/v* ]]; then
+            # Extract version from tag ref (e.g., refs/tags/v1.2.3 -> v1.2.3)
+            VERSION=$(echo "${{ inputs.ref }}" | sed 's#refs/tags/##')
+          else
+            # Fallback to package.json version
+            VERSION=$(node -p "require('./package.json').version")
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Archive build artifacts (if requested)
+        if: ${{ inputs.upload_artifact }}
+        id: archive_build
+        run: |
+          tar -czf build-artifacts.tar.gz build/ package.json package-lock.json README.md CHANGELOG.md Dockerfile .dockerignore
+          echo "archive_name=build-artifacts.tar.gz" >> $GITHUB_OUTPUT
+
+      - name: Upload build artifacts (if requested)
+        if: ${{ inputs.upload_artifact }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-archive # Use consistent name
+          path: ${{ steps.archive_build.outputs.archive_name }}

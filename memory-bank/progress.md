@@ -1,4 +1,4 @@
-<!-- Version: 2.2 | Last Updated: 2025-05-04 | Updated By: Cline -->
+<!-- Version: 2.3 | Last Updated: 2025-05-04 | Updated By: Cline -->
 # Progress: Filesystem MCP Server (v0.5.5 Release)
 
 ## 1. What Works
@@ -21,18 +21,21 @@
   - `.dockerignore` configured correctly.
   - Build process debugged and corrected.
 - **CI/CD (GitHub Actions):**
-  - **Separated Workflows:** CI build checks (`ci.yml` on main/PR) and Release workflow (`publish.yml` on tag push) are now separate.
-  - **Release Workflow:** Automates parallel publishing to npm/Docker Hub and creates GitHub Releases only on version tag pushes.
-  - **Artifact Handling Fixed:** Corrected artifact creation and extraction in `publish.yml`.
+  - **Refactored with Reusable Workflow:** Separated into `ci.yml` (main/PR checks) and `publish.yml` (tag releases), both using `build-reusable.yml` to avoid duplicate build logic.
+  - **Release Workflow (`publish.yml`):** Triggers on `workflow_run` after successful `ci.yml` completion *if* triggered by a tag. Handles parallel publishing (npm/Docker) and automatic GitHub Release creation. Artifact handling fixed.
 - **Versioning:** Package version updated to `0.5.5`.
 - **`.clinerules` Created:** Established `memory-bank/.clinerules` to capture project-specific patterns and user preferences.
 - **Changelog:** Updated `CHANGELOG.md` with entry for v0.5.5.
 
 ## 2. What's Left to Build / Test
 
-- **Commit & Push Workflow Separation:** Commit the new `ci.yml`, updated `publish.yml`, and Memory Bank files. Push to `origin main`.
-- **Create & Push v0.5.5 Tag:** Create and push the `v0.5.5` tag to trigger the release workflow.
-- **Monitor CI/CD:** Verify the `v0.5.5` tag push triggers the `Release` workflow correctly and that pushes to `main` only trigger the `CI` workflow.
+- **Commit & Push Workflow Refactor:** Commit the new/updated workflow files (`ci.yml`, `publish.yml`, `build-reusable.yml`) and Memory Bank files. Push to `origin main`.
+- **Create & Push v0.5.5 Tag:** Create and push the `v0.5.5` tag.
+- **Monitor CI/CD:**
+    - Verify the push to `main` triggers only `ci.yml`.
+    - Verify the push of `v0.5.5` tag triggers `ci.yml` first.
+    - Verify the successful completion of `ci.yml` (triggered by the tag) then triggers `publish.yml`.
+    - Verify `publish.yml` successfully downloads artifacts, publishes, and creates the release.
 - **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
 - **Code Cleanup:** (Post-release task) Remove any remaining debugging logs.
 - **Comprehensive Testing:** (Post-release task) Test dynamic root logic, launcher integration, edge cases, etc.
@@ -40,8 +43,8 @@
 ## 3. Current Status
 
 - **Release Prep Complete:** Version bumped to `0.5.5`, `CHANGELOG.md` updated.
-- **CI/CD Refactored:** Workflows separated for CI checks and tag-based releases. Artifact handling fixed.
-- **Ready to Commit Workflow Separation:** Waiting to commit the new/updated workflow files and Memory Bank files.
+- **CI/CD Refactored:** Workflows separated and using reusable build logic triggered by `workflow_run`. Artifact handling fixed.
+- **Ready to Commit Workflow Refactor:** Waiting to commit the new/updated workflow files and Memory Bank files.
 
 ## 4. Known Issues / Areas for Improvement
 

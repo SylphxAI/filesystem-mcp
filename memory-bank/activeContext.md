@@ -1,9 +1,9 @@
-<!-- Version: 2.2 | Last Updated: 2025-05-04 | Updated By: Cline -->
+<!-- Version: 2.3 | Last Updated: 2025-05-04 | Updated By: Cline -->
 # Active Context: Filesystem MCP Server (v0.5.5 Release)
 
 ## 1. Current Work Focus
 
-Finalizing the separation of CI and Release workflows and preparing to trigger the v0.5.5 release.
+Refactoring CI/CD using reusable workflows and `workflow_run` trigger, preparing for v0.5.5 release.
 
 ## 2. Recent Changes/Decisions
 
@@ -35,19 +35,24 @@ Finalizing the separation of CI and Release workflows and preparing to trigger t
 - **Incremented Version to 0.5.5:** Updated `package.json` to version `0.5.5`.
 - **Updated Changelog:** Added entry for v0.5.5 in `CHANGELOG.md`.
 - **Fixed CI/CD Artifacts:** Corrected artifact creation and extraction in `.github/workflows/publish.yml`.
-- **Separated CI and Release Workflows:**
-    - Created `.github/workflows/ci.yml` to run build checks on pushes/PRs to `main`.
-    - Modified `.github/workflows/publish.yml` (renamed to `Release`) to trigger *only* on version tag pushes (`v*.*.*`) for building, publishing, and creating GitHub Releases.
+- **Refactored CI/CD with Reusable Workflow:**
+    - Created `.github/workflows/build-reusable.yml` containing the shared build logic (checkout, setup, install, build, optional artifact upload).
+    - Modified `.github/workflows/ci.yml` to call `build-reusable.yml` (without artifact upload) on main/PR pushes for build checks.
+    - Modified `.github/workflows/publish.yml` (renamed to `Release`) to:
+        - Trigger via `workflow_run` after `ci.yml` completes successfully on a tagged commit.
+        - Remove its own build job.
+        - Add a `check-and-prepare` job to verify the trigger was from a tag and get necessary info (tag name, CI run ID).
+        - Update `publish-npm`, `publish-docker`, `create-release` jobs to depend on `check-and-prepare`, download artifacts using the CI run ID (via `dawidd6/action-download-artifact`), and use the extracted tag name/version.
 
 ## 3. Next Steps / Considerations
 
-- **Update `progress.md`:** Reflect the separation of CI/Release workflows.
-- **Update `systemPatterns.md`:** Reflect the separation of CI/Release workflows.
-- **Commit Changes:** Commit the new `ci.yml`, updated `publish.yml`, and Memory Bank updates.
+- **Update `progress.md`:** Reflect the reusable workflow refactoring.
+- **Update `systemPatterns.md`:** Reflect the reusable workflow refactoring.
+- **Commit Changes:** Commit the new/updated workflow files and Memory Bank updates.
 - **Push Commit:** Push the changes to `origin main`.
 - **Create Git Tag:** Create `v0.5.5` tag.
-- **Push Tag:** Push the `v0.5.5` tag to trigger the release workflow.
-- **Monitor CI/CD:** Verify the `v0.5.5` tag push triggers the `Release` workflow correctly and the `CI` workflow is not triggered by the tag push. Verify pushes to `main` only trigger the `CI` workflow.
+- **Push Tag:** Push the `v0.5.5` tag. This will trigger `ci.yml`.
+- **Monitor CI/CD:** Verify `ci.yml` runs and succeeds. Verify `publish.yml` is triggered by `ci.yml` completion and successfully downloads artifacts, publishes, and creates the release.
 - **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
 
 ## 4. Active Decisions
@@ -61,6 +66,6 @@ Finalizing the separation of CI and Release workflows and preparing to trigger t
 - **Path Error Messages:** Enhanced with more context.
 - **Tool Preference:** Documented preference for edit tools in `.clinerules`.
 - **Tool Descriptions:** Updated `writeContent` and `editFile` descriptions.
-- **CI/CD Structure:** Separated into `ci.yml` (for main/PR build checks) and `publish.yml` (for tag-triggered releases with parallel publish and auto-release). Artifact handling fixed.
+- **CI/CD Structure:** Refactored using `workflow_run` and a reusable build workflow (`build-reusable.yml`) to avoid duplicate builds. `ci.yml` handles main/PR checks, `publish.yml` handles tag-triggered releases.
 - **Release Version:** Set to `0.5.5`.
 - **Changelog:** Updated for `v0.5.5`.
