@@ -1,5 +1,5 @@
-<!-- Version: 2.7 | Last Updated: 2025-05-04 | Updated By: Cline -->
-# Progress: Filesystem MCP Server (v0.5.6 Release Prep & Docs)
+<!-- Version: 2.8 | Last Updated: 2025-04-05 | Updated By: Cline -->
+# Progress: Filesystem MCP Server (v0.5.7 Release)
 
 ## 1. What Works
 
@@ -23,29 +23,28 @@
   - **Simplified Single Workflow (`publish.yml`):** Handles both CI checks (build only on main push) and Releases (build with artifacts, parallel publish, auto-release on tag push).
   - **Conditional Artifacts:** Build job uploads artifacts only when triggered by a tag push.
   - **Conditional Publishing/Release:** Publish and release jobs run only when triggered by a tag push.
-  - **Artifact Handling Fixed:** Corrected artifact creation and extraction.
+  - **Artifact Handling Fixed:** Corrected artifact creation (`tar` command now includes `build` directory) and extraction.
   - **Diagnostic Steps Added:** Added `ls -la` steps to `publish-docker` job for debugging artifact issues.
-- **Versioning:** Package version updated to `0.5.6`.
+- **Versioning:** Package version updated to `0.5.7`.
 - **`.clinerules` Created:** Established `memory-bank/.clinerules` to capture project-specific patterns and user preferences.
-- **Changelog:** Updated `CHANGELOG.md` with entry for v0.5.6.
+- **Changelog:** Updated `CHANGELOG.md` with entry for v0.5.7.
 - **License:** Added MIT `LICENSE` file.
 
 ## 2. What's Left to Build / Test
 
-- **Commit & Push Changes:** Commit the new `LICENSE` file, updated `README.md`, `Dockerfile`, `publish.yml`, and Memory Bank files. Push to `origin main`.
-- **(Optional) Re-run Release Process:** If needed, delete remote/local `v0.5.6` tag, re-tag the latest commit, and push the tag again to trigger the fixed workflow.
-- **Monitor CI/CD:** Analyze the output of the new `ls -la` steps in the `publish-docker` job if the release is re-run. Verify all jobs succeed.
+- **Commit Changes:** Commit updated `package.json`, `CHANGELOG.md`, and Memory Bank files.
+- **Tag Release:** Create git tag `v0.5.7`.
+- **Push Commit & Tag:** Push the commit and the new tag to `origin`.
+- **Monitor CI/CD:** Verify the `v0.5.7` release workflow completes successfully, especially the `publish-docker` job.
 - **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
 - **Code Cleanup:** (Post-release task) Remove any remaining debugging logs (including the added `ls -la` steps if successful).
 - **Comprehensive Testing:** (Post-release task) Test dynamic root logic, launcher integration, edge cases, etc.
 
 ## 3. Current Status
 
-- **Release Prep Complete:** Version bumped to `0.5.6`, `CHANGELOG.md` updated.
-- **CI/CD Simplified & Fixed:** Refactored to a single workflow (`publish.yml`) with conditional logic, corrected artifact handling, and added diagnostic steps.
-- **Dockerfile Refactored:** Updated to use pre-built code.
-- **Documentation Updated:** Added `LICENSE` file and Glama.ai badge to `README.md`.
-- **Ready to Commit:** Waiting to commit all recent changes.
+- **Release Prep Complete:** Version bumped to `0.5.7`, `CHANGELOG.md` updated.
+- **CI/CD Artifact Archiving Fixed:** Corrected `tar` command in `publish.yml` to include the `build` directory.
+- **Ready to Commit & Tag:** Waiting to commit version updates and tag `v0.5.7`.
 
 ## 4. Known Issues / Areas for Improvement
 

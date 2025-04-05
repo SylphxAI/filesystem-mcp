@@ -1,9 +1,9 @@
-<!-- Version: 2.7 | Last Updated: 2025-05-04 | Updated By: Cline -->
-# Active Context: Filesystem MCP Server (v0.5.6 Release Prep & Docs)
+<!-- Version: 2.8 | Last Updated: 2025-04-05 | Updated By: Cline -->
+# Active Context: Filesystem MCP Server (v0.5.7 Release)
 
 ## 1. Current Work Focus
 
-Finalizing documentation updates (LICENSE, README badge) before committing changes and potentially re-running the v0.5.6 release process.
+Preparing to commit changes and tag version `0.5.7` to test the CI/CD fix for Docker artifact archiving.
 
 ## 2. Recent Changes/Decisions
 
@@ -41,14 +41,16 @@ Finalizing documentation updates (LICENSE, README badge) before committing chang
 - **Added CI/CD Diagnostics:** Added `ls -la` steps in the `publish-docker` job in `.github/workflows/publish.yml` to help diagnose artifact download and extraction issues.
 - **Added `LICENSE` File:** Created `LICENSE` file with MIT license text.
 - **Updated `README.md`:** Added Glama.ai badge.
+- **Fixed CI Artifact Archiving:** Corrected `tar` command in `.github/workflows/publish.yml` to include the `build` directory itself, not just its contents (5f5c7c4).
+- **Incremented Version to 0.5.7:** Updated `package.json` and `CHANGELOG.md`.
 
 ## 3. Next Steps / Considerations
 
-- **Update `progress.md`:** Reflect the addition of `LICENSE` and README badge.
-- **Commit Changes:** Commit the new `LICENSE` file, updated `README.md`, and Memory Bank updates.
-- **Push Commit:** Push the changes to `origin main`.
-- **(Optional) Re-run Release Process:** If needed, delete remote/local `v0.5.6` tag, re-tag the latest commit, and push the tag again to trigger the fixed workflow.
-- **Monitor CI/CD:** Analyze the output of the diagnostic `ls -la` steps in the `publish-docker` job if the release is re-run.
+- **Update `progress.md`:** Reflect the version bump and CI fix.
+- **Commit Changes:** Commit updated `package.json`, `CHANGELOG.md`, and Memory Bank files.
+- **Tag Release:** Create git tag `v0.5.7`.
+- **Push Commit & Tag:** Push the commit and the new tag to `origin`.
+- **Monitor CI/CD:** Verify the `v0.5.7` release workflow completes successfully, especially the `publish-docker` job.
 - **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
 
 ## 4. Active Decisions
@@ -64,7 +66,7 @@ Finalizing documentation updates (LICENSE, README badge) before committing chang
 - **Tool Descriptions:** Updated `writeContent` and `editFile` descriptions.
 - **CI/CD Structure:** Simplified single workflow (`publish.yml`) handling CI checks and tag-triggered releases. Artifact handling fixed. Diagnostic steps added.
 - **Dockerfile:** Refactored to copy pre-built code and install production dependencies only.
-- **Release Version:** Set to `0.5.6`.
-- **Changelog:** Updated for `v0.5.6`.
+- **Release Version:** Set to `0.5.7`.
+- **Changelog:** Updated for `v0.5.7`.
 - **License:** Added MIT `LICENSE` file.
 - **README Badge:** Added Glama.ai badge.
