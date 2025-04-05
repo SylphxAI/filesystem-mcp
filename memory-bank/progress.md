@@ -1,4 +1,4 @@
-<!-- Version: 2.5 | Last Updated: 2025-05-04 | Updated By: Cline -->
+<!-- Version: 2.6 | Last Updated: 2025-05-04 | Updated By: Cline -->
 # Progress: Filesystem MCP Server (v0.5.6 Release Prep)
 
 ## 1. What Works
@@ -17,32 +17,33 @@
 - **Documentation (`README.md`):** Significantly improved with clear usage instructions, detailed feature descriptions, Docker instructions, and contribution guidelines.
 - **Tool Descriptions:** Descriptions for `write_content` and `edit_file` now include notes recommending edit tools for modifications.
 - **Dockerization:**
-  - `Dockerfile` created using multi-stage builds.
+  - `Dockerfile` created using multi-stage builds, copies pre-built code, installs production dependencies only.
   - `.dockerignore` configured correctly.
-  - Build process debugged and corrected.
 - **CI/CD (GitHub Actions):**
   - **Simplified Single Workflow (`publish.yml`):** Handles both CI checks (build only on main push) and Releases (build with artifacts, parallel publish, auto-release on tag push).
   - **Conditional Artifacts:** Build job uploads artifacts only when triggered by a tag push.
   - **Conditional Publishing/Release:** Publish and release jobs run only when triggered by a tag push.
   - **Artifact Handling Fixed:** Corrected artifact creation and extraction.
+  - **Diagnostic Steps Added:** Added `ls -la` steps to `publish-docker` job for debugging artifact issues.
 - **Versioning:** Package version updated to `0.5.6`.
 - **`.clinerules` Created:** Established `memory-bank/.clinerules` to capture project-specific patterns and user preferences.
 - **Changelog:** Updated `CHANGELOG.md` with entry for v0.5.6.
 
 ## 2. What's Left to Build / Test
 
-- **Commit & Push v0.5.6 Release Prep:** Commit `package.json`, `CHANGELOG.md`, Memory Bank updates. Push to `origin main`.
-- **Create & Push v0.5.6 Tag:** Create and push the `v0.5.6` tag to trigger the release workflow.
-- **Monitor CI/CD:** Verify the `v0.5.6` tag push triggers the `publish.yml` workflow correctly and all jobs succeed.
+- **Commit & Push CI/CD Diagnostics:** Commit the updated `Dockerfile`, `publish.yml`, and Memory Bank files. Push to `origin main`.
+- **Re-run Release Process:** Delete remote/local `v0.5.6` tag, re-tag the latest commit, and push the tag again to trigger the fixed workflow.
+- **Monitor CI/CD:** Analyze the output of the new `ls -la` steps in the `publish-docker` job to understand the file structure and confirm the fix for the "package-lock.json not found" error. Verify all jobs succeed.
 - **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
-- **Code Cleanup:** (Post-release task) Remove any remaining debugging logs.
+- **Code Cleanup:** (Post-release task) Remove any remaining debugging logs (including the added `ls -la` steps if successful).
 - **Comprehensive Testing:** (Post-release task) Test dynamic root logic, launcher integration, edge cases, etc.
 
 ## 3. Current Status
 
-- **Release Prep Complete:** Version bumped to `0.5.6`, `CHANGELOG.md` updated, all related changes documented in Memory Bank.
-- **CI/CD Simplified & Fixed:** Refactored to a single workflow (`publish.yml`) with conditional logic and corrected artifact handling.
-- **Ready to Commit & Push v0.5.6 Prep:** Waiting to commit changes and push the tag to trigger the v0.5.6 release.
+- **Release Prep Complete:** Version bumped to `0.5.6`, `CHANGELOG.md` updated.
+- **CI/CD Simplified & Fixed:** Refactored to a single workflow (`publish.yml`) with conditional logic, corrected artifact handling, and added diagnostic steps.
+- **Dockerfile Refactored:** Updated to use pre-built code.
+- **Ready to Commit Diagnostics:** Waiting to commit the updated `Dockerfile`, `publish.yml`, and Memory Bank files.
 
 ## 4. Known Issues / Areas for Improvement
 

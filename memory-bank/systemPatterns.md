@@ -1,4 +1,4 @@
-<!-- Version: 2.2 | Last Updated: 2025-05-04 | Updated By: Cline -->
+<!-- Version: 2.3 | Last Updated: 2025-05-04 | Updated By: Cline -->
 # System Patterns: Filesystem MCP Server
 
 ## 1. Architecture Overview
@@ -69,18 +69,19 @@ graph LR
 - **TypeScript:** Provides static typing for better code maintainability, early
   error detection, and improved developer experience. Uses ES module syntax
   (`import`/`export`).
+- **Dockerfile:** Uses a multi-stage build. The first stage (`deps`) installs *only* production dependencies. The final stage copies `node_modules` and `package.json` from the `deps` stage, and copies the pre-built `build/` directory from the CI artifact context. This avoids rebuilding the project inside Docker and keeps the final image smaller.
 - **CI/CD (GitHub Actions - Single Workflow):**
   - A single workflow file (`.github/workflows/publish.yml`) handles both CI checks and releases.
   - **Triggers:** Runs on pushes to the `main` branch and pushes of tags matching `v*.*.*`.
   - **Conditional Logic:**
-    - The `build` job runs on both triggers but *only uploads artifacts* when triggered by a tag push. This allows CI checks on `main` without unnecessary artifact storage.
-    - The `publish-npm`, `publish-docker`, and `create-release` jobs depend on the `build` job but have an `if: startsWith(github.ref, 'refs/tags/v')` condition, ensuring they *only execute* when triggered by a version tag push.
-  - **Structure:**
-    - `build`: Checks out, installs, builds. Archives and uploads artifacts *if* it's a tag push. Outputs version.
-    - `publish-npm`: Needs `build`. Downloads artifact, publishes to npm (only runs on tag push).
-    - `publish-docker`: Needs `build`. Downloads artifact, builds and pushes Docker image (only runs on tag push).
-    - `create-release`: Needs `build`, `publish-npm`, `publish-docker`. Downloads artifact, creates GitHub Release (only runs on tag push).
-  - This simplified structure avoids workflow interdependencies (`workflow_run`) while still preventing duplicate *publishing* actions and unnecessary artifact uploads during CI checks on `main`.
+    - The `build` job runs on both triggers but *only uploads artifacts* (including `build/`, `package.json`, `package-lock.json`, `Dockerfile`, etc.) when triggered by a tag push.
+    - The `publish-npm`, `publish-docker`, and `create-release` jobs depend on the `build` job but run *only* when triggered by a version tag push.
+  - **Structure & Artifact Handling:**
+    - `build`: Checks out, installs, builds. Archives and uploads artifacts *if* it's a tag push. Outputs version and archive filename.
+    - `publish-npm`: Needs `build`. Downloads artifact, extracts using correct filename (`build-artifacts.tar.gz`), publishes to npm.
+    - `publish-docker`: Needs `build`. Downloads artifact, extracts using correct filename, includes diagnostic `ls -la` steps, sets up Docker, builds (using pre-built code from artifact), and pushes image.
+    - `create-release`: Needs `build`, `publish-npm`, `publish-docker`. Downloads artifact, extracts using correct filename, creates GitHub Release.
+  - This simplified structure avoids workflow interdependencies while still preventing duplicate publishing actions and unnecessary artifact uploads during CI checks on `main`. Includes diagnostic steps for debugging artifact issues.
 
 ## 3. Component Relationships
 
@@ -101,4 +102,5 @@ graph LR
 - **`zod` Library:** Used for defining and validating tool input schemas.
 - **`diff` Library:** Used by `edit_file` to generate diff output.
 - **`detect-indent` Library:** Used by `edit_file` for indentation handling.
+- **`Dockerfile`:** Defines the multi-stage build process for the production Docker image.
 - **`.github/workflows/publish.yml`:** Defines the combined CI check and release process using conditional logic within a single workflow.

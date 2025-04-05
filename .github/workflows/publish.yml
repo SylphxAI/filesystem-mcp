@@ -92,8 +92,14 @@ jobs:
           name: ${{ needs.build.outputs.artifact_name }} # Use consistent artifact name
           path: .
 
+      - name: List downloaded files (docker)
+        run: ls -la
+
       - name: Extract build artifacts
         run: tar -xzf build-artifacts.tar.gz # Use the correct archive filename
+
+      - name: List extracted files (docker)
+        run: ls -la
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
