@@ -68,7 +68,7 @@ jobs:
           path: .
 
       - name: Extract build artifacts
-        run: tar -xzf ${{ needs.build.outputs.archive_filename }} # Use actual archive filename
+        run: tar -xzf build-artifacts.tar.gz # Use the correct archive filename
 
       - name: Set up Node.js for npm publish
         uses: actions/setup-node@v4
@@ -93,7 +93,7 @@ jobs:
           path: .
 
       - name: Extract build artifacts
-        run: tar -xzf ${{ needs.build.outputs.archive_filename }} # Use actual archive filename
+        run: tar -xzf build-artifacts.tar.gz # Use the correct archive filename
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -144,7 +144,7 @@ jobs:
           path: .
 
       - name: Extract build artifacts
-        run: tar -xzf ${{ needs.build.outputs.archive_filename }} # Use actual archive filename
+        run: tar -xzf build-artifacts.tar.gz # Use the correct archive filename
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
