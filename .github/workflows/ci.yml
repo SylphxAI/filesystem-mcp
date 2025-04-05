@@ -10,18 +10,8 @@ on:
 
 jobs:
   build-check:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build project (Check Only)
-        run: npm run build
+    # Use the reusable build workflow for checks
+    uses: ./.github/workflows/build-reusable.yml
+    with:
+      ref: ${{ github.ref }} # Pass the ref that triggered the workflow
+      upload_artifact: false # No need to upload artifacts for CI checks
