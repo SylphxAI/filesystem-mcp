@@ -12,7 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get_version.outputs.version }}
-      artifact_name: build-artifacts-archive # Consistent name
+      artifact_name: build-artifacts-archive # Consistent name for upload/download
+      archive_filename: ${{ steps.archive_build.outputs.archive_name }} # Actual .tar.gz filename
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -63,11 +64,11 @@ jobs:
       - name: Download build artifacts archive
         uses: actions/download-artifact@v4
         with:
-          name: ${{ needs.build.outputs.artifact_name }}
+          name: ${{ needs.build.outputs.artifact_name }} # Use consistent artifact name
           path: .
 
       - name: Extract build artifacts
-        run: tar -xzf ${{ needs.build.outputs.artifact_name }}.tar.gz
+        run: tar -xzf ${{ needs.build.outputs.archive_filename }} # Use actual archive filename
 
       - name: Set up Node.js for npm publish
         uses: actions/setup-node@v4
@@ -88,11 +89,11 @@ jobs:
       - name: Download build artifacts archive
         uses: actions/download-artifact@v4
         with:
-          name: ${{ needs.build.outputs.artifact_name }}
+          name: ${{ needs.build.outputs.artifact_name }} # Use consistent artifact name
           path: .
 
       - name: Extract build artifacts
-        run: tar -xzf ${{ needs.build.outputs.artifact_name }}.tar.gz
+        run: tar -xzf ${{ needs.build.outputs.archive_filename }} # Use actual archive filename
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -139,11 +140,11 @@ jobs:
       - name: Download build artifacts archive
         uses: actions/download-artifact@v4
         with:
-          name: ${{ needs.build.outputs.artifact_name }}
+          name: ${{ needs.build.outputs.artifact_name }} # Use consistent artifact name
           path: .
 
       - name: Extract build artifacts
-        run: tar -xzf ${{ needs.build.outputs.artifact_name }}.tar.gz
+        run: tar -xzf ${{ needs.build.outputs.archive_filename }} # Use actual archive filename
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -151,6 +152,6 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           body_path: CHANGELOG.md # Assumes CHANGELOG.md is in the artifact
-          # files: ${{ needs.build.outputs.artifact_name }}.tar.gz # Attach the archive
+          # files: ${{ needs.build.outputs.archive_filename }} # Attach the actual archive file
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
