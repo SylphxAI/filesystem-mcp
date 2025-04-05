@@ -1,9 +1,9 @@
-<!-- Version: 1.4 | Last Updated: 2025-05-04 | Updated By: Cline -->
-# Active Context: Filesystem MCP Server (v0.5.2 - Enhanced Error Reporting & Descriptions)
+<!-- Version: 1.5 | Last Updated: 2025-05-04 | Updated By: Cline -->
+# Active Context: Filesystem MCP Server (v0.5.2 - Parallel CI/CD & Enhancements)
 
 ## 1. Current Work Focus
 
-The focus is on improving the clarity of error messages, documenting user preferences, and refining tool descriptions based on feedback.
+The focus is on optimizing the CI/CD pipeline for faster parallel publishing and incorporating previous enhancements to error reporting and tool descriptions.
 
 ## 2. Recent Changes/Decisions
 
@@ -24,19 +24,20 @@ The focus is on improving the clarity of error messages, documenting user prefer
 - **Enhanced Path Error Reporting (`pathUtils.ts`):** Modified `src/utils/pathUtils.ts` to include more context in path-related error messages and added console logging.
 - **Created `.clinerules`:** Created `memory-bank/.clinerules` to document the user preference for prioritizing edit tools over `write_to_file`.
 - **Enhanced `readContent` Error Reporting:** Modified `src/handlers/readContent.ts` to include more context in `ENOENT` error messages.
-- **Updated `writeContent` Description:** Modified the description for the `write_content` tool in `src/handlers/writeContent.ts` to explicitly recommend using edit tools.
-- **Updated `editFile` Description:** Modified the description for the `edit_file` tool in `src/handlers/editFile.ts` to reinforce that it is the recommended tool for modifications, especially complex ones.
+- **Updated `writeContent` Description:** Modified the description for the `write_content` tool to recommend using edit tools.
+- **Updated `editFile` Description:** Modified the description for the `edit_file` tool to reinforce its recommendation for modifications.
+- **Parallelized CI/CD:** Refactored `.github/workflows/publish.yml` to split npm and Docker publishing into separate, parallel jobs (`publish-npm`, `publish-docker`). Introduced a shared `build` job that both publish jobs depend on, using artifacts to pass build outputs. This should speed up the overall publishing process.
 
 ## 3. Next Steps / Considerations
 
-- **Rebuild & Restart Server:** Need to rebuild (`npm run build`) and restart the server.
-- **Test Error Reporting & Descriptions:** Verify enhanced error messages and updated tool descriptions.
-- **Test New Project Root Logic:** Thoroughly test behavior with different `cwd` settings.
+- **Rebuild & Restart Server:** Need to rebuild (`npm run build`) and restart the server locally if testing changes other than CI/CD.
+- **Test Error Reporting & Descriptions:** Verify enhanced error messages and updated tool descriptions locally.
+- **Test New Project Root Logic:** Thoroughly test behavior with different `cwd` settings locally.
 - **Verify Launcher Integration:** Confirm the launching system sets `cwd` correctly.
-- **Update `progress.md`:** Reflect the `editFile` description update.
-- **Update `systemPatterns.md`:** Reflect the `editFile` description update.
+- **Update `progress.md`:** Reflect the CI/CD parallelization.
+- **Update `systemPatterns.md`:** Reflect the CI/CD parallelization.
 - **Versioning:** Increment `package.json` to `0.5.2` and potentially tag the release.
-- **CI/CD:** Ensure pipeline functions correctly.
+- **CI/CD:** Monitor the next push to `main` to ensure the parallel jobs run correctly.
 - **Implement `edit_file` Regex Support:** Add logic for `use_regex: true`.
 
 ## 4. Active Decisions
@@ -49,4 +50,5 @@ The focus is on improving the clarity of error messages, documenting user prefer
 - Batch Error Handling: Confirmed "continue on error".
 - **Path Error Messages:** Enhanced with more context.
 - **Tool Preference:** Documented preference for edit tools in `.clinerules`.
-- **Tool Descriptions:** Updated `writeContent` and `editFile` descriptions to guide usage.
+- **Tool Descriptions:** Updated `writeContent` and `editFile` descriptions.
+- **CI/CD Structure:** Changed to parallel jobs for npm and Docker publishing, dependent on a shared build job.

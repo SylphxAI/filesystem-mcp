@@ -1,5 +1,5 @@
-<!-- Version: 1.4 | Last Updated: 2025-05-04 | Updated By: Cline -->
-# Progress: Filesystem MCP Server (v0.5.2 - Enhanced Error Reporting & Descriptions)
+<!-- Version: 1.5 | Last Updated: 2025-05-04 | Updated By: Cline -->
+# Progress: Filesystem MCP Server (v0.5.2 - Parallel CI/CD & Enhancements)
 
 ## 1. What Works
 
@@ -22,17 +22,18 @@
   - Build process debugged and corrected.
 - **CI/CD (GitHub Actions):**
   - Workflow successfully automates publishing to npm and Docker Hub.
+  - **Parallel Publishing:** Workflow refactored to use separate, parallel jobs for npm and Docker publishing, dependent on a shared build job using artifacts.
 - **Versioning:** Package version consistently incremented (updated to `0.5.1`, preparing for `0.5.2`).
 - **`.clinerules` Created:** Established `memory-bank/.clinerules` to capture project-specific patterns and user preferences.
 
 ## 2. What's Left to Build / Test
 
-- **Rebuild & Restart Server:** Need to rebuild (`npm run build`) and restart the server.
-- **Test Error Reporting & Descriptions:** Verify enhanced error messages and updated tool descriptions.
-- **Test Dynamic Root Logic:** Verify the server operates correctly when launched with different `cwd` settings.
+- **Rebuild & Restart Server:** Need to rebuild (`npm run build`) and restart the server locally if testing changes other than CI/CD.
+- **Test Error Reporting & Descriptions:** Verify enhanced error messages and updated tool descriptions locally.
+- **Test Dynamic Root Logic:** Verify the server operates correctly when launched with different `cwd` settings locally.
 - **Launcher Integration Testing:** Confirm the system launching the server sets the `cwd` appropriately.
 - **Versioning:** Update `package.json` to `0.5.2` and potentially create a git tag.
-- **CI/CD Verification:** Ensure the pipeline works with the changes for `0.5.2`.
+- **CI/CD Verification:** Monitor the next push to `main` to ensure the parallel jobs run correctly.
 - **Resolve `list_files` Issue (Glob Path):** (Lower priority) Investigate the `glob`-based execution path within `handleListFiles`.
 - **Comprehensive Testing (Post-Root Change):** Re-test core functionality, edge cases, permissions (`chmod`/`chown`), cross-device moves/copies in the context of the dynamic root.
 - **Code Cleanup:** Remove any remaining debugging logs.
@@ -42,9 +43,9 @@
 
 - **Project Root Logic Updated:** Server now uses `process.cwd()` for the project root.
 - **Core Functionality Implemented:** All defined tools are implemented and passed basic tests. Batch error handling confirmed. Path error reporting enhanced. Tool descriptions updated.
-- **Deployment Automated:** Publishing to npm and Docker Hub is handled by GitHub Actions.
+- **Deployment Automated:** Publishing to npm and Docker Hub is handled by GitHub Actions, now configured for parallel execution.
 - **Documentation Updated (Internal & Public):** Memory Bank files updated. `README.md` updated.
-- **Primary Blocker:** Need to rebuild, restart, and test the enhanced error reporting and description changes. Then, test the dynamic root behavior thoroughly and ensure the launcher integration works as expected before releasing `0.5.2`.
+- **Primary Blocker:** Need to test the parallel CI/CD workflow on the next push. Locally, need to rebuild, restart, and test the enhanced error reporting and description changes, then test the dynamic root behavior thoroughly and ensure the launcher integration works as expected before releasing `0.5.2`.
 
 ## 4. Known Issues / Areas for Improvement
 
