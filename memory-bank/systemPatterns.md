@@ -1,3 +1,4 @@
+<!-- Version: 1.1 | Last Updated: 2025-05-04 | Updated By: Cline -->
 # System Patterns: Filesystem MCP Server
 
 ## 1. Architecture Overview
@@ -35,6 +36,9 @@ graph LR
     `PROJECT_ROOT` absolute path to prevent path traversal vulnerabilities
     (e.g., `../../sensitive-file`).
   - It rejects absolute paths provided by the agent.
+  - **Enhanced Error Reporting:** Throws `McpError` with detailed messages on
+    failure, including the original path, resolved path (if applicable), and
+    project root to aid debugging.
 - **Zod for Schemas & Validation:** Uses `zod` library to define input schemas
   for tools and perform robust validation within each handler. JSON schemas for
   MCP listing are generated from Zod schemas.
@@ -53,7 +57,7 @@ graph LR
   - Catches specific Node.js filesystem errors (like `ENOENT`, `EPERM`,
     `EACCES`) and maps them to appropriate MCP error codes (`InvalidRequest`).
   - Uses custom `McpError` objects for standardized error reporting back to the
-    agent.
+    agent (including enhanced details from `resolvePath`).
   - Logs unexpected errors to the server's console (`stderr`) for debugging.
 - **Glob for Listing/Searching:** Uses the `glob` library for flexible and
   powerful file listing and searching based on glob patterns, including
@@ -74,7 +78,7 @@ graph LR
 - **Tool Handler Functions (`handleListFiles`, `handleEditFile`, etc.):**
   Contain the specific logic for each tool, including Zod argument validation,
   path resolution, filesystem interaction, and result formatting.
-- **`resolvePath` Helper:** Centralized security function for path validation.
+- **`resolvePath` Helper:** Centralized security function for path validation with enhanced error reporting.
 - **`formatStats` Helper:** Utility to create a consistent stats object
   structure.
 - **Node.js Modules (`fs`, `path`):** Used for actual filesystem operations and

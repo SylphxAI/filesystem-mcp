@@ -21,13 +21,13 @@ export const resolvePath = (userPath: string): string => {
   }
   const normalizedUserPath = path.normalize(userPath);
   if (path.isAbsolute(normalizedUserPath)) {
-      throw new McpError(ErrorCode.InvalidParams, 'Absolute paths are not allowed.');
+      throw new McpError(ErrorCode.InvalidParams, `Absolute paths are not allowed. Received: '${normalizedUserPath}'`);
   }
   // Resolve against the calculated PROJECT_ROOT
   const resolved = path.resolve(PROJECT_ROOT, normalizedUserPath);
   // Security check: Ensure the resolved path is still within the project root
   if (!resolved.startsWith(PROJECT_ROOT)) {
-      throw new McpError(ErrorCode.InvalidRequest, 'Path traversal detected. Access denied.');
+      throw new McpError(ErrorCode.InvalidRequest, `Path traversal detected. Attempted path '${userPath}' resolved to '${resolved}' which is outside the project root '${PROJECT_ROOT}'. Access denied.`);
   }
   return resolved;
 };

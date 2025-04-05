@@ -1,0 +1,7 @@
+<!-- Version: 1.0 | Last Updated: 2025-05-04 | Updated By: Cline -->
+
+# Cline Rules for filesystem-mcp Project
+
+## Tool Usage Preferences
+
+- **Prioritize Edit Tools:** When modifying existing files, prefer using `apply_diff`, `insert_content`, or `search_and_replace` over `write_to_file`. `write_to_file` should primarily be used for creating new files or when a complete rewrite is necessary, as it can be less efficient for large files or minor edits.
