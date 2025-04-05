@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.6] - 2025-05-04
+
+### Fixed
+- Corrected CI/CD artifact handling (`package-lock.json` inclusion, extraction paths) in `publish.yml` to ensure successful npm and Docker publishing (4372afa).
+- Simplified CI/CD structure back to a single workflow (`publish.yml`) with conditional artifact upload, removing `ci.yml` and `build-reusable.yml` (38029ca).
+
+### Changed
+- Bumped version to 0.5.6 due to previous failed release attempt of 0.5.5.
+
+
 ## [0.5.5] - 2025-05-04
 
 ### Changed

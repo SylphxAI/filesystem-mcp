@@ -1,9 +1,9 @@
-<!-- Version: 2.4 | Last Updated: 2025-05-04 | Updated By: Cline -->
-# Active Context: Filesystem MCP Server (v0.5.5 Release)
+<!-- Version: 2.5 | Last Updated: 2025-05-04 | Updated By: Cline -->
+# Active Context: Filesystem MCP Server (v0.5.6 Release Prep)
 
 ## 1. Current Work Focus
 
-Finalizing the simplified single-workflow CI/CD structure and preparing to trigger the v0.5.5 release.
+Preparing for the v0.5.6 release after previous failed attempts with v0.5.5 due to npm version conflict.
 
 ## 2. Recent Changes/Decisions
 
@@ -35,23 +35,17 @@ Finalizing the simplified single-workflow CI/CD structure and preparing to trigg
 - **Incremented Version to 0.5.5:** Updated `package.json` to version `0.5.5`.
 - **Updated Changelog:** Added entry for v0.5.5 in `CHANGELOG.md`.
 - **Fixed CI/CD Artifacts:** Corrected artifact creation and extraction in `.github/workflows/publish.yml`.
-- **Refactored CI/CD (Attempt 2 - Reusable Workflow):** Separated into `ci.yml` and `publish.yml` using `build-reusable.yml` and `workflow_run`. (Discarded due to complexity).
-- **Simplified CI/CD (Final):**
-    - Deleted `ci.yml` and `build-reusable.yml`.
-    - Modified `.github/workflows/publish.yml` (renamed to `CI, Publish & Release`) to handle both CI checks and releases within a single file.
-    - **Triggers:** Runs on pushes to `main` and pushes of `v*.*.*` tags.
-    - **Conditional Artifacts:** The `build` job runs on both triggers, but *only uploads artifacts* when triggered by a tag push.
-    - **Conditional Publishing/Release:** The `publish-npm`, `publish-docker`, and `create-release` jobs depend on `build` but run *only* when triggered by a tag push.
+- **Simplified CI/CD (Final):** Refactored back to a single workflow (`publish.yml`) with conditional artifact upload and job execution based on trigger (main push vs tag push). Deleted `ci.yml` and `build-reusable.yml`.
+- **Incremented Version to 0.5.6:** Updated `package.json` to version `0.5.6` due to v0.5.5 being previously published to npm.
+- **Updated Changelog for v0.5.6:** Added entry for v0.5.6 in `CHANGELOG.md`, noting the CI/CD fixes included in this release attempt.
 
 ## 3. Next Steps / Considerations
 
-- **Update `progress.md`:** Reflect the final simplified CI/CD structure.
-- **Update `systemPatterns.md`:** Reflect the final simplified CI/CD structure.
-- **Commit Changes:** Commit the deleted/updated workflow files and Memory Bank updates.
-- **Push Commit:** Push the changes to `origin main`.
-- **Create Git Tag:** Create `v0.5.5` tag.
-- **Push Tag:** Push the `v0.5.5` tag to trigger the release workflow.
-- **Monitor CI/CD:** Verify the `v0.5.5` tag push triggers the `publish.yml` workflow correctly (build with artifact upload, publish, release). Verify pushes to `main` trigger `publish.yml` but only run the `build` job (without artifact upload).
+- **Update `progress.md`:** Reflect the v0.5.6 version bump and changelog update.
+- **Commit Changes:** Commit the v0.5.6 version bump, changelog update, and Memory Bank updates.
+- **Create Git Tag:** Create `v0.5.6` tag.
+- **Push Commit & Tag:** Push to `origin main` to trigger the v0.5.6 release via GitHub Actions.
+- **Monitor CI/CD:** Verify the `v0.5.6` tag push triggers the `publish.yml` workflow correctly and all jobs succeed.
 - **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
 
 ## 4. Active Decisions
@@ -65,6 +59,6 @@ Finalizing the simplified single-workflow CI/CD structure and preparing to trigg
 - **Path Error Messages:** Enhanced with more context.
 - **Tool Preference:** Documented preference for edit tools in `.clinerules`.
 - **Tool Descriptions:** Updated `writeContent` and `editFile` descriptions.
-- **CI/CD Structure:** Simplified back to a single workflow (`publish.yml`) handling both CI checks (build only) and tag-triggered releases (build with artifacts, parallel publish, auto-release).
-- **Release Version:** Set to `0.5.5`.
-- **Changelog:** Updated for `v0.5.5`.
+- **CI/CD Structure:** Simplified single workflow (`publish.yml`) handling CI checks and tag-triggered releases. Artifact handling fixed.
+- **Release Version:** Set to `0.5.6`.
+- **Changelog:** Updated for `v0.5.6`.

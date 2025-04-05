@@ -1,5 +1,5 @@
-<!-- Version: 2.4 | Last Updated: 2025-05-04 | Updated By: Cline -->
-# Progress: Filesystem MCP Server (v0.5.5 Release)
+<!-- Version: 2.5 | Last Updated: 2025-05-04 | Updated By: Cline -->
+# Progress: Filesystem MCP Server (v0.5.6 Release Prep)
 
 ## 1. What Works
 
@@ -25,26 +25,24 @@
   - **Conditional Artifacts:** Build job uploads artifacts only when triggered by a tag push.
   - **Conditional Publishing/Release:** Publish and release jobs run only when triggered by a tag push.
   - **Artifact Handling Fixed:** Corrected artifact creation and extraction.
-- **Versioning:** Package version updated to `0.5.5`.
+- **Versioning:** Package version updated to `0.5.6`.
 - **`.clinerules` Created:** Established `memory-bank/.clinerules` to capture project-specific patterns and user preferences.
-- **Changelog:** Updated `CHANGELOG.md` with entry for v0.5.5.
+- **Changelog:** Updated `CHANGELOG.md` with entry for v0.5.6.
 
 ## 2. What's Left to Build / Test
 
-- **Commit & Push Simplified Workflow:** Commit the deleted/updated workflow files and Memory Bank files. Push to `origin main`.
-- **Create & Push v0.5.5 Tag:** Create and push the `v0.5.5` tag to trigger the release workflow.
-- **Monitor CI/CD:**
-    - Verify pushes to `main` trigger `publish.yml` but only run the `build` job (without artifact upload).
-    - Verify the push of `v0.5.5` tag triggers `publish.yml` and successfully runs all jobs (build with upload, publish-npm, publish-docker, create-release).
+- **Commit & Push v0.5.6 Release Prep:** Commit `package.json`, `CHANGELOG.md`, Memory Bank updates. Push to `origin main`.
+- **Create & Push v0.5.6 Tag:** Create and push the `v0.5.6` tag to trigger the release workflow.
+- **Monitor CI/CD:** Verify the `v0.5.6` tag push triggers the `publish.yml` workflow correctly and all jobs succeed.
 - **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
 - **Code Cleanup:** (Post-release task) Remove any remaining debugging logs.
 - **Comprehensive Testing:** (Post-release task) Test dynamic root logic, launcher integration, edge cases, etc.
 
 ## 3. Current Status
 
-- **Release Prep Complete:** Version bumped to `0.5.5`, `CHANGELOG.md` updated.
-- **CI/CD Simplified:** Refactored back to a single workflow (`publish.yml`) with conditional artifact upload and job execution based on trigger (main push vs tag push).
-- **Ready to Commit Simplified Workflow:** Waiting to commit the deleted/updated workflow files and Memory Bank files.
+- **Release Prep Complete:** Version bumped to `0.5.6`, `CHANGELOG.md` updated, all related changes documented in Memory Bank.
+- **CI/CD Simplified & Fixed:** Refactored to a single workflow (`publish.yml`) with conditional logic and corrected artifact handling.
+- **Ready to Commit & Push v0.5.6 Prep:** Waiting to commit changes and push the tag to trigger the v0.5.6 release.
 
 ## 4. Known Issues / Areas for Improvement
 
