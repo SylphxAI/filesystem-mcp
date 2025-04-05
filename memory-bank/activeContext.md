@@ -1,9 +1,9 @@
-<!-- Version: 1.7 | Last Updated: 2025-05-04 | Updated By: Cline -->
-# Active Context: Filesystem MCP Server (v0.5.3 - Auto GitHub Release)
+<!-- Version: 1.8 | Last Updated: 2025-05-04 | Updated By: Cline -->
+# Active Context: Filesystem MCP Server (v0.5.3 - CI/CD Fix & Release Prep)
 
 ## 1. Current Work Focus
 
-The focus is on finalizing the v0.5.3 release process by adding automatic GitHub Release creation to the CI/CD pipeline.
+The focus is on fixing the CI/CD pipeline for Docker publishing and finalizing the v0.5.3 release process.
 
 ## 2. Recent Changes/Decisions
 
@@ -29,19 +29,17 @@ The focus is on finalizing the v0.5.3 release process by adding automatic GitHub
 - **Parallelized CI/CD:** Refactored `.github/workflows/publish.yml` to split npm and Docker publishing into separate, parallel jobs.
 - **Incremented Version to 0.5.3:** Updated `package.json` to version `0.5.3`.
 - **Created Changelog:** Generated and created `CHANGELOG.md` file documenting changes since v0.5.1 for the v0.5.3 release.
-- **Automated GitHub Releases:** Modified `.github/workflows/publish.yml` to:
-    - Trigger on pushes to `main` AND pushes of tags matching `v*.*.*`.
-    - Add a new `create-release` job that depends on successful `publish-npm` and `publish-docker` jobs.
-    - Configure the `create-release` job to run only on tag pushes and use `softprops/action-gh-release` to automatically create a GitHub Release associated with the tag, linking to `CHANGELOG.md`.
-    - Adjusted existing job conditions and artifact handling for the new trigger and job structure.
+- **Automated GitHub Releases:** Modified `.github/workflows/publish.yml` to add automatic GitHub Release creation on tag pushes.
+- **Fixed Docker CI/CD Artifact Extraction:** Corrected the `tar` command in the `publish-docker` job within `.github/workflows/publish.yml` to properly extract the downloaded artifact archive in the current directory, resolving the "Dockerfile not found" error.
 
 ## 3. Next Steps / Considerations
 
-- **Update `progress.md`:** Reflect the addition of automatic GitHub Release creation.
-- **Update `systemPatterns.md`:** Reflect the addition of automatic GitHub Release creation.
+- **Update `progress.md`:** Reflect the Docker CI/CD fix.
+- **Update `systemPatterns.md`:** Reflect the Docker CI/CD fix.
 - **Commit Changes:** Commit the updated workflow file and Memory Bank updates.
-- **Push Commit:** Push the changes to `origin main`. (Note: This push itself won't create the v0.5.3 release as the tag was already pushed. The workflow change applies to *future* tag pushes).
-- **Manually Create v0.5.3 Release (Optional):** If desired, manually create the GitHub Release for the existing `v0.5.3` tag.
+- **Push Commit:** Push the changes to `origin main`.
+- **Re-run Release Process:** Delete remote/local `v0.5.3` tag, re-tag the latest commit, and push the tag again to trigger the fixed workflow.
+- **Monitor CI/CD:** Verify the `publish-docker` job now succeeds and the release is created.
 - **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
 
 ## 4. Active Decisions
@@ -55,7 +53,6 @@ The focus is on finalizing the v0.5.3 release process by adding automatic GitHub
 - **Path Error Messages:** Enhanced with more context.
 - **Tool Preference:** Documented preference for edit tools in `.clinerules`.
 - **Tool Descriptions:** Updated `writeContent` and `editFile` descriptions.
-- **CI/CD Structure:** Changed to parallel jobs for publishing.
+- **CI/CD Structure:** Changed to parallel jobs with automatic GitHub Release creation. Artifact extraction fixed for Docker job.
 - **Release Version:** Set to `0.5.3`.
 - **Changelog:** Created `CHANGELOG.md`.
-- **GitHub Release Automation:** Added to CI/CD workflow for future tag pushes.

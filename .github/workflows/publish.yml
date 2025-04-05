@@ -90,7 +90,7 @@ jobs:
           path: .
 
       - name: Extract build artifacts
-        run: tar -xzf build-artifacts-archive/build-artifacts.tar.gz
+        run: tar -xzf build-artifacts.tar.gz # Extract the archive from the current directory
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
