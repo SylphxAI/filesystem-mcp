@@ -1,9 +1,9 @@
-<!-- Version: 1.8 | Last Updated: 2025-05-04 | Updated By: Cline -->
-# Active Context: Filesystem MCP Server (v0.5.3 - CI/CD Fix & Release Prep)
+<!-- Version: 2.0 | Last Updated: 2025-05-04 | Updated By: Cline -->
+# Active Context: Filesystem MCP Server (v0.5.5 Release)
 
 ## 1. Current Work Focus
 
-The focus is on fixing the CI/CD pipeline for Docker publishing and finalizing the v0.5.3 release process.
+Finalizing and preparing to trigger the v0.5.5 release.
 
 ## 2. Recent Changes/Decisions
 
@@ -30,16 +30,18 @@ The focus is on fixing the CI/CD pipeline for Docker publishing and finalizing t
 - **Incremented Version to 0.5.3:** Updated `package.json` to version `0.5.3`.
 - **Created Changelog:** Generated and created `CHANGELOG.md` file documenting changes since v0.5.1 for the v0.5.3 release.
 - **Automated GitHub Releases:** Modified `.github/workflows/publish.yml` to add automatic GitHub Release creation on tag pushes.
-- **Fixed Docker CI/CD Artifact Extraction:** Corrected the `tar` command in the `publish-docker` job within `.github/workflows/publish.yml` to properly extract the downloaded artifact archive in the current directory, resolving the "Dockerfile not found" error.
+- **Fixed Docker CI/CD Artifact Extraction:** Corrected the `tar` command in the `publish-docker` job.
+- **Refined CI/CD Triggers:** Modified `.github/workflows/publish.yml` so that publishing jobs only run on version tag pushes.
+- **Incremented Version to 0.5.5:** Updated `package.json` to version `0.5.5`.
+- **Updated Changelog:** Added entry for v0.5.5 in `CHANGELOG.md` (documenting CI/CD fixes and trigger changes).
 
 ## 3. Next Steps / Considerations
 
-- **Update `progress.md`:** Reflect the Docker CI/CD fix.
-- **Update `systemPatterns.md`:** Reflect the Docker CI/CD fix.
-- **Commit Changes:** Commit the updated workflow file and Memory Bank updates.
-- **Push Commit:** Push the changes to `origin main`.
-- **Re-run Release Process:** Delete remote/local `v0.5.3` tag, re-tag the latest commit, and push the tag again to trigger the fixed workflow.
-- **Monitor CI/CD:** Verify the `publish-docker` job now succeeds and the release is created.
+- **Update `progress.md`:** Reflect the v0.5.5 version bump and changelog update.
+- **Commit Changes:** Commit the workflow trigger fix, v0.5.5 version bump, changelog update, and Memory Bank updates.
+- **Create Git Tag:** Create `v0.5.5` tag.
+- **Push Commit & Tag:** Push to `origin main` to trigger the v0.5.5 release via GitHub Actions.
+- **Monitor CI/CD:** Verify the `v0.5.5` tag push triggers the build, publish, and release jobs correctly.
 - **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
 
 ## 4. Active Decisions
@@ -53,6 +55,7 @@ The focus is on fixing the CI/CD pipeline for Docker publishing and finalizing t
 - **Path Error Messages:** Enhanced with more context.
 - **Tool Preference:** Documented preference for edit tools in `.clinerules`.
 - **Tool Descriptions:** Updated `writeContent` and `editFile` descriptions.
-- **CI/CD Structure:** Changed to parallel jobs with automatic GitHub Release creation. Artifact extraction fixed for Docker job.
-- **Release Version:** Set to `0.5.3`.
-- **Changelog:** Created `CHANGELOG.md`.
+- **CI/CD Structure:** Parallel jobs with automatic GitHub Release creation. Artifact extraction fixed.
+- **CI/CD Triggers:** Publishing jobs now run *only* on version tag pushes.
+- **Release Version:** Set to `0.5.5`.
+- **Changelog:** Updated for `v0.5.5`.

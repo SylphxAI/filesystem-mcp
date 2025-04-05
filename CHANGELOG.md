@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] - 2025-05-04
+
+### Changed
+- Refined GitHub Actions workflow (`publish.yml`) triggers: publishing jobs (`publish-npm`, `publish-docker`, `create-release`) now run *only* on version tag pushes (`v*.*.*`), not on pushes to `main` (9c0df99).
+
+### Fixed
+- Corrected artifact extraction path in the `publish-docker` CI/CD job to resolve "Dockerfile not found" error (708d3f5).
+
+
 ## [0.5.3] - 2025-05-04
 
 ### Added
