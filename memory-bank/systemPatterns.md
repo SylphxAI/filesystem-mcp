@@ -1,4 +1,4 @@
-<!-- Version: 2.1 | Last Updated: 2025-05-04 | Updated By: Cline -->
+<!-- Version: 2.2 | Last Updated: 2025-05-04 | Updated By: Cline -->
 # System Patterns: Filesystem MCP Server
 
 ## 1. Architecture Overview
@@ -69,25 +69,18 @@ graph LR
 - **TypeScript:** Provides static typing for better code maintainability, early
   error detection, and improved developer experience. Uses ES module syntax
   (`import`/`export`).
-- **CI/CD (GitHub Actions - Reusable & Workflow Run):**
-  - **Reusable Build Workflow (`build-reusable.yml`):**
-    - Defines the core build steps (checkout, setup node, install, build).
-    - Accepts `ref` and `upload_artifact` inputs.
-    - Outputs the determined `version` and `artifact_name` (if uploaded).
-    - Can be called by other workflows using `uses: ./.github/workflows/build-reusable.yml`.
-  - **CI Workflow (`ci.yml`):**
-    - **Triggers:** Runs on pushes and pull requests to the `main` branch.
-    - **Purpose:** Performs Continuous Integration build checks.
-    - **Jobs:** Calls `build-reusable.yml` with `upload_artifact: false`.
-  - **Release Workflow (`publish.yml`):**
-    - **Triggers:** Runs via `workflow_run` when the `ci.yml` workflow completes successfully *and* the triggering event was a push to a version tag (`v*.*.*`).
-    - **Purpose:** Handles the complete release process.
-    - **Jobs:**
-      - `check-and-prepare`: Verifies the trigger conditions (successful CI run from a tag push) and extracts the tag name and CI run ID.
-      - `publish-npm`: Depends on `check-and-prepare`, downloads the artifact from the triggering CI run (using `dawidd6/action-download-artifact`), extracts it, and publishes to npm.
-      - `publish-docker`: Depends on `check-and-prepare`, downloads the artifact, extracts it, sets up Docker, and builds/pushes the image to Docker Hub using the tag name for versioning.
-      - `create-release`: Depends on `check-and-prepare`, `publish-npm`, and `publish-docker`. Downloads the artifact, and uses `softprops/action-gh-release` to create a GitHub Release associated with the tag, linking to `CHANGELOG.md`.
-    - This structure avoids duplicate builds by reusing the build logic and ensures releases only happen after a successful CI build triggered by a version tag push.
+- **CI/CD (GitHub Actions - Single Workflow):**
+  - A single workflow file (`.github/workflows/publish.yml`) handles both CI checks and releases.
+  - **Triggers:** Runs on pushes to the `main` branch and pushes of tags matching `v*.*.*`.
+  - **Conditional Logic:**
+    - The `build` job runs on both triggers but *only uploads artifacts* when triggered by a tag push. This allows CI checks on `main` without unnecessary artifact storage.
+    - The `publish-npm`, `publish-docker`, and `create-release` jobs depend on the `build` job but have an `if: startsWith(github.ref, 'refs/tags/v')` condition, ensuring they *only execute* when triggered by a version tag push.
+  - **Structure:**
+    - `build`: Checks out, installs, builds. Archives and uploads artifacts *if* it's a tag push. Outputs version.
+    - `publish-npm`: Needs `build`. Downloads artifact, publishes to npm (only runs on tag push).
+    - `publish-docker`: Needs `build`. Downloads artifact, builds and pushes Docker image (only runs on tag push).
+    - `create-release`: Needs `build`, `publish-npm`, `publish-docker`. Downloads artifact, creates GitHub Release (only runs on tag push).
+  - This simplified structure avoids workflow interdependencies (`workflow_run`) while still preventing duplicate *publishing* actions and unnecessary artifact uploads during CI checks on `main`.
 
 ## 3. Component Relationships
 
@@ -108,6 +101,4 @@ graph LR
 - **`zod` Library:** Used for defining and validating tool input schemas.
 - **`diff` Library:** Used by `edit_file` to generate diff output.
 - **`detect-indent` Library:** Used by `edit_file` for indentation handling.
-- **`.github/workflows/build-reusable.yml`:** Defines the reusable build steps.
-- **`.github/workflows/ci.yml`:** Defines the Continuous Integration build check process, calling the reusable workflow.
-- **`.github/workflows/publish.yml`:** Defines the automated release process (publish, release creation) triggered by the completion of the CI workflow for a version tag, calling the reusable workflow for the build artifact.
+- **`.github/workflows/publish.yml`:** Defines the combined CI check and release process using conditional logic within a single workflow.

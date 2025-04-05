@@ -1,9 +1,9 @@
-<!-- Version: 2.3 | Last Updated: 2025-05-04 | Updated By: Cline -->
+<!-- Version: 2.4 | Last Updated: 2025-05-04 | Updated By: Cline -->
 # Active Context: Filesystem MCP Server (v0.5.5 Release)
 
 ## 1. Current Work Focus
 
-Refactoring CI/CD using reusable workflows and `workflow_run` trigger, preparing for v0.5.5 release.
+Finalizing the simplified single-workflow CI/CD structure and preparing to trigger the v0.5.5 release.
 
 ## 2. Recent Changes/Decisions
 
@@ -35,24 +35,23 @@ Refactoring CI/CD using reusable workflows and `workflow_run` trigger, preparing
 - **Incremented Version to 0.5.5:** Updated `package.json` to version `0.5.5`.
 - **Updated Changelog:** Added entry for v0.5.5 in `CHANGELOG.md`.
 - **Fixed CI/CD Artifacts:** Corrected artifact creation and extraction in `.github/workflows/publish.yml`.
-- **Refactored CI/CD with Reusable Workflow:**
-    - Created `.github/workflows/build-reusable.yml` containing the shared build logic (checkout, setup, install, build, optional artifact upload).
-    - Modified `.github/workflows/ci.yml` to call `build-reusable.yml` (without artifact upload) on main/PR pushes for build checks.
-    - Modified `.github/workflows/publish.yml` (renamed to `Release`) to:
-        - Trigger via `workflow_run` after `ci.yml` completes successfully on a tagged commit.
-        - Remove its own build job.
-        - Add a `check-and-prepare` job to verify the trigger was from a tag and get necessary info (tag name, CI run ID).
-        - Update `publish-npm`, `publish-docker`, `create-release` jobs to depend on `check-and-prepare`, download artifacts using the CI run ID (via `dawidd6/action-download-artifact`), and use the extracted tag name/version.
+- **Refactored CI/CD (Attempt 2 - Reusable Workflow):** Separated into `ci.yml` and `publish.yml` using `build-reusable.yml` and `workflow_run`. (Discarded due to complexity).
+- **Simplified CI/CD (Final):**
+    - Deleted `ci.yml` and `build-reusable.yml`.
+    - Modified `.github/workflows/publish.yml` (renamed to `CI, Publish & Release`) to handle both CI checks and releases within a single file.
+    - **Triggers:** Runs on pushes to `main` and pushes of `v*.*.*` tags.
+    - **Conditional Artifacts:** The `build` job runs on both triggers, but *only uploads artifacts* when triggered by a tag push.
+    - **Conditional Publishing/Release:** The `publish-npm`, `publish-docker`, and `create-release` jobs depend on `build` but run *only* when triggered by a tag push.
 
 ## 3. Next Steps / Considerations
 
-- **Update `progress.md`:** Reflect the reusable workflow refactoring.
-- **Update `systemPatterns.md`:** Reflect the reusable workflow refactoring.
-- **Commit Changes:** Commit the new/updated workflow files and Memory Bank updates.
+- **Update `progress.md`:** Reflect the final simplified CI/CD structure.
+- **Update `systemPatterns.md`:** Reflect the final simplified CI/CD structure.
+- **Commit Changes:** Commit the deleted/updated workflow files and Memory Bank updates.
 - **Push Commit:** Push the changes to `origin main`.
 - **Create Git Tag:** Create `v0.5.5` tag.
-- **Push Tag:** Push the `v0.5.5` tag. This will trigger `ci.yml`.
-- **Monitor CI/CD:** Verify `ci.yml` runs and succeeds. Verify `publish.yml` is triggered by `ci.yml` completion and successfully downloads artifacts, publishes, and creates the release.
+- **Push Tag:** Push the `v0.5.5` tag to trigger the release workflow.
+- **Monitor CI/CD:** Verify the `v0.5.5` tag push triggers the `publish.yml` workflow correctly (build with artifact upload, publish, release). Verify pushes to `main` trigger `publish.yml` but only run the `build` job (without artifact upload).
 - **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
 
 ## 4. Active Decisions
@@ -66,6 +65,6 @@ Refactoring CI/CD using reusable workflows and `workflow_run` trigger, preparing
 - **Path Error Messages:** Enhanced with more context.
 - **Tool Preference:** Documented preference for edit tools in `.clinerules`.
 - **Tool Descriptions:** Updated `writeContent` and `editFile` descriptions.
-- **CI/CD Structure:** Refactored using `workflow_run` and a reusable build workflow (`build-reusable.yml`) to avoid duplicate builds. `ci.yml` handles main/PR checks, `publish.yml` handles tag-triggered releases.
+- **CI/CD Structure:** Simplified back to a single workflow (`publish.yml`) handling both CI checks (build only) and tag-triggered releases (build with artifacts, parallel publish, auto-release).
 - **Release Version:** Set to `0.5.5`.
 - **Changelog:** Updated for `v0.5.5`.

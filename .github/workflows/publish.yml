@@ -1,47 +1,73 @@
-name: Release
+name: CI, Publish & Release
 
 on:
-  workflow_run:
-    workflows: ["Continuous Integration"] # Trigger when CI workflow runs
-    types:
-      - completed # Trigger only when CI workflow completes
+  push:
+    branches:
+      - main # Trigger on push to main branch
+    tags:
+      - 'v*.*.*' # Trigger on push of version tags (e.g., v0.5.5)
 
 jobs:
-  # This job acts as a gatekeeper and extracts necessary info
-  check-and-prepare:
+  build:
     runs-on: ubuntu-latest
-    # Only proceed if the triggering CI workflow was successful AND was triggered by a tag push
-    if: ${{ github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, 'refs/tags/v') }}
     outputs:
-      tag_name: ${{ steps.get_tag.outputs.tag_name }}
-      run_id: ${{ github.event.workflow_run.id }} # Pass the run ID of the CI workflow
+      version: ${{ steps.get_version.outputs.version }}
       artifact_name: build-artifacts-archive # Consistent name
     steps:
-      - name: Get Tag Name
-        id: get_tag
-        run: echo "tag_name=$(echo ${{ github.event.workflow_run.head_branch }} | sed 's#refs/tags/##')" >> $GITHUB_OUTPUT
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Print Info
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Get package version
+        id: get_version
+        # Use tag name if available, otherwise use package.json version
         run: |
-          echo "Triggering CI Workflow Run ID: ${{ github.event.workflow_run.id }}"
-          echo "Triggering CI Workflow Conclusion: ${{ github.event.workflow_run.conclusion }}"
-          echo "Triggering Ref (Tag): ${{ github.event.workflow_run.head_branch }}"
-          echo "Extracted Tag Name: ${{ steps.get_tag.outputs.tag_name }}"
+          VERSION=""
+          if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION=$(echo "${{ github.ref }}" | sed 's#refs/tags/##')
+          else
+            VERSION=$(node -p "require('./package.json').version")
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      # --- Conditional Artifact Archiving and Upload ---
+      - name: Archive build artifacts (only on tag push)
+        if: startsWith(github.ref, 'refs/tags/v') # Condition: Only run for tags
+        id: archive_build
+        run: |
+          tar -czf build-artifacts.tar.gz build/ package.json package-lock.json README.md CHANGELOG.md Dockerfile .dockerignore
+          echo "archive_name=build-artifacts.tar.gz" >> $GITHUB_OUTPUT
+
+      - name: Upload build artifacts (only on tag push)
+        if: startsWith(github.ref, 'refs/tags/v') # Condition: Only run for tags
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-archive # Use consistent name
+          path: ${{ steps.archive_build.outputs.archive_name }}
 
   publish-npm:
-    needs: check-and-prepare # Depend on the gatekeeper job
+    needs: build
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') # Condition: Only run for tags
     steps:
-      - name: Download build artifacts from CI workflow
-        uses: dawidd6/action-download-artifact@v6 # Use action that supports workflow_run
+      - name: Download build artifacts archive
+        uses: actions/download-artifact@v4
         with:
-          workflow: ci.yml # Name of the CI workflow file
-          run_id: ${{ needs.check-and-prepare.outputs.run_id }} # Get Run ID from previous job
-          name: ${{ needs.check-and-prepare.outputs.artifact_name }} # Artifact name
-          path: . # Download to current directory
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: .
 
       - name: Extract build artifacts
-        run: tar -xzf ${{ needs.check-and-prepare.outputs.artifact_name }}.tar.gz
+        run: tar -xzf ${{ needs.build.outputs.artifact_name }}.tar.gz
 
       - name: Set up Node.js for npm publish
         uses: actions/setup-node@v4
@@ -50,25 +76,23 @@ jobs:
           registry-url: 'https://registry.npmjs.org/'
 
       - name: Publish to npm
-        # Assumes package.json version matches the tag
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-docker:
-    needs: check-and-prepare # Depend on the gatekeeper job
+    needs: build
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') # Condition: Only run for tags
     steps:
-      - name: Download build artifacts from CI workflow
-        uses: dawidd6/action-download-artifact@v6
+      - name: Download build artifacts archive
+        uses: actions/download-artifact@v4
         with:
-          workflow: ci.yml
-          run_id: ${{ needs.check-and-prepare.outputs.run_id }}
-          name: ${{ needs.check-and-prepare.outputs.artifact_name }}
+          name: ${{ needs.build.outputs.artifact_name }}
           path: .
 
       - name: Extract build artifacts
-        run: tar -xzf ${{ needs.check-and-prepare.outputs.artifact_name }}.tar.gz
+        run: tar -xzf ${{ needs.build.outputs.artifact_name }}.tar.gz
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -87,10 +111,10 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: shtse8/filesystem-mcp
-          # Use tag name from the gatekeeper job output
+          # Use version from the build job output (which is derived from the tag)
           tags: |
-            type=semver,pattern={{version}},value=${{ needs.check-and-prepare.outputs.tag_name }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ needs.check-and-prepare.outputs.tag_name }}
+            type=semver,pattern={{version}},value=${{ needs.build.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.build.outputs.version }}
             type=sha,prefix=,suffix=,event=tag
             type=raw,value=latest
 
@@ -105,34 +129,28 @@ jobs:
           cache-to: type=gha,mode=max
 
   create-release:
-    needs: [check-and-prepare, publish-npm, publish-docker] # Depend on gatekeeper and both publish jobs
+    needs: [build, publish-npm, publish-docker] # Depend on build and both publish jobs
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') # Condition: Only run for tags
     permissions:
       contents: write
     steps:
       # No need to checkout repo again if CHANGELOG is in artifact
-      # - name: Checkout repository (needed for CHANGELOG)
-      #   uses: actions/checkout@v4
-      #   with:
-      #     ref: ${{ needs.check-and-prepare.outputs.tag_name }} # Checkout the specific tag
-
-      - name: Download build artifacts from CI workflow
-        uses: dawidd6/action-download-artifact@v6
+      - name: Download build artifacts archive
+        uses: actions/download-artifact@v4
         with:
-          workflow: ci.yml
-          run_id: ${{ needs.check-and-prepare.outputs.run_id }}
-          name: ${{ needs.check-and-prepare.outputs.artifact_name }}
+          name: ${{ needs.build.outputs.artifact_name }}
           path: .
 
       - name: Extract build artifacts
-        run: tar -xzf ${{ needs.check-and-prepare.outputs.artifact_name }}.tar.gz
+        run: tar -xzf ${{ needs.build.outputs.artifact_name }}.tar.gz
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.check-and-prepare.outputs.tag_name }}
-          name: Release ${{ needs.check-and-prepare.outputs.tag_name }}
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
           body_path: CHANGELOG.md # Assumes CHANGELOG.md is in the artifact
-          # files: ${{ needs.check-and-prepare.outputs.artifact_name }}.tar.gz # Attach the archive
+          # files: ${{ needs.build.outputs.artifact_name }}.tar.gz # Attach the archive
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
