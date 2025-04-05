@@ -40,7 +40,7 @@ jobs:
       - name: Archive build artifacts
         id: archive_build
         run: |
-          tar -czf build-artifacts.tar.gz build/ package.json README.md CHANGELOG.md Dockerfile .dockerignore
+          tar -czf build-artifacts.tar.gz build/ package.json package-lock.json README.md CHANGELOG.md Dockerfile .dockerignore
           # Include any other files needed for publishing or release assets
           echo "archive_name=build-artifacts.tar.gz" >> $GITHUB_OUTPUT
 
@@ -63,7 +63,7 @@ jobs:
           path: .
 
       - name: Extract build artifacts
-        run: tar -xzf build-artifacts-archive/build-artifacts.tar.gz
+        run: tar -xzf build-artifacts.tar.gz # Extract the archive from the current directory
 
       - name: Set up Node.js for npm publish
         uses: actions/setup-node@v4
@@ -81,7 +81,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     # Run on main branch pushes (for latest) and tag pushes (for versioned releases)
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') # Only run on tag pushes
     steps:
       - name: Download build artifacts archive
         uses: actions/download-artifact@v4
@@ -111,11 +111,12 @@ jobs:
           images: shtse8/filesystem-mcp
           # Use tag name for version tags, otherwise use 'latest' for main branch
           tags: |
+            # Tags based on the pushed version tag
             type=semver,pattern={{version}},value=${{ needs.build.outputs.version }}
             type=semver,pattern={{major}}.{{minor}},value=${{ needs.build.outputs.version }}
-            type=sha,prefix=,suffix=,event=branch # Sha for main branch
-            type=sha,prefix=,suffix=,event=tag    # Sha for tags
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }} # Latest only for main branch
+            type=sha,prefix=,suffix=,event=tag # Sha for tags
+            # Optionally add 'latest' tag for every version release, or manage manually
+            type=raw,value=latest
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
