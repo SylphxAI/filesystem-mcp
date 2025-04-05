@@ -1,11 +1,9 @@
-name: Build, Test, Publish & Release
+name: Release
 
 on:
   push:
-    branches:
-      - main # Trigger on push to main branch
     tags:
-      - 'v*.*.*' # Trigger on push of version tags (e.g., v0.5.3)
+      - 'v*.*.*' # Trigger only on push of version tags (e.g., v0.5.5)
 
 jobs:
   build:
