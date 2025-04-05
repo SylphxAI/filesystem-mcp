@@ -1,9 +1,9 @@
-<!-- Version: 2.8 | Last Updated: 2025-04-05 | Updated By: Cline -->
-# Active Context: Filesystem MCP Server (v0.5.7 Release)
+<!-- Version: 2.9 | Last Updated: 2025-04-05 | Updated By: Cline -->
+# Active Context: Filesystem MCP Server (v0.5.8 Release)
 
 ## 1. Current Work Focus
 
-Preparing to commit changes and tag version `0.5.7` to test the CI/CD fix for Docker artifact archiving.
+Preparing to commit changes and tag version `0.5.8` after fixing the `.dockerignore` file which caused the previous Docker build failure.
 
 ## 2. Recent Changes/Decisions
 
@@ -42,15 +42,17 @@ Preparing to commit changes and tag version `0.5.7` to test the CI/CD fix for Do
 - **Added `LICENSE` File:** Created `LICENSE` file with MIT license text.
 - **Updated `README.md`:** Added Glama.ai badge.
 - **Fixed CI Artifact Archiving:** Corrected `tar` command in `.github/workflows/publish.yml` to include the `build` directory itself, not just its contents (5f5c7c4).
-- **Incremented Version to 0.5.7:** Updated `package.json` and `CHANGELOG.md`.
+- **Incremented Version to 0.5.7:** Updated `package.json` and `CHANGELOG.md` (Release failed due to `.dockerignore`).
+- **Fixed `.dockerignore`:** Removed `build` directory exclusion to allow it in Docker build context.
+- **Incremented Version to 0.5.8:** Updated `package.json` and `CHANGELOG.md`.
 
 ## 3. Next Steps / Considerations
 
-- **Update `progress.md`:** Reflect the version bump and CI fix.
-- **Commit Changes:** Commit updated `package.json`, `CHANGELOG.md`, and Memory Bank files.
-- **Tag Release:** Create git tag `v0.5.7`.
+- **Update `progress.md`:** Reflect the `.dockerignore` fix and version bump to `0.5.8`.
+- **Commit Changes:** Commit updated `.dockerignore`, `package.json`, `CHANGELOG.md`, and Memory Bank files.
+- **Tag Release:** Create git tag `v0.5.8`.
 - **Push Commit & Tag:** Push the commit and the new tag to `origin`.
-- **Monitor CI/CD:** Verify the `v0.5.7` release workflow completes successfully, especially the `publish-docker` job.
+- **Monitor CI/CD:** Verify the `v0.5.8` release workflow completes successfully.
 - **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
 
 ## 4. Active Decisions
@@ -66,7 +68,7 @@ Preparing to commit changes and tag version `0.5.7` to test the CI/CD fix for Do
 - **Tool Descriptions:** Updated `writeContent` and `editFile` descriptions.
 - **CI/CD Structure:** Simplified single workflow (`publish.yml`) handling CI checks and tag-triggered releases. Artifact handling fixed. Diagnostic steps added.
 - **Dockerfile:** Refactored to copy pre-built code and install production dependencies only.
-- **Release Version:** Set to `0.5.7`.
-- **Changelog:** Updated for `v0.5.7`.
+- **Release Version:** Set to `0.5.8`.
+- **Changelog:** Updated for `v0.5.8`.
 - **License:** Added MIT `LICENSE` file.
 - **README Badge:** Added Glama.ai badge.

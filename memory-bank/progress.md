@@ -1,5 +1,5 @@
-<!-- Version: 2.8 | Last Updated: 2025-04-05 | Updated By: Cline -->
-# Progress: Filesystem MCP Server (v0.5.7 Release)
+<!-- Version: 2.9 | Last Updated: 2025-04-05 | Updated By: Cline -->
+# Progress: Filesystem MCP Server (v0.5.8 Release)
 
 ## 1. What Works
 
@@ -18,36 +18,37 @@
 - **Tool Descriptions:** Descriptions for `write_content` and `edit_file` now include notes recommending edit tools for modifications.
 - **Dockerization:**
   - `Dockerfile` created using multi-stage builds, copies pre-built code, installs production dependencies only.
-  - `.dockerignore` configured correctly.
+  - `.dockerignore` configured correctly (removed `build` exclusion).
 - **CI/CD (GitHub Actions):**
   - **Simplified Single Workflow (`publish.yml`):** Handles both CI checks (build only on main push) and Releases (build with artifacts, parallel publish, auto-release on tag push).
   - **Conditional Artifacts:** Build job uploads artifacts only when triggered by a tag push.
   - **Conditional Publishing/Release:** Publish and release jobs run only when triggered by a tag push.
   - **Artifact Handling Fixed:** Corrected artifact creation (`tar` command now includes `build` directory) and extraction.
   - **Diagnostic Steps Added:** Added `ls -la` steps to `publish-docker` job for debugging artifact issues.
-- **Versioning:** Package version updated to `0.5.7`.
+- **Versioning:** Package version updated to `0.5.8`.
 - **`.clinerules` Created:** Established `memory-bank/.clinerules` to capture project-specific patterns and user preferences.
-- **Changelog:** Updated `CHANGELOG.md` with entry for v0.5.7.
+- **Changelog:** Updated `CHANGELOG.md` with entry for v0.5.8.
 - **License:** Added MIT `LICENSE` file.
 
 ## 2. What's Left to Build / Test
 
-- **Commit Changes:** Commit updated `package.json`, `CHANGELOG.md`, and Memory Bank files.
-- **Tag Release:** Create git tag `v0.5.7`.
+- **Commit Changes:** Commit updated `.dockerignore`, `package.json`, `CHANGELOG.md`, and Memory Bank files.
+- **Tag Release:** Create git tag `v0.5.8`.
 - **Push Commit & Tag:** Push the commit and the new tag to `origin`.
-- **Monitor CI/CD:** Verify the `v0.5.7` release workflow completes successfully, especially the `publish-docker` job.
+- **Monitor CI/CD:** Verify the `v0.5.8` release workflow completes successfully.
 - **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
 - **Code Cleanup:** (Post-release task) Remove any remaining debugging logs (including the added `ls -la` steps if successful).
 - **Comprehensive Testing:** (Post-release task) Test dynamic root logic, launcher integration, edge cases, etc.
 
 ## 3. Current Status
 
-- **Release Prep Complete:** Version bumped to `0.5.7`, `CHANGELOG.md` updated.
-- **CI/CD Artifact Archiving Fixed:** Corrected `tar` command in `publish.yml` to include the `build` directory.
-- **Ready to Commit & Tag:** Waiting to commit version updates and tag `v0.5.7`.
+- **Release Prep Complete:** Version bumped to `0.5.8`, `CHANGELOG.md` updated.
+- **Docker Build Context Fixed:** Removed `build` exclusion from `.dockerignore`.
+- **Ready to Commit & Tag:** Waiting to commit fixes and version updates, then tag `v0.5.8`.
 
 ## 4. Known Issues / Areas for Improvement
 
+- **Docker Build Failure (v0.5.7):** The `v0.5.7` release failed because `.dockerignore` excluded the `build` directory from the Docker context. (Fixed in v0.5.8)
 - **Launcher Dependency:** Server functionality is now critically dependent on the launching process setting the correct `cwd`.
 - **`list_files` (`glob` path):** Potential issue with recursion/stats enabled needs investigation.
 - **Windows `chmod`/`chown`:** Effectiveness is limited by the OS.

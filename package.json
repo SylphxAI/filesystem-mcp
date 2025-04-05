@@ -1,6 +1,6 @@
 {
   "name": "@shtse8/filesystem-mcp",
-  "version": "0.5.7",
+  "version": "0.5.8",
   "description": "An MCP server providing filesystem tools relative to a project root.",
   "type": "module",
   "bin": {

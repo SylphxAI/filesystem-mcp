@@ -6,7 +6,6 @@
 node_modules
 
 # Build artifacts (we only need the build output in the final stage)
-build
 
 # Docker files
 Dockerfile
