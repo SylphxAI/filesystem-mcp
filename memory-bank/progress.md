@@ -1,5 +1,5 @@
-<!-- Version: 1.5 | Last Updated: 2025-05-04 | Updated By: Cline -->
-# Progress: Filesystem MCP Server (v0.5.2 - Parallel CI/CD & Enhancements)
+<!-- Version: 1.6 | Last Updated: 2025-05-04 | Updated By: Cline -->
+# Progress: Filesystem MCP Server (v0.5.3 - Changelog & Release Prep)
 
 ## 1. What Works
 
@@ -23,29 +23,22 @@
 - **CI/CD (GitHub Actions):**
   - Workflow successfully automates publishing to npm and Docker Hub.
   - **Parallel Publishing:** Workflow refactored to use separate, parallel jobs for npm and Docker publishing, dependent on a shared build job using artifacts.
-- **Versioning:** Package version consistently incremented (updated to `0.5.1`, preparing for `0.5.2`).
+- **Versioning:** Package version updated to `0.5.3`.
 - **`.clinerules` Created:** Established `memory-bank/.clinerules` to capture project-specific patterns and user preferences.
+- **Changelog:** Created `CHANGELOG.md` documenting changes for v0.5.3.
 
 ## 2. What's Left to Build / Test
 
-- **Rebuild & Restart Server:** Need to rebuild (`npm run build`) and restart the server locally if testing changes other than CI/CD.
-- **Test Error Reporting & Descriptions:** Verify enhanced error messages and updated tool descriptions locally.
-- **Test Dynamic Root Logic:** Verify the server operates correctly when launched with different `cwd` settings locally.
-- **Launcher Integration Testing:** Confirm the system launching the server sets the `cwd` appropriately.
-- **Versioning:** Update `package.json` to `0.5.2` and potentially create a git tag.
-- **CI/CD Verification:** Monitor the next push to `main` to ensure the parallel jobs run correctly.
-- **Resolve `list_files` Issue (Glob Path):** (Lower priority) Investigate the `glob`-based execution path within `handleListFiles`.
-- **Comprehensive Testing (Post-Root Change):** Re-test core functionality, edge cases, permissions (`chmod`/`chown`), cross-device moves/copies in the context of the dynamic root.
-- **Code Cleanup:** Remove any remaining debugging logs.
-- **`edit_file` Regex Support:** Implement regex matching for search patterns.
+- **Commit & Push Release:** Commit `package.json`, `CHANGELOG.md`, Memory Bank updates. Create and push `v0.5.3` tag.
+- **Monitor CI/CD:** Verify the parallel jobs run correctly and publish v0.5.3.
+- **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
+- **Code Cleanup:** (Post-release task) Remove any remaining debugging logs.
+- **Comprehensive Testing:** (Post-release task) Test dynamic root logic, launcher integration, edge cases, etc.
 
 ## 3. Current Status
 
-- **Project Root Logic Updated:** Server now uses `process.cwd()` for the project root.
-- **Core Functionality Implemented:** All defined tools are implemented and passed basic tests. Batch error handling confirmed. Path error reporting enhanced. Tool descriptions updated.
-- **Deployment Automated:** Publishing to npm and Docker Hub is handled by GitHub Actions, now configured for parallel execution.
-- **Documentation Updated (Internal & Public):** Memory Bank files updated. `README.md` updated.
-- **Primary Blocker:** Need to test the parallel CI/CD workflow on the next push. Locally, need to rebuild, restart, and test the enhanced error reporting and description changes, then test the dynamic root behavior thoroughly and ensure the launcher integration works as expected before releasing `0.5.2`.
+- **Release Prep Complete:** Version bumped to `0.5.3`, `CHANGELOG.md` created, all related changes documented in Memory Bank.
+- **Ready to Commit & Push:** Waiting to commit changes and push the tag to trigger the release.
 
 ## 4. Known Issues / Areas for Improvement
 
