@@ -1,4 +1,4 @@
-<!-- Version: 4.9 | Last Updated: 2025-04-06 | Updated By: Roo -->
+<!-- Version: 4.10 | Last Updated: 2025-04-06 | Updated By: Roo -->
 # Progress: Filesystem MCP Server
 
 ## 1. What Works
@@ -45,12 +45,12 @@
 
 - All tests pass except for 3 skipped tests (2 in `editFile`, 1 in `searchFiles`) due to known bugs/mocking issues.
 - Coverage reports are generating.
-- Ready to analyze coverage and add more tests.
+- Ready to analyze coverage and add more tests in the next task.
 
 ## 4. Known Issues / Areas for Improvement
 
-- **`editFile` Nth Regex Bug:** Replace/delete operations using `use_regex: true` and `match_occurrence > 1` incorrectly affect only the first match found in the original content state, not the Nth match in the current state. (Tests Skipped).
-- **`searchFiles` Mocking Issue:** Test `should handle file read errors gracefully and continue` fails due to `TypeError: Cannot redefine property: readFile` when using `vi.spyOn(fsPromises, 'readFile')`. Needs investigation into Vitest mocking lifecycle or alternative mocking strategy. (Test Skipped).
+- **`editFile` Nth Regex Bug:** Replace/delete operations using `use_regex: true` and `match_occurrence > 1` incorrectly affect only the first match found. (Tests Skipped).
+- **`searchFiles` Mocking Issue:** Test `should handle file read errors gracefully and continue` fails due to `TypeError: Cannot redefine property: readFile` when using `vi.spyOn(fsPromises, 'readFile')`. Needs investigation. (Test Skipped).
 - **Coverage Reports:** Generation fixed. Need to analyze and improve coverage.
 - **`apply_diff` Unreliability:** Tool seems unreliable on `editFile.ts`. Prefer `write_to_file`.
 - **Launcher Dependency:** Server functionality relies on the launching process setting the correct `cwd`.
