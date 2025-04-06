@@ -41,25 +41,45 @@ const handleReadContentFunc = async (args: unknown) => {
 
   const results = await Promise.allSettled(relativePaths.map(async (relativePath): Promise<ReadResult> => {
     const pathOutput = relativePath.replace(/\\/g, '/'); // Ensure consistent path separators early
-    let targetPath: string = ''; // Declare outside try block for catch scope
+    let targetPath: string; // Declare here
+
     try {
-      const targetPath = resolvePath(relativePath);
-      const stats = await fs.stat(targetPath);
-      if (!stats.isFile()) {
-          return { path: pathOutput, error: `Path is not a file` };
+      // Resolve path first. This can throw McpError for invalid/absolute/traversal paths.
+      targetPath = resolvePath(relativePath);
+
+      // Now try file operations
+      try {
+          const stats = await fs.stat(targetPath);
+          if (!stats.isFile()) {
+              // Use a more specific error message or code if possible
+              return { path: pathOutput, error: `Path is not a regular file: ${relativePath}` };
+          }
+          // Read the file
+          const content = await fs.readFile(targetPath, 'utf-8');
+          return { path: pathOutput, content: content };
+
+      } catch (fsError: any) {
+          // Handle errors from fs.stat or fs.readFile
+          if (fsError.code === 'ENOENT') {
+              // Now targetPath should be correctly defined here
+              return { path: pathOutput, error: `File not found at resolved path '${targetPath}' (from relative path '${relativePath}')` };
+          }
+          if (fsError.code === 'EISDIR') {
+               return { path: pathOutput, error: `Path is a directory, not a file: ${relativePath}` };
+          }
+          // Log other filesystem errors
+          console.error(`[Filesystem MCP - readContent] Filesystem error for ${relativePath} at ${targetPath}:`, fsError);
+          return { path: pathOutput, error: `Filesystem error: ${fsError.message}` };
       }
-      const content = await fs.readFile(targetPath, 'utf-8');
-      return { path: pathOutput, content: content };
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
-          // Include more context for ENOENT errors
-          return { path: pathOutput, error: `File not found at resolved path '${targetPath}' (from relative path '${relativePath}', project root: '${PROJECT_ROOT}')` };
-      }
-      if (error instanceof McpError) {
-          return { path: pathOutput, error: error.message };
-      }
-      console.error(`[Filesystem MCP - readContent] Error reading file ${relativePath}:`, error);
-      return { path: pathOutput, error: `Failed to read file: ${error.message}` };
+
+    } catch (resolveError: any) {
+        // Handle errors from resolvePath (McpError)
+        if (resolveError instanceof McpError) {
+            return { path: pathOutput, error: resolveError.message }; // Return McpError message directly
+        }
+        // Handle unexpected errors during path resolution
+        console.error(`[Filesystem MCP - readContent] Unexpected error resolving path ${relativePath}:`, resolveError);
+        return { path: pathOutput, error: `Unexpected error resolving path: ${resolveError.message}` };
     }
   }));
 

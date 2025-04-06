@@ -17,10 +17,13 @@ async function createStructureRecursively(structure: any, currentPath: string): 
     const content = structure[name];
 
     if (typeof content === 'string') {
-      // It's a file
+      // It's a file with string content
+      await fsPromises.writeFile(itemPath, content);
+    } else if (Buffer.isBuffer(content)) {
+      // It's a file with binary content
       await fsPromises.writeFile(itemPath, content);
     } else if (typeof content === 'object' && content !== null) {
-      // It's a directory
+      // It's a directory (plain object)
       await fsPromises.mkdir(itemPath);
       // Recurse into the subdirectory
       await createStructureRecursively(content, itemPath);
