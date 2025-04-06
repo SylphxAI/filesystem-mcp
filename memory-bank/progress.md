@@ -1,4 +1,4 @@
-<!-- Version: 4.14 | Last Updated: 2025-04-06 | Updated By: Roo -->
+<!-- Version: 4.15 | Last Updated: 2025-04-06 | Updated By: Roo -->
 # Progress: Filesystem MCP Server
 
 ## 1. What Works
@@ -20,7 +20,7 @@
 - **Testing Framework:** Vitest configured with v8 coverage.
 - **Coverage Reports:** Generating successfully.
 - **Tests Added & Passing (Vitest):**
-    - `listFiles` (Improved coverage, 1 test skipped)
+    - `listFiles` (Improved coverage, 1 test skipped - confirmed mocking issue)
     - `statItems`
     - `readContent`
     - `writeContent` (Improved coverage, 1 test skipped - confirmed mocking issue)
