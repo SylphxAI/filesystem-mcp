@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
@@ -8,18 +8,19 @@ import { createTemporaryFilesystem, cleanupTemporaryFilesystem } from '../testUt
 let mockedProjectRoot: string = 'initial/mock/root'; // Initial value
 
 // Mock pathUtils BEFORE importing the handler
-const mockResolvePath = jest.fn<(userPath: string) => string>();
-jest.unstable_mockModule('../../src/utils/pathUtils.js', () => ({
+// Mock pathUtils using vi.mock (hoisted)
+const mockResolvePath = vi.fn<(userPath: string) => string>();
+vi.mock('../../src/utils/pathUtils.js', () => ({
     // Use the dynamic variable for PROJECT_ROOT
-    // Use a getter to ensure the latest value of mockedProjectRoot is used
     get PROJECT_ROOT() { return mockedProjectRoot; },
     resolvePath: mockResolvePath,
 }));
 
 // Mock glob BEFORE importing the handler
 // Provide type hint for the mock function signature: returns a Promise resolving to string[]
-const mockGlob = jest.fn<() => Promise<string[]>>();
-jest.unstable_mockModule('glob', () => ({
+// Mock glob using vi.mock (hoisted)
+const mockGlob = vi.fn<() => Promise<string[]>>();
+vi.mock('glob', () => ({
     glob: mockGlob,
 }));
 
@@ -59,12 +60,12 @@ describe('handleSearchFiles Integration Tests', () => {
     });
 
     // Reset glob mock before each test
-    mockGlob.mockReset();
+    // Use vi.clearAllMocks() in afterEach instead of mockReset here
   });
 
   afterEach(async () => {
     await cleanupTemporaryFilesystem(tempRootDir);
-    mockResolvePath.mockClear();
+    vi.clearAllMocks(); // Clear all mocks
   });
 
   it('should find search term in multiple files with default file pattern (*)', async () => {

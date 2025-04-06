@@ -1,13 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { createTemporaryFilesystem, cleanupTemporaryFilesystem } from '../testUtils.js';
 
 // Mock pathUtils BEFORE importing the handler
-const mockResolvePath = jest.fn<(userPath: string) => string>();
-jest.unstable_mockModule('../../src/utils/pathUtils.js', () => ({
-    PROJECT_ROOT: 'mocked/project/root',
+// Mock pathUtils using vi.mock (hoisted)
+const mockResolvePath = vi.fn<(userPath: string) => string>();
+vi.mock('../../src/utils/pathUtils.js', () => ({
+    PROJECT_ROOT: 'mocked/project/root', // Keep simple for now
     resolvePath: mockResolvePath,
 }));
 
@@ -43,7 +44,7 @@ describe('handleWriteContent Integration Tests', () => {
 
   afterEach(async () => {
     await cleanupTemporaryFilesystem(tempRootDir);
-    mockResolvePath.mockClear();
+    vi.clearAllMocks(); // Clear all mocks
   });
 
   it('should write content to new files', async () => {

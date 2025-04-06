@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals'; // Add jest
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 // Import the definition object - will be mocked later
@@ -7,10 +7,10 @@ import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js'; // Mat
 import { createTemporaryFilesystem, cleanupTemporaryFilesystem } from '../testUtils.js'; // Assuming a test utility exists, add .js extension
 
 // Mock pathUtils BEFORE importing the handler that uses it
-const mockResolvePath = jest.fn<(userPath: string) => string>(); // Add type hint for the mock function signature
-jest.unstable_mockModule('../../src/utils/pathUtils.js', () => ({
-    // Keep original PROJECT_ROOT if needed elsewhere, but override resolvePath
-    PROJECT_ROOT: 'mocked/project/root', // Or keep original: jest.requireActual('../../src/utils/pathUtils.js').PROJECT_ROOT,
+// Mock pathUtils using vi.mock (hoisted)
+const mockResolvePath = vi.fn<(userPath: string) => string>();
+vi.mock('../../src/utils/pathUtils.js', () => ({
+    PROJECT_ROOT: 'mocked/project/root', // Keep simple for now
     resolvePath: mockResolvePath,
 }));
 
@@ -55,7 +55,7 @@ describe('handleStatItems Integration Tests', () => {
     // Change CWD back - No longer needed
     // process.chdir(originalCwd);
     await cleanupTemporaryFilesystem(tempRootDir);
-    mockResolvePath.mockClear(); // Clear mock calls between tests
+    vi.clearAllMocks(); // Clear all mocks, including resolvePath
   });
 
   it('should return stats for existing files and directories', async () => {

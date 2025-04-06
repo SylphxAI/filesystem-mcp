@@ -1,5 +1,5 @@
 // __tests__/handlers/listFiles.test.ts
-import { jest } from '@jest/globals'; // Keep for Jest functions like expect
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import type { Stats, Dirent } from 'fs';
 import { promises as fsPromises } from 'fs'; // Import actual fs promises

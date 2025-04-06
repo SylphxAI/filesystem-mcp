@@ -1,34 +1,31 @@
 // __tests__/handlers/editFile.test.ts
-import { jest } from '@jest/globals';
+import { vi, describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import type { Stats } from 'fs';
 import type { PathLike, WriteFileOptions, StatOptions } from 'fs';
 import path from 'path';
 
-// --- Define Mocks OUTSIDE the factory ---
+// --- Define Mock Types ---
 type MockReadFileOptions = any;
 type MockReadFile = (path: PathLike | number, options?: MockReadFileOptions) => Promise<string | Buffer>;
 type MockWriteFile = (path: PathLike | number, data: string | NodeJS.ArrayBufferView, options?: WriteFileOptions) => Promise<void>;
 type MockStat = (path: PathLike, opts?: StatOptions) => Promise<Stats>;
 
-const mockReadFileFn = jest.fn<MockReadFile>();
-const mockWriteFileFn = jest.fn<MockWriteFile>();
-const mockStatFn = jest.fn<MockStat>();
-const mockMkdirFn = jest.fn();
-const mockAppendFileFn = jest.fn();
-const mockChmodFn = jest.fn();
-const mockChownFn = jest.fn();
-const mockUnlinkFn = jest.fn();
-const mockReaddirFn = jest.fn();
-const mockRenameFn = jest.fn();
-const mockCopyFileFn = jest.fn();
-const mockResolvePathFnExt = jest.fn((relativePath: string) => {
-    return path.resolve(process.cwd(), relativePath);
-});
+// --- Mock Dependencies using vi.mock (hoisted) ---
+// Define mocks within the factory function for vi.mock
+const mockReadFileFn = vi.fn<MockReadFile>();
+const mockWriteFileFn = vi.fn<MockWriteFile>();
+const mockStatFn = vi.fn<MockStat>();
+const mockMkdirFn = vi.fn();
+const mockAppendFileFn = vi.fn();
+const mockChmodFn = vi.fn();
+const mockChownFn = vi.fn();
+const mockUnlinkFn = vi.fn();
+const mockReaddirFn = vi.fn();
+const mockRenameFn = vi.fn();
+const mockCopyFileFn = vi.fn();
 
-// --- Mock Dependencies using unstable_mockModule ---
-jest.unstable_mockModule('fs/promises', () => {
-    // Return the externally defined mocks
+vi.mock('fs/promises', () => {
     const fsPromisesMockObject = {
       readFile: mockReadFileFn,
       writeFile: mockWriteFileFn,
@@ -49,17 +46,20 @@ jest.unstable_mockModule('fs/promises', () => {
     };
 });
 
-jest.unstable_mockModule('../../src/utils/pathUtils.js', () => ({
+const mockResolvePathFnExt = vi.fn((relativePath: string) => path.resolve(process.cwd(), relativePath));
+vi.mock('../../src/utils/pathUtils.js', () => ({
     resolvePath: mockResolvePathFnExt,
-    PROJECT_ROOT: process.cwd(),
+    PROJECT_ROOT: process.cwd(), // Keep simple for now, adjust if needed per test
 }));
 
-jest.unstable_mockModule('detect-indent', () => ({
-    default: jest.fn().mockReturnValue({ indent: '  ', type: 'space', amount: 2 }),
+vi.mock('detect-indent', () => ({
+    default: vi.fn().mockReturnValue({ indent: '  ', type: 'space', amount: 2 }),
 }));
-jest.unstable_mockModule('diff', () => ({
-    createPatch: jest.fn().mockReturnValue('mock diff content'),
+vi.mock('diff', () => ({
+    createPatch: vi.fn().mockReturnValue('mock diff content'),
 }));
+
+// Removed old jest.unstable_mockModule calls
 
 // --- Test Suite ---
 describe('editFile Handler', () => {
@@ -78,7 +78,7 @@ describe('editFile Handler', () => {
 
   beforeEach(() => {
     // Clear mocks before each test
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Default mock implementations SET INSIDE beforeEach using external vars
     const defaultMockStats = {
