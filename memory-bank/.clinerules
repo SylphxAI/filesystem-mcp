@@ -1,4 +1,4 @@
-<!-- Version: 4.5 | Last Updated: 2025-04-06 | Updated By: Roo -->
+<!-- Version: 4.6 | Last Updated: 2025-04-06 | Updated By: Roo -->
 
 # Cline Rules for filesystem-mcp Project
 
@@ -8,8 +8,15 @@
 
 ## Technical Notes & Workarounds
 
-- **Jest ESM Mocking:** Mocking ES Modules (especially `fs/promises`, `glob`, and local utilities) with Jest/`ts-jest` in this project is complex and standard methods (`jest.mock`, `spyOn`) often fail due to module loading order or immutability issues.
-    - **`editFile` Test Strategy:** Uses `jest.unstable_mockModule` with mock functions defined *outside* the factory, returning these external functions from the factory. Requires `as any` cast on mock function calls (`mockFn.mockResolvedValue(...)`) within tests to bypass TypeScript errors, although this might mask underlying issues if the mock isn't correctly applied.
-    - **`listFiles` Test Strategy:** Uses integration testing. Creates temporary directories/files using actual `fsPromises` in `beforeEach`/`afterEach` and tests the handler against this real (but temporary) filesystem state. This avoids mocking `fs` but makes tests slower and dependent on actual filesystem behavior.
-    - **Execution Requirement:** Tests require the `NODE_OPTIONS=--experimental-vm-modules` flag set via `cross-env` in the `npm test` script.
+- **Vitest ESM Mocking:** Mocking Node.js built-in ES Modules (like `fs/promises`) or external libraries (`glob`) using `vi.mock` or `vi.doMock` in Vitest can be problematic due to hoisting, scope, and type inference issues, especially when trying to modify mock behavior within tests. **Prefer direct dependency injection:**
+    - Export the core logic function from the handler file, accepting dependencies as an argument.
+    - In tests, import the core logic function.
+    - In `beforeEach`, create mock functions (`vi.fn()`) for dependencies.
+    - Use `vi.importActual` to get the real implementations and set them as the default for the mock functions.
+    - Create a `dependencies` object, passing in the mock functions.
+    - Call the core logic function with the `dependencies` object.
+    - Within specific tests requiring mocked behavior, modify the implementation of the mock function (e.g., `mockDependency.mockImplementation(...)`).
+    - *Obsolete `editFile` Strategy:* Previous attempts used `jest.unstable_mockModule` (likely a typo, meant Vitest equivalent) which was also unreliable.
+    - *Obsolete `listFiles` Strategy:* Initial integration tests avoided mocking but couldn't test error paths effectively. Dependency injection proved superior.
+    - **Execution Requirement:** Tests still require `NODE_OPTIONS=--experimental-vm-modules` (handled by `cross-env` in `package.json`).
 - **`write_to_file` Tool Limitation:** This tool seems to incorrectly escape `&` characters to `&amp;amp;` within the `<content>` block, causing syntax errors when writing code containing `&`. Use alternative tools like `apply_diff` (carefully, as it has issues with `=======`) or `search_and_replace` for such content, or write the file in multiple steps if possible.

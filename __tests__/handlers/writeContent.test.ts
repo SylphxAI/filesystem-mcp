@@ -1,19 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
+import type { PathLike } from 'fs'; // Import PathLike type
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { createTemporaryFilesystem, cleanupTemporaryFilesystem } from '../testUtils.js';
 
-// Mock pathUtils BEFORE importing the handler
-// Mock pathUtils using vi.mock (hoisted)
-const mockResolvePath = vi.fn<(userPath: string) => string>();
-vi.mock('../../src/utils/pathUtils.js', () => ({
-    PROJECT_ROOT: 'mocked/project/root', // Keep simple for now
-    resolvePath: mockResolvePath,
-}));
+// Remove vi.mock for pathUtils
 
-// Import the handler AFTER the mock
-const { writeContentToolDefinition } = await import('../../src/handlers/writeContent.js');
+// Import the core function and types
+import { handleWriteContentFunc, WriteContentDependencies, WriteContentArgsSchema } from '../../src/handlers/writeContent.js';
 
 // Define the initial structure for the temporary filesystem
 const initialTestStructure = {
@@ -24,22 +19,45 @@ const initialTestStructure = {
 let tempRootDir: string;
 
 describe('handleWriteContent Integration Tests', () => {
+ let mockDependencies: WriteContentDependencies;
+ let mockWriteFile: Mock; // Declare mock function variable
+ let mockAppendFile: Mock; // Declare mock function variable for append
+ let mockMkdir: Mock; // Declare mock function variable for mkdir
+ let mockStat: Mock; // Declare mock function variable for stat
   beforeEach(async () => {
     tempRootDir = await createTemporaryFilesystem(initialTestStructure);
 
-    // Configure the mock resolvePath
-    mockResolvePath.mockImplementation((relativePath: string): string => {
-        if (path.isAbsolute(relativePath)) {
-             throw new McpError(ErrorCode.InvalidParams, `Mocked Absolute paths are not allowed for ${relativePath}`);
-        }
-        const absolutePath = path.resolve(tempRootDir, relativePath);
-        if (!absolutePath.startsWith(tempRootDir)) {
-            throw new McpError(ErrorCode.InvalidRequest, `Mocked Path traversal detected for ${relativePath}`);
-        }
-        // For write, we don't need to check existence beforehand in the mock,
-        // as the handler itself uses fs.writeFile which handles creation/overwriting.
-        return absolutePath;
-    });
+    // Mock resolvePath implementation is now defined within mockDependencies below
+
+    const actualFsPromises = (await vi.importActual<typeof import('fs')>('fs')).promises;
+
+    // Create mock functions for dependencies used by writeContent
+    mockWriteFile = vi.fn().mockImplementation(actualFsPromises.writeFile);
+    mockAppendFile = vi.fn().mockImplementation(actualFsPromises.appendFile);
+    mockMkdir = vi.fn().mockImplementation(actualFsPromises.mkdir);
+    mockStat = vi.fn().mockImplementation(actualFsPromises.stat);
+
+    // Create mock dependencies object using the defined interface
+    mockDependencies = {
+        writeFile: mockWriteFile,
+        mkdir: mockMkdir,
+        stat: mockStat,
+        appendFile: mockAppendFile,
+        // Define resolvePath implementation directly within dependencies
+        resolvePath: vi.fn((relativePath: string): string => {
+            const root = tempRootDir!; // Use tempRootDir for testing context, assert non-null
+            if (path.isAbsolute(relativePath)) {
+                 throw new McpError(ErrorCode.InvalidParams, `Mocked Absolute paths are not allowed for ${relativePath}`);
+            }
+            const absolutePath = path.resolve(root, relativePath);
+            if (!absolutePath.startsWith(root)) {
+                throw new McpError(ErrorCode.InvalidRequest, `Mocked Path traversal detected for ${relativePath}`);
+            }
+            return absolutePath;
+        }),
+        PROJECT_ROOT: tempRootDir!, // Use tempRootDir as the project root for tests, assert non-null
+        path: { dirname: path.dirname }, // Provide only the used path function
+    };
   });
 
   afterEach(async () => {
@@ -54,7 +72,7 @@ describe('handleWriteContent Integration Tests', () => {
         { path: 'dir2/newFile2.log', content: 'Log entry' }, // Should create dir2
       ],
     };
-    const rawResult = await writeContentToolDefinition.handler(request);
+    const rawResult = await handleWriteContentFunc(mockDependencies, request);
     const result = JSON.parse(rawResult.content[0].text); // Assuming similar return structure
 
     expect(result).toHaveLength(2);
@@ -77,7 +95,7 @@ describe('handleWriteContent Integration Tests', () => {
         { path: 'existingFile.txt', content: 'Overwritten content.' },
       ],
     };
-    const rawResult = await writeContentToolDefinition.handler(request);
+    const rawResult = await handleWriteContentFunc(mockDependencies, request);
     const result = JSON.parse(rawResult.content[0].text);
 
     expect(result).toHaveLength(1);
@@ -94,7 +112,9 @@ describe('handleWriteContent Integration Tests', () => {
         { path: 'existingFile.txt', content: ' Appended content.', append: true },
       ],
     };
-    const rawResult = await writeContentToolDefinition.handler(request);
+    // No need to mock appendFile here, beforeEach sets the default
+
+    const rawResult = await handleWriteContentFunc(mockDependencies, request);
     const result = JSON.parse(rawResult.content[0].text);
 
     expect(result).toHaveLength(1);
@@ -113,7 +133,28 @@ describe('handleWriteContent Integration Tests', () => {
         { path: '../outside.txt', content: 'Traversal attempt' }, // Should fail via mockResolvePath
       ],
     };
-    const rawResult = await writeContentToolDefinition.handler(request);
+    // Mock stat to simulate directory for 'dir1'
+    const actualFsPromises = (await vi.importActual<typeof import('fs')>('fs')).promises;
+    mockStat.mockImplementation(async (p: PathLike) => {
+        if (p.toString().endsWith('dir1')) {
+            // Return stats indicating it's a directory
+            const actualStat = await actualFsPromises.stat(path.join(tempRootDir, 'dir1'));
+            return { ...actualStat, isFile: () => false, isDirectory: () => true };
+        }
+        return actualFsPromises.stat(p);
+    });
+     // Mock writeFile to throw EISDIR for 'dir1'
+    mockWriteFile.mockImplementation(async (p: PathLike, content: string | Buffer, options: any) => {
+         if (p.toString().endsWith('dir1')) {
+             const error = new Error('EISDIR: illegal operation on a directory, write') as NodeJS.ErrnoException;
+             error.code = 'EISDIR';
+             throw error;
+         }
+         return actualFsPromises.writeFile(p, content, options);
+     });
+
+
+    const rawResult = await handleWriteContentFunc(mockDependencies, request);
     const result = JSON.parse(rawResult.content[0].text);
 
     expect(result).toHaveLength(3);
@@ -144,7 +185,7 @@ describe('handleWriteContent Integration Tests', () => {
   it('should return error for absolute paths (caught by mock resolvePath)', async () => {
     const absolutePath = path.resolve(tempRootDir, 'file1.txt');
     const request = { items: [{ path: absolutePath, content: 'Absolute fail' }] };
-    const rawResult = await writeContentToolDefinition.handler(request);
+    const rawResult = await handleWriteContentFunc(mockDependencies, request);
     const result = JSON.parse(rawResult.content[0].text);
     expect(result).toHaveLength(1);
     expect(result[0].success).toBe(false); // Check success flag
@@ -154,35 +195,30 @@ describe('handleWriteContent Integration Tests', () => {
 
   it('should reject requests with empty items array based on Zod schema', async () => {
     const request = { items: [] };
-    await expect(writeContentToolDefinition.handler(request)).rejects.toThrow(McpError);
-    await expect(writeContentToolDefinition.handler(request)).rejects.toThrow(/Items array cannot be empty/);
+    await expect(handleWriteContentFunc(mockDependencies, request)).rejects.toThrow(McpError);
+    await expect(handleWriteContentFunc(mockDependencies, request)).rejects.toThrow(/Items array cannot be empty/);
   });
 
+  it('should handle fs.writeFile errors (e.g., permission denied)', async () => {
+    // Configure mockWriteFile to throw an EACCES error
+    const permissionError = new Error('Permission denied') as NodeJS.ErrnoException;
+    permissionError.code = 'EACCES';
+    mockWriteFile.mockImplementation(async (p: PathLike, content: string | Buffer, options: any) => {
+        throw permissionError;
+    });
+
+    const request = {
+      items: [
+        { path: 'permissionError.txt', content: 'This should fail' },
+      ],
+    };
+    const rawResult = await handleWriteContentFunc(mockDependencies, request);
+    const result = JSON.parse(rawResult.content[0].text);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].success).toBe(false);
+    expect(result[0].error).toBeDefined();
+    expect(result[0].error).toMatch(/Failed to write file: Permission denied/);
+    expect(mockWriteFile).toHaveBeenCalledTimes(1); // Verify the mock was called
+  });
 });
-
-  it.skip('should handle fs.writeFile errors (e.g., permission denied)', async () => { // SKIP - Mocking fsPromises with vi.spyOn/vi.doMock is unreliable in this ESM setup
-    // // Mock fs.writeFile to throw an EACCES error
-    // const writeFileSpy = vi.spyOn(fsPromises, 'writeFile');
-    // try {
-    //   const permissionError = new Error('Permission denied');
-    //   (permissionError as any).code = 'EACCES';
-    //   writeFileSpy.mockRejectedValueOnce(permissionError);
-
-    //   const request = {
-    //     items: [
-    //       { path: 'permissionError.txt', content: 'This should fail' },
-    //     ],
-    //   };
-    //   const rawResult = await writeContentToolDefinition.handler(request);
-    //   const result = JSON.parse(rawResult.content[0].text);
-
-    //   expect(result).toHaveLength(1);
-    //   expect(result[0].success).toBe(false);
-    //   expect(result[0].error).toBeDefined();
-    //   expect(result[0].error).toMatch(/Failed to write file: Permission denied/);
-    //   expect(writeFileSpy).toHaveBeenCalledTimes(1); // Verify the spy was called
-
-    // } finally {
-    //   writeFileSpy.mockRestore(); // Ensure the spy is restored even if the test fails
-    // }
-  });

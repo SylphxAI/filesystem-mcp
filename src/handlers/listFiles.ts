@@ -138,7 +138,8 @@ export const handleListFilesFunc = async (deps: ListFilesDependencies, args: unk
               }
           } catch (globError: any) {
               console.error(`[Filesystem MCP] Error during glob execution or processing for ${targetAbsolutePath}:`, globError);
-              throw globError;
+              // Wrap the glob error in an McpError
+              throw new McpError(ErrorCode.InternalError, `Failed to list files using glob: ${globError.message}`, { cause: globError });
           }
       }
 

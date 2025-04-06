@@ -1,11 +1,11 @@
-# Filesystem MCP Server (@shtse8/filesystem-mcp)
+# Filesystem MCP Server (@sylphlab/filesystem-mcp)
 
-[![npm version](https://badge.fury.io/js/%40shtse8%2Ffilesystem-mcp.svg)](https://badge.fury.io/js/%40shtse8%2Ffilesystem-mcp)
-[![Docker Pulls](https://img.shields.io/docker/pulls/shtse8/filesystem-mcp.svg)](https://hub.docker.com/r/shtse8/filesystem-mcp)
+[![npm version](https://badge.fury.io/js/%40sylphlab%2Ffilesystem-mcp.svg)](https://badge.fury.io/js/%40sylphlab%2Ffilesystem-mcp)
+[![Docker Pulls](https://img.shields.io/docker/pulls/sylphlab/filesystem-mcp.svg)](https://hub.docker.com/r/sylphlab/filesystem-mcp)
 
 <!-- Add other badges like License, Build Status if applicable -->
-<a href="https://glama.ai/mcp/servers/@shtse8/filesystem-mcp">
-  <img width="380" height="200" src="https://glama.ai/mcp/servers/@shtse8/filesystem-mcp/badge" />
+<a href="https://glama.ai/mcp/servers/@sylphlab/filesystem-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@sylphlab/filesystem-mcp/badge" />
 </a>
 
 **Empower your AI agents (like Cline/Claude) with secure, efficient, and
@@ -66,7 +66,7 @@ using `npx`.
     "filesystem-mcp": {
       "command": "npx",
       "args": [
-        "@shtse8/filesystem-mcp"
+        "@sylphlab/filesystem-mcp"
       ],
       "name": "Filesystem (npx)"
     }
@@ -84,7 +84,7 @@ If you prefer using Bun, you can use `bunx` instead:
     "filesystem-mcp": {
       "command": "bunx",
       "args": [
-        "@shtse8/filesystem-mcp"
+        "@sylphlab/filesystem-mcp"
       ],
       "name": "Filesystem (bunx)"
     }
@@ -181,7 +181,7 @@ must mount your project directory to `/app` inside the container.**
         "--rm",
         "-v",
         "/path/to/your/project:/app",
-        "shtse8/filesystem-mcp:latest"
+        "sylphlab/filesystem-mcp:latest"
       ],
       "name": "Filesystem (Docker)"
     }
@@ -198,7 +198,7 @@ must mount your project directory to `/app` inside the container.**
   and shell, you _might_ be able to use variables like `$PWD` (Linux/macOS),
   `%CD%` (Windows Cmd), or `${workspaceFolder}` (if supported by the host)
   instead of the explicit path, but this is not guaranteed to work universally.)
-- `shtse8/filesystem-mcp:latest`: Specifies the Docker image. Docker will pull
+- `sylphlab/filesystem-mcp:latest`: Specifies the Docker image. Docker will pull
   it if needed.
 
 **3. Restart your MCP Host environment.**
@@ -209,7 +209,7 @@ must mount your project directory to `/app` inside the container.**
 
 ### Local Build (For Development)
 
-1. Clone: `git clone https://github.com/shtse8/filesystem-mcp.git`
+1. Clone: `git clone https://github.com/sylphlab/filesystem-mcp.git`
 2. Install: `cd filesystem-mcp && npm install`
 3. Build: `npm run build`
 4. Configure MCP Host:
@@ -245,10 +245,10 @@ This repository uses GitHub Actions (`.github/workflows/publish.yml`) to
 automatically:
 
 1. Publish the package to
-   [npm](https://www.npmjs.com/package/@shtse8/filesystem-mcp) on pushes to
+   [npm](https://www.npmjs.com/package/@sylphlab/filesystem-mcp) on pushes to
    `main`.
 2. Build and push a Docker image to
-   [Docker Hub](https://hub.docker.com/r/shtse8/filesystem-mcp) on pushes to
+   [Docker Hub](https://hub.docker.com/r/sylphlab/filesystem-mcp) on pushes to
    `main`.
 
 Requires `NPM_TOKEN`, `DOCKERHUB_USERNAME`, and `DOCKERHUB_TOKEN` secrets

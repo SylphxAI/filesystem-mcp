@@ -1,7 +1,15 @@
 {
-  "name": "@shtse8/filesystem-mcp",
-  "version": "0.5.8",
+  "name": "@sylphlab/filesystem-mcp",
+  "version": "0.5.9",
   "description": "An MCP server providing filesystem tools relative to a project root.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sylphlab/filesystem-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sylphlab/filesystem-mcp/issues"
+  },
+  "homepage": "https://github.com/sylphlab/filesystem-mcp#readme",
   "type": "module",
   "bin": {
     "filesystem-mcp": "./build/index.js"

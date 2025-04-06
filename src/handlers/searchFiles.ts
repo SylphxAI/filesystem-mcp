@@ -1,9 +1,9 @@
-import { promises as fs } from "fs";
+import { promises as fsPromises, PathLike } from "fs"; // Import PathLike
 import path from "path";
 import { z } from 'zod';
-import { glob } from 'glob';
+import { glob as globFn, GlobOptions } from 'glob'; // Import types from glob
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
+import { resolvePath as resolvePathUtil, PROJECT_ROOT as projectRootUtil } from '../utils/pathUtils.js';
 
 /**
  * Handles the 'search_files' MCP tool request.
@@ -22,7 +22,16 @@ type SearchFilesArgs = z.infer<typeof SearchFilesArgsSchema>;
 
 // Removed duplicated non-exported schema/type definitions
 
-const handleSearchFilesFunc = async (args: unknown) => {
+// Define Dependencies Interface
+export interface SearchFilesDependencies {
+    readFile: (p: PathLike, options: any) => Promise<string>; // Simplified options
+    glob: typeof globFn; // Use the type of the imported glob function
+    resolvePath: typeof resolvePathUtil;
+    PROJECT_ROOT: string;
+    path: Pick<typeof path, 'relative' | 'join'>; // Only relative and join used
+}
+
+export const handleSearchFilesFunc = async (deps: SearchFilesDependencies, args: unknown) => {
     // Validate and parse arguments
     let parsedArgs: SearchFilesArgs;
     try {
@@ -66,11 +75,11 @@ const handleSearchFilesFunc = async (args: unknown) => {
 
     let targetPath: string = ''; // Initialize for use in catch block
     try {
-        targetPath = resolvePath(relativePath);
+        targetPath = deps.resolvePath(relativePath);
         // Use targetPath as cwd for glob
         const globPattern = filePattern; // Pattern is now relative to cwd
-        const ignorePattern = path.join(targetPath, '**/node_modules/**').replace(/\\/g, '/'); // Still need absolute ignore path
-        const files = await glob(globPattern, {
+        const ignorePattern = deps.path.join(targetPath, '**/node_modules/**').replace(/\\/g, '/'); // Still need absolute ignore path
+        const files = await deps.glob(globPattern, {
             cwd: targetPath,
             nodir: true,
             dot: true,
@@ -79,9 +88,9 @@ const handleSearchFilesFunc = async (args: unknown) => {
         });
 
         for (const absoluteFilePath of files) {
-            const fileRelative = path.relative(PROJECT_ROOT, absoluteFilePath).replace(/\\/g, '/');
+            const fileRelative = deps.path.relative(deps.PROJECT_ROOT, absoluteFilePath).replace(/\\/g, '/');
             try {
-                const fileContent = await fs.readFile(absoluteFilePath, 'utf-8');
+                const fileContent = await deps.readFile(absoluteFilePath, 'utf-8');
                 const lines = fileContent.split('\n');
 
                 // Execute regex on the entire file content for multi-line support
@@ -129,7 +138,7 @@ const handleSearchFilesFunc = async (args: unknown) => {
             }
         }
     } catch (error: any) {
-        if (error instanceof McpError) throw error; // Re-throw specific McpErrors
+        if (error instanceof McpError) throw error; // Re-throw specific McpErrors from resolvePath
         console.error(`[Filesystem MCP - searchFiles] Error searching files in ${relativePath} (resolved: ${targetPath}):`, error);
         throw new McpError(ErrorCode.InternalError, `Failed to search files: ${error.message}`);
     }
@@ -142,5 +151,15 @@ export const searchFilesToolDefinition = {
     name: "search_files",
     description: "Search for a regex pattern within files in a specified directory (read-only).",
     schema: SearchFilesArgsSchema,
-    handler: handleSearchFilesFunc,
+    // The production handler needs to provide the dependencies
+    handler: (args: unknown) => {
+        const deps: SearchFilesDependencies = {
+            readFile: fsPromises.readFile,
+            glob: globFn,
+            resolvePath: resolvePathUtil,
+            PROJECT_ROOT: projectRootUtil,
+            path: { relative: path.relative, join: path.join },
+        };
+        return handleSearchFilesFunc(deps, args);
+    },
 };

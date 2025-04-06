@@ -117,7 +117,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: shtse8/filesystem-mcp
+          images: sylphlab/filesystem-mcp
           # Use version from the build job output (which is derived from the tag)
           tags: |
             type=semver,pattern={{version}},value=${{ needs.build.outputs.version }}

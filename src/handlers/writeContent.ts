@@ -26,7 +26,18 @@ export const WriteContentArgsSchema = z.object({
 type WriteContentArgs = z.infer<typeof WriteContentArgsSchema>;
 // Removed duplicated non-exported schema/type definitions comment
 
-const handleWriteContentFunc = async (args: unknown) => {
+// Define Dependencies Interface
+export interface WriteContentDependencies {
+    writeFile: typeof fs.writeFile;
+    mkdir: typeof fs.mkdir;
+    stat: typeof fs.stat;
+    appendFile: typeof fs.appendFile;
+    resolvePath: typeof resolvePath;
+    PROJECT_ROOT: string;
+    path: Pick<typeof path, 'dirname'>; // Only dirname is used
+}
+
+export const handleWriteContentFunc = async (deps: WriteContentDependencies, args: unknown) => {
   // Validate and parse arguments
   let parsedArgs: WriteContentArgs;
   try {
@@ -54,18 +65,18 @@ const handleWriteContentFunc = async (args: unknown) => {
     const pathOutput = relativePath.replace(/\\/g, '/'); // Ensure consistent path separators early
 
     try {
-        const targetPath = resolvePath(relativePath);
-        if (targetPath === PROJECT_ROOT) {
+        const targetPath = deps.resolvePath(relativePath);
+        if (targetPath === deps.PROJECT_ROOT) {
             return { path: pathOutput, success: false, error: 'Writing directly to the project root is not allowed.' };
         }
-        const targetDir = path.dirname(targetPath);
-        await fs.mkdir(targetDir, { recursive: true });
+        const targetDir = deps.path.dirname(targetPath);
+        await deps.mkdir(targetDir, { recursive: true });
 
         if (append) {
-            await fs.appendFile(targetPath, content, 'utf-8');
+            await deps.appendFile(targetPath, content, 'utf-8');
             return { path: pathOutput, success: true, operation: 'appended' };
         } else {
-            await fs.writeFile(targetPath, content, 'utf-8');
+            await deps.writeFile(targetPath, content, 'utf-8');
             return { path: pathOutput, success: true, operation: 'written' };
         }
     } catch (error: any) {
@@ -107,5 +118,17 @@ export const writeContentToolDefinition = {
     name: "write_content",
     description: "Write or append content to multiple specified files (creating directories if needed). NOTE: For modifying existing files, prefer using 'edit_file' or 'replace_content' for better performance, especially with large files. Use 'write_content' primarily for creating new files or complete overwrites.",
     schema: WriteContentArgsSchema,
-    handler: handleWriteContentFunc,
+    // The production handler needs to provide the dependencies
+    handler: (args: unknown) => {
+        const deps: WriteContentDependencies = {
+            writeFile: fs.writeFile,
+            mkdir: fs.mkdir,
+            stat: fs.stat,
+            appendFile: fs.appendFile,
+            resolvePath: resolvePath,
+            PROJECT_ROOT: PROJECT_ROOT,
+            path: { dirname: path.dirname },
+        };
+        return handleWriteContentFunc(deps, args);
+    },
 };
