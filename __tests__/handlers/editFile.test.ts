@@ -208,4 +208,116 @@ describe('editFile Handler', () => {
   });
 
   // Add more tests...
+
+  // --- Regex Tests ---
+
+  it('should successfully replace content using regex', async () => {
+    const args = {
+      changes: [ {
+        path: 'regex_replace.txt',
+        start_line: 1,
+        search_pattern: 'line \d+', // Regex to match "line " followed by digits
+        replace_content: 'matched line',
+        use_regex: true,
+      } ],
+    };
+    mockReadFileFn.mockResolvedValueOnce('line 1\nline two\nline 3');
+
+    const result = await handleEditFile(args);
+    const resultData = JSON.parse(result.content[0].text);
+
+    expect(resultData.results[0].status).toBe('success');
+    expect(mockWriteFileFn).toHaveBeenCalledWith(
+      path.resolve(process.cwd(), 'regex_replace.txt'),
+      'matched line\nline two\nmatched line', // Expecting both line 1 and line 3 to be replaced
+      'utf-8'
+    );
+  });
+
+  it('should successfully delete content using regex', async () => {
+    const args = {
+      changes: [ {
+        path: 'regex_delete.txt',
+        start_line: 1,
+        search_pattern: 'delete this \d+\n?', // Match "delete this " digits, and optional newline
+        use_regex: true,
+      } ],
+    };
+    mockReadFileFn.mockResolvedValueOnce('keep this\ndelete this 1\nkeep this too\ndelete this 2');
+
+    const result = await handleEditFile(args);
+    const resultData = JSON.parse(result.content[0].text);
+
+    expect(resultData.results[0].status).toBe('success');
+    expect(mockWriteFileFn).toHaveBeenCalledWith(
+      path.resolve(process.cwd(), 'regex_delete.txt'),
+      'keep this\nkeep this too\n', // Expecting both matching lines to be deleted
+      'utf-8'
+    );
+  });
+
+  it('should replace only the specified occurrence using regex', async () => {
+    const args = {
+      changes: [ {
+        path: 'regex_occurrence.txt',
+        start_line: 1,
+        search_pattern: 'target',
+        replace_content: 'REPLACED',
+        use_regex: true,
+        match_occurrence: 2, // Target the second occurrence
+      } ],
+    };
+    mockReadFileFn.mockResolvedValueOnce('target one\ntarget two\ntarget three');
+
+    const result = await handleEditFile(args);
+    const resultData = JSON.parse(result.content[0].text);
+
+    expect(resultData.results[0].status).toBe('success');
+    expect(mockWriteFileFn).toHaveBeenCalledWith(
+      path.resolve(process.cwd(), 'regex_occurrence.txt'),
+      'target one\nREPLACED two\ntarget three',
+      'utf-8'
+    );
+  });
+
+  it('should skip change if regex pattern is invalid', async () => {
+    const args = {
+      changes: [ {
+        path: 'invalid_regex.txt',
+        start_line: 1,
+        search_pattern: '[invalid regex', // Invalid regex
+        replace_content: 'wont happen',
+        use_regex: true,
+      } ],
+    };
+    mockReadFileFn.mockResolvedValueOnce('some content');
+
+    const result = await handleEditFile(args);
+    const resultData = JSON.parse(result.content[0].text);
+
+    expect(resultData.results[0].status).toBe('failed'); // Expect 'failed' because invalid regex should cause failure
+    expect(resultData.results[0].message).toMatch(/Invalid regex pattern|Skipping change/i);
+    expect(mockWriteFileFn).not.toHaveBeenCalled();
+  });
+
+  it('should skip change if regex pattern is not found', async () => {
+    const args = {
+      changes: [ {
+        path: 'regex_notfound.txt',
+        start_line: 1,
+        search_pattern: 'nonexistent pattern \d+',
+        replace_content: 'wont happen',
+        use_regex: true,
+      } ],
+    };
+    mockReadFileFn.mockResolvedValueOnce('line 1\nline 2');
+
+    const result = await handleEditFile(args);
+    const resultData = JSON.parse(result.content[0].text);
+
+    expect(resultData.results[0].status).toBe('skipped');
+    expect(resultData.results[0].message).toContain('No applicable changes found');
+    expect(mockWriteFileFn).not.toHaveBeenCalled();
+  });
+
 });
