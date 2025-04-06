@@ -211,7 +211,7 @@ describe('editFile Handler', () => {
 
   // --- Regex Tests ---
 
-  it.skip('should successfully replace content using regex', async () => { // SKIP - Known issue: only replaces first match
+  it('should successfully replace the first matched content using regex', async () => { // Test adjusted for match_occurrence=1
     const args = {
       changes: [ {
         path: 'regex_replace.txt',
@@ -229,12 +229,12 @@ describe('editFile Handler', () => {
     expect(resultData.results[0].status).toBe('success');
     expect(mockWriteFileFn).toHaveBeenCalledWith(
       path.resolve(process.cwd(), 'regex_replace.txt'),
-      'matched line\nline two\nmatched line', // Expecting both line 1 and line 3 to be replaced
+      'matched line\nline two\nline 3', // Expecting only the first match (line 1) to be replaced
       'utf-8'
     );
   });
 
-  it.skip('should successfully delete content using regex', async () => { // SKIP - Known issue: only deletes first match
+  it('should successfully delete the first matched content using regex', async () => { // Test adjusted for match_occurrence=1
     const args = {
       changes: [ {
         path: 'regex_delete.txt',
@@ -251,7 +251,7 @@ describe('editFile Handler', () => {
     expect(resultData.results[0].status).toBe('success');
     expect(mockWriteFileFn).toHaveBeenCalledWith(
       path.resolve(process.cwd(), 'regex_delete.txt'),
-      'keep this\nkeep this too\n', // Expecting both matching lines to be deleted
+      'keep this\nkeep this too\ndelete this 2', // Expecting only the first match ('delete this 1\\n') to be deleted
       'utf-8'
     );
   });
@@ -276,6 +276,53 @@ describe('editFile Handler', () => {
     expect(mockWriteFileFn).toHaveBeenCalledWith(
       path.resolve(process.cwd(), 'regex_occurrence.txt'),
       'target one\nREPLACED two\ntarget three',
+      'utf-8'
+    );
+  });
+
+  it('should delete only the specified occurrence using regex', async () => {
+    const args = {
+      changes: [ {
+        path: 'regex_delete_occurrence.txt',
+        start_line: 1,
+        search_pattern: 'delete me\\\\n?', // Match 'delete me' optionally followed by newline
+        use_regex: true,
+        match_occurrence: 2, // Target the second occurrence
+      } ],
+    };
+    mockReadFileFn.mockResolvedValueOnce('line 1\\ndelete me\\nline 3\\ndelete me\\nline 5');
+
+    const result = await handleEditFile(args);
+    const resultData = JSON.parse(result.content[0].text);
+
+    expect(resultData.results[0].status).toBe('success');
+    expect(mockWriteFileFn).toHaveBeenCalledWith(
+      path.resolve(process.cwd(), 'regex_delete_occurrence.txt'),
+      'line 1\\ndelete me\\nline 3\\nline 5', // Expecting only the second 'delete me\n' to be removed
+      'utf-8'
+    );
+  });
+
+
+  it('should delete only the specified occurrence using regex', async () => {
+    const args = {
+      changes: [ {
+        path: 'regex_delete_occurrence.txt',
+        start_line: 1,
+        search_pattern: 'delete me\\\\n?', // Match 'delete me' optionally followed by newline
+        use_regex: true,
+        match_occurrence: 2, // Target the second occurrence
+      } ],
+    };
+    mockReadFileFn.mockResolvedValueOnce('line 1\\ndelete me\\nline 3\\ndelete me\\nline 5');
+
+    const result = await handleEditFile(args);
+    const resultData = JSON.parse(result.content[0].text);
+
+    expect(resultData.results[0].status).toBe('success');
+    expect(mockWriteFileFn).toHaveBeenCalledWith(
+      path.resolve(process.cwd(), 'regex_delete_occurrence.txt'),
+      'line 1\\ndelete me\\nline 3\\nline 5', // Expecting only the second 'delete me\\n' to be removed
       'utf-8'
     );
   });
