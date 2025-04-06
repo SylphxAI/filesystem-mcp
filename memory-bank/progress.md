@@ -1,4 +1,4 @@
-<!-- Version: 4.10 | Last Updated: 2025-04-06 | Updated By: Roo -->
+<!-- Version: 4.12 | Last Updated: 2025-04-06 | Updated By: Roo -->
 # Progress: Filesystem MCP Server
 
 ## 1. What Works
@@ -6,7 +6,7 @@
 - **Server Initialization & Core MCP:** Starts, connects, lists tools.
 - **Path Security:** `resolvePath` prevents traversal and absolute paths.
 - **Project Root:** Determined by `process.cwd()`.
-- **Core Tool Functionality:** Most tools (`create_directories`, `write_content`, `stat_items`, `read_content`, `move_items`, `copy_items`, `search_files`, `replace_content`, `delete_items`, `listFiles`) have basic functionality and passing tests (except skipped `searchFiles` mock test).
+- **Core Tool Functionality:** Most tools (`create_directories`, `write_content`, `stat_items`, `read_content`, `move_items`, `copy_items`, `search_files`, `replace_content`, `delete_items`, `listFiles`) have basic functionality and passing tests (except skipped tests).
 - **`editFile` Tool:** Plain text insertion, replacement, deletion, occurrence matching (plain text & regex), indentation preservation, diff output implemented and tested (passing). **Regex replace/delete for Nth occurrence is buggy (2 tests skipped).**
 - **Documentation (`README.md`):** Updated.
 - **Tool Descriptions:** Updated.
@@ -20,38 +20,37 @@
 - **Testing Framework:** Vitest configured with v8 coverage.
 - **Coverage Reports:** Generating successfully.
 - **Tests Added & Passing (Vitest):**
-    - `listFiles`
+    - `listFiles` (Improved coverage, 1 test skipped)
     - `statItems`
     - `readContent`
-    - `writeContent`
+    - `writeContent` (Improved coverage, 1 test skipped)
     - `deleteItems`
-    - `createDirectories`
+    - `createDirectories` (Improved coverage, 2 tests skipped)
     - `moveItems`
-    - `copyItems`
-    - `searchFiles` (except 1 skipped mock test)
+    - `copyItems` (Improved coverage, 4 tests skipped)
+    - `searchFiles` (Improved coverage, 3 tests skipped)
     - `replaceContent`
     - `editFile` (except 2 skipped Regex tests)
 
 ## 2. What's Left to Build / Test
 
 - **Fix Failing/Skipped `editFile` Tests:** Debug and resolve issues with **regex replace and regex delete for Nth occurrence**. The logic currently only affects the first match.
-- **Fix Skipped `searchFiles` Test:** Resolve the `vi.spyOn` issue preventing the file read error test from running.
-- **Improve Test Coverage:** Add tests based on coverage report analysis, focusing on branch coverage for handlers like `copyItems`, `listFiles`, `writeContent`, `createDirectories`.
+- **Fix Skipped Mocking Tests:** Resolve the persistent `vi.spyOn` issues preventing error condition tests from running for `fsPromises` (`readFile`, `mkdir`, `cp`, `writeFile`) and `glob` (`glob`). This likely requires a different mocking approach.
 - **Add Tests for Remaining Handlers:**
     - `chmodItems` (**Skipped** - Windows limitations)
     - `chownItems` (**Skipped** - Windows limitations)
 
 ## 3. Current Status
 
-- All tests pass except for 3 skipped tests (2 in `editFile`, 1 in `searchFiles`) due to known bugs/mocking issues.
+- All tests pass except for 13 skipped tests (2 in `editFile`, 3 in `searchFiles`, 2 in `createDirectories`, 4 in `copyItems`, 1 in `listFiles`, 1 in `writeContent`) due to known bugs or persistent mocking issues.
 - Coverage reports are generating.
-- Ready to analyze coverage and add more tests in the next task.
+- Test coverage improved for several handlers.
 
 ## 4. Known Issues / Areas for Improvement
 
-- **`editFile` Nth Regex Bug:** Replace/delete operations using `use_regex: true` and `match_occurrence > 1` incorrectly affect only the first match found. (Tests Skipped).
-- **`searchFiles` Mocking Issue:** Test `should handle file read errors gracefully and continue` fails due to `TypeError: Cannot redefine property: readFile` when using `vi.spyOn(fsPromises, 'readFile')`. Needs investigation. (Test Skipped).
-- **Coverage Reports:** Generation fixed. Need to analyze and improve coverage.
+- **`editFile` Nth Regex Bug:** Replace/delete operations using `use_regex: true` and `match_occurrence > 1` incorrectly affect only the first match found. (2 Tests Skipped).
+- **Mocking Issues (`vi.spyOn`):** Tests attempting to mock error conditions for `fsPromises` (`readFile`, `mkdir`, `cp`, `writeFile`) and `glob` (`glob`) consistently fail with `TypeError: Cannot redefine property`. This prevents testing specific error handling branches. (Multiple Tests Skipped).
+- **Coverage Reports:** Generation fixed. Coverage improved but some branches remain uncovered due to mocking issues.
 - **`apply_diff` Unreliability:** Tool seems unreliable on `editFile.ts`. Prefer `write_to_file`.
 - **Launcher Dependency:** Server functionality relies on the launching process setting the correct `cwd`.
 - **Windows `chmod`/`chown`:** Effectiveness is limited. Tests skipped.
