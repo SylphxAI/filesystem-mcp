@@ -1,4 +1,4 @@
-<!-- Version: 4.15 | Last Updated: 2025-04-06 | Updated By: Roo -->
+<!-- Version: 4.16 | Last Updated: 2025-04-06 | Updated By: Roo -->
 # Active Context: Filesystem MCP Server
 
 ## 1. Current Work Focus & Status
@@ -15,6 +15,7 @@
 - Fixed `editFile.ts` Nth occurrence regex tests by adjusting expectations and adding a specific Nth deletion test. Ran tests: All non-skipped tests pass.
 - Confirmed `fsPromises.writeFile` mocking issues persist in `writeContent.test.ts` using `vi.spyOn`. Reverted changes and kept the error handling test skipped.
 - Confirmed `glob` mocking issues persist in `listFiles.test.ts` using `vi.mock`. Reverted changes and kept the error handling test skipped.
+- Confirmed `fsPromises.readFile` mocking issues persist in `searchFiles.test.ts` using `vi.spyOn`. Kept the error handling test skipped.
 
 ## 3. Next Steps
 
@@ -29,7 +30,7 @@
 - **Skipped Tests:**
     - `chmodItems`, `chownItems` (Windows limitations).
     // editFile regex tests now pass
-    - `searchFiles.test.ts`: `should handle file read errors gracefully and continue` (Mocking issue).
+    - `searchFiles.test.ts`: `should handle file read errors gracefully and continue` (Mocking issue - confirmed `vi.spyOn` unreliable here).
     - `createDirectories.test.ts`: `should handle permission errors during mkdir`, `should handle generic errors during mkdir` (Mocking issue).
     - `copyItems.test.ts`: `fs.cp Fallback Tests (Node < 16.7)` (describe block), `should handle permission errors during copy`, `should handle generic errors during copy` (Mocking issue).
     - `listFiles.test.ts`: `should handle errors during glob execution` (Mocking issue - confirmed `vi.mock` unreliable here).
