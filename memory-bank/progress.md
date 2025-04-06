@@ -1,5 +1,5 @@
-<!-- Version: 4.7 | Last Updated: 2025-04-06 | Updated By: Roo -->
-# Progress: Filesystem MCP Server (Context Limit Transition)
+<!-- Version: 4.8 | Last Updated: 2025-04-06 | Updated By: Roo -->
+# Progress: Filesystem MCP Server (Context Limit Transition 2)
 
 ## 1. What Works
 
@@ -33,7 +33,7 @@
 
 ## 2. What's Left to Build / Test
 
-- **Fix Failing `edit_file` Tests:** Debug and resolve issues with **regex replace and regex delete** test cases. The core issue seems to be the `regex.exec` loop not executing correctly.
+- **Fix Failing `edit_file` Tests:** Debug and resolve issues with **regex replace and regex delete** test cases. The core issue seems to be the `regex.exec` loop not executing correctly. Debugging is currently blocked by tool failures (`apply_diff`) and context limits.
 - **Fix Coverage Report Generation:** Reports are not being generated despite configuration. May be related to failing tests or Vitest/v8 issues.
 - **Add Tests for Remaining Handlers:**
     - `chmodItems` (**Skipped** - Windows limitations)
@@ -42,14 +42,14 @@
 
 ## 3. Current Status
 
-- **Debugging Blocked:** Repeated failures with `apply_diff` prevent effective debugging or cleanup of `edit_file` regex issues. File state might be inconsistent. Context limit reached.
-- **Context Limit Transition:** Pausing work due to context limit (~293k chars) and tool failures.
+- **Debugging Blocked:** Repeated failures with `apply_diff` prevent effective debugging or cleanup of `edit_file` regex issues. File state is inconsistent. Context limit reached again.
+- **Context Limit Transition 2:** Pausing work due to context limit (~347k chars) and tool failures.
 
 ## 4. Known Issues / Areas for Improvement
 
 - **`edit_file` Failing Tests:** Regex replace and Regex delete tests for `edit_file` are failing (status 'skipped'). Root cause likely related to `regex.exec` loop execution. Debugging deferred.
 - **Coverage Reports:** Not generating.
-- **`apply_diff` Unreliability:** Tool seems unreliable on `src/handlers/editFile.ts` in current state.
+- **`apply_diff` Unreliability:** Tool seems unreliable on `src/handlers/editFile.ts` in current state. Prefer `write_to_file`.
 - **Launcher Dependency:** Server functionality relies on the launching process setting the correct `cwd`.
 - **Windows `chmod`/`chown`:** Effectiveness is limited. Tests skipped.
 - **Cross-Device Moves/Copies:** May fail (`EXDEV`).

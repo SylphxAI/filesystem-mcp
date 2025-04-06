@@ -160,7 +160,8 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
                         let regex: RegExp;
                         try {
                             // Basic regex creation, consider adding flags from schema later (e.g., 'gm', 'gmi')
-                            regex = new RegExp(search_pattern, 'g'); // Use 'g' flag for potential multiple occurrences needed by match_occurrence logic
+                            // Remove 'g' flag to test if statefulness is the issue
+                            regex = new RegExp(search_pattern, 'g'); // Restore 'g' flag
                             // console.log(`[DEBUG editFile] Created regex: ${regex}`); // Keep commented out for now
                         } catch (e: any) {
                              // Set failure status for this specific change attempt due to invalid regex
@@ -179,23 +180,36 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
                         // Reset lastIndex before searching
                         regex.lastIndex = 0;
 
-                        // Find the Nth occurrence
+                        // Find the Nth occurrence by calling exec() repeatedly
                         // Ensure currentContent is not null before regex execution
                         if (currentContent !== null) {
-                            while ((match = regex.exec(currentContent)) !== null) {
-                                 // Prevent infinite loops with zero-width matches
-                                 if (match.index === regex.lastIndex) {
-                                     regex.lastIndex++;
-                                 }
+                            for (let k = 0; k < match_occurrence; k++) {
+                                match = regex.exec(currentContent);
+                                if (match === null) {
+                                    // Not enough occurrences found
+                                    matchStartIndex = -1; // Ensure it's marked as not found
+                                    break;
+                                }
+                                // Store the details of the Kth match
+                                matchStartIndex = match.index;
+                                matchEndIndex = match.index + match[0].length;
+                                occurrencesFound++; // Increment count
 
-                                 occurrencesFound++;
-                                 if (occurrencesFound === match_occurrence) {
-                                     matchStartIndex = match.index;
-                                     matchEndIndex = match.index + match[0].length;
-                                     break; // Found the desired occurrence
-                                 }
-                                 lastIndex = regex.lastIndex; // Store last index for next iteration
+                                // Prevent infinite loops with zero-width matches for the *next* iteration
+                                if (match.index === regex.lastIndex) {
+                                     regex.lastIndex++;
+                                }
+                                // If this is the last iteration (k === match_occurrence - 1), we found our target
+                                if (k === match_occurrence - 1) {
+                                     break;
+                                }
                             }
+                            // Check if we actually found the required number of occurrences
+                            if (occurrencesFound < match_occurrence) {
+                                matchStartIndex = -1; // Mark as not found if loop finished early
+                            }
+                        } else {
+                             matchStartIndex = -1; // Mark as not found if currentContent is null
                         }
 
 
