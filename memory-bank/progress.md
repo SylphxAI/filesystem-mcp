@@ -1,4 +1,4 @@
-<!-- Version: 2.9 | Last Updated: 2025-04-05 | Updated By: Cline -->
+<!-- Version: 3.0 | Last Updated: 2025-06-04 | Updated By: Cline -->
 # Progress: Filesystem MCP Server (v0.5.8 Release)
 
 ## 1. What Works
@@ -14,7 +14,7 @@
 - **Core Tool Functionality (v0.2.0+):** Most tools (`create_directories`, `write_content`, `stat_items`, `read_content`, `move_items`, `copy_items`, `search_files`, `replace_content`, `delete_items`, `list_files` simple case) have passed basic functional tests.
 - **Reliable Batch Error Handling:** All tools supporting multiple items/operations (e.g., `delete_items`, `edit_file`, `write_content`) now consistently attempt all items and return detailed individual results (success/failure/skipped + error message).
 - **`edit_file` Tool (Basic Implementation):** Added new tool with support for insertion, text search/replace/delete, indentation preservation, and diff output. Zod schema defined and integrated. Tested with multiple files and mixed outcomes (success/skipped/fail). Return structure fixed for MCP compliance.
-- **Documentation (`README.md`):** Significantly improved with clear usage instructions, detailed feature descriptions, Docker instructions, contribution guidelines, and **Glama.ai badge added**.
+- **Documentation (`README.md`):** Significantly improved with clear usage instructions, detailed feature descriptions, Docker instructions, contribution guidelines, **Glama.ai badge added**, and **'Support the Project' section added**.
 - **Tool Descriptions:** Descriptions for `write_content` and `edit_file` now include notes recommending edit tools for modifications.
 - **Dockerization:**
   - `Dockerfile` created using multi-stage builds, copies pre-built code, installs production dependencies only.
@@ -32,7 +32,7 @@
 
 ## 2. What's Left to Build / Test
 
-- **Commit Changes:** Commit updated `.dockerignore`, `package.json`, `CHANGELOG.md`, and Memory Bank files.
+- **Commit Changes:** Commit updated `README.md`, `.dockerignore`, `package.json`, `CHANGELOG.md`, and Memory Bank files.
 - **Tag Release:** Create git tag `v0.5.8`.
 - **Push Commit & Tag:** Push the commit and the new tag to `origin`.
 - **Monitor CI/CD:** Verify the `v0.5.8` release workflow completes successfully.
@@ -44,6 +44,7 @@
 
 - **Release Prep Complete:** Version bumped to `0.5.8`, `CHANGELOG.md` updated.
 - **Docker Build Context Fixed:** Removed `build` exclusion from `.dockerignore`.
+- **README Updated:** Added 'Support the Project' section.
 - **Ready to Commit & Tag:** Waiting to commit fixes and version updates, then tag `v0.5.8`.
 
 ## 4. Known Issues / Areas for Improvement
