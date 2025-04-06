@@ -1,4 +1,4 @@
-<!-- Version: 4.13 | Last Updated: 2025-04-06 | Updated By: Roo -->
+<!-- Version: 4.14 | Last Updated: 2025-04-06 | Updated By: Roo -->
 # Progress: Filesystem MCP Server
 
 ## 1. What Works
@@ -23,7 +23,7 @@
     - `listFiles` (Improved coverage, 1 test skipped)
     - `statItems`
     - `readContent`
-    - `writeContent` (Improved coverage, 1 test skipped)
+    - `writeContent` (Improved coverage, 1 test skipped - confirmed mocking issue)
     - `deleteItems`
     - `createDirectories` (Improved coverage, 2 tests skipped)
     - `moveItems`
@@ -48,7 +48,7 @@
 ## 4. Known Issues / Areas for Improvement
 
 - **Mocking Issues (`vi.spyOn`):** Tests attempting to mock error conditions for `fsPromises` (`readFile`, `mkdir`, `cp`, `writeFile`) and `glob` (`glob`) consistently fail with `TypeError: Cannot redefine property`. This prevents testing specific error handling branches. (Multiple Tests Skipped).
-- **Coverage Reports:** Generation fixed. Coverage improved but some branches remain uncovered due to mocking issues.
+<!-- Removed duplicate line -->
 - **Coverage Reports:** Generation fixed. Coverage improved but some branches remain uncovered due to mocking issues.
 - **`apply_diff` Unreliability:** Tool seems unreliable on `editFile.ts`. Prefer `write_to_file`.
 - **Launcher Dependency:** Server functionality relies on the launching process setting the correct `cwd`.
