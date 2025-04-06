@@ -1,58 +1,58 @@
-<!-- Version: 3.1 | Last Updated: 2025-06-04 | Updated By: Cline -->
-# Progress: Filesystem MCP Server (v0.5.8 Release)
+<!-- Version: 4.0 | Last Updated: 2025-06-06 | Updated By: Roo -->
+# Progress: Filesystem MCP Server (Testing Phase)
 
 ## 1. What Works
 
-- **Server Initialization:** The MCP server starts, connects via stdio, and identifies itself correctly.
-- **Tool Listing:** Responds correctly to `list_tools` requests.
-- **Path Security:** The `resolvePath` function prevents path traversal outside the determined `PROJECT_ROOT` and rejects absolute paths.
-- **Enhanced Path Error Reporting:**
-    - Error messages from `resolvePath` now include user path, resolved path, and project root for better debugging context.
-    - `readContent` handler now returns detailed error messages for `ENOENT` (File not found) errors, including resolved path, relative path, and project root.
-- **Project Root Determination:** Logic updated to use the server's current working directory (`process.cwd()`) as the `PROJECT_ROOT`, enabling operation relative to the agent's context _if launched correctly_.
-- **Basic Error Handling:** Handles common errors like `ENOENT` (with enhanced reporting).
-- **Core Tool Functionality (v0.2.0+):** Most tools (`create_directories`, `write_content`, `stat_items`, `read_content`, `move_items`, `copy_items`, `search_files`, `replace_content`, `delete_items`, `list_files` simple case) have passed basic functional tests.
-- **Reliable Batch Error Handling:** All tools supporting multiple items/operations (e.g., `delete_items`, `edit_file`, `write_content`) now consistently attempt all items and return detailed individual results (success/failure/skipped + error message).
-- **`edit_file` Tool (Basic Implementation):** Added new tool with support for insertion, text search/replace/delete, indentation preservation, and diff output. Zod schema defined and integrated. Tested with multiple files and mixed outcomes (success/skipped/fail). Return structure fixed for MCP compliance.
-- **Documentation (`README.md`):** Significantly improved with clear usage instructions, detailed feature descriptions, Docker instructions, contribution guidelines, **Glama.ai badge added**, and **'Support the Project' section added**.
-- **Tool Descriptions:** Descriptions for `write_content` and `edit_file` now include notes recommending edit tools for modifications.
-- **Dockerization:**
-  - `Dockerfile` created using multi-stage builds, copies pre-built code, installs production dependencies only.
-  - `.dockerignore` configured correctly (removed `build` exclusion).
-- **CI/CD (GitHub Actions):**
-  - **Simplified Single Workflow (`publish.yml`):** Handles both CI checks (build only on main push) and Releases (build with artifacts, parallel publish, auto-release on tag push).
-  - **Conditional Artifacts:** Build job uploads artifacts only when triggered by a tag push.
-  - **Conditional Publishing/Release:** Publish and release jobs run only when triggered by a tag push.
-  - **Artifact Handling Fixed:** Corrected artifact creation (`tar` command now includes `build` directory) and extraction.
-  - **Diagnostic Steps Added:** Added `ls -la` steps to `publish-docker` job for debugging artifact issues.
-- **Versioning:** Package version updated to `0.5.8`.
-- **`.clinerules` Created:** Established `memory-bank/.clinerules` to capture project-specific patterns and user preferences.
-- **Changelog:** Updated `CHANGELOG.md` with entry for v0.5.8.
-- **License:** Added MIT `LICENSE` file.
-- **Funding File:** Created `.github/FUNDING.yml` with Buy Me a Coffee link.
+- **Server Initialization & Core MCP:** Starts, connects, lists tools.
+- **Path Security:** `resolvePath` prevents traversal and absolute paths. Enhanced error reporting implemented.
+- **Project Root:** Determined by `process.cwd()`.
+- **Core Tool Functionality:** Most tools (`create_directories`, `write_content`, `stat_items`, `read_content`, `move_items`, `copy_items`, `search_files`, `replace_content`, `delete_items`) have basic functionality.
+- **Batch Error Handling:** Tools attempt all items and report individual results.
+- **`edit_file` Tool:** Basic text insertion, replacement, deletion, indentation preservation, diff output implemented and tested.
+- **`listFiles` Tool:** Core functionality implemented and tested (integration tests).
+- **Documentation (`README.md`):** Improved usage, features, Docker info, contribution, support section, badges.
+- **Tool Descriptions:** Updated for `write_content` and `edit_file`.
+- **Dockerization:** Multi-stage `Dockerfile` and `.dockerignore` are functional.
+- **CI/CD (GitHub Actions):** Single workflow handles CI checks (main push) and releases (tag push) including npm, Docker Hub publishing, and GitHub Release creation. Artifact handling fixed.
+- **Versioning:** Package version at `0.5.8`.
+- **`.clinerules`:** Created.
+- **Changelog:** Updated up to `v0.5.8`.
+- **License:** MIT `LICENSE` file added.
+- **Funding File:** `.github/FUNDING.yml` added.
+- **Testing Framework:** Jest, `ts-jest`, `cross-env` installed and configured (`jest.config.js`, `tsconfig.test.json`). `test` script added.
+- **Tests Added:**
+    - `editFile`: Unit tests passing (using `unstable_mockModule` + `as any` workaround).
+    - `listFiles`: Integration tests passing (using temporary filesystem).
 
 ## 2. What's Left to Build / Test
 
-- **Commit Changes:** Commit updated `README.md`, `.github/FUNDING.yml`, `.dockerignore`, `package.json`, `CHANGELOG.md`, and Memory Bank files.
-- **Tag Release:** Create git tag `v0.5.8`.
-- **Push Commit & Tag:** Push the commit and the new tag to `origin`.
-- **Monitor CI/CD:** Verify the `v0.5.8` release workflow completes successfully.
-- **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
-- **Code Cleanup:** (Post-release task) Remove any remaining debugging logs (including the added `ls -la` steps if successful).
-- **Comprehensive Testing:** (Post-release task) Test dynamic root logic, launcher integration, edge cases, etc.
+- **Add Tests for Remaining Handlers:**
+    - `statItems`
+    - `readContent`
+    - `writeContent`
+    - `deleteItems`
+    - `createDirectories`
+    - `chmodItems`
+    - `chownItems`
+    - `moveItems`
+    - `copyItems`
+    - `searchFiles`
+    - `replaceContent`
+- **Commit Testing Progress:** Commit new test files, configurations, and `package.json`.
+- **Implement `edit_file` Regex Support:** (Post-testing task).
+- **Code Cleanup:** (Post-testing task) Remove debugging logs.
+- **Comprehensive Testing:** (Post-testing task) Edge cases, permissions, large files, etc.
+- **Refine Mocking Strategy:** (Optional) Revisit ESM mocking later.
 
 ## 3. Current Status
 
-- **Release Prep Complete:** Version bumped to `0.5.8`, `CHANGELOG.md` updated.
-- **Docker Build Context Fixed:** Removed `build` exclusion from `.dockerignore`.
-- **README Updated:** Added 'Support the Project' section.
-- **Funding File Created:** Added `.github/FUNDING.yml`.
-- **Ready to Commit & Tag:** Waiting to commit fixes and version updates, then tag `v0.5.8`.
+- **Testing Implementation In Progress:** Successfully added tests for `editFile` and `listFiles` after overcoming significant ESM mocking challenges. Decided to use integration tests for `listFiles`.
+- **Ready to Continue:** Prepared to add tests for the next handler.
 
 ## 4. Known Issues / Areas for Improvement
 
-- **Docker Build Failure (v0.5.7):** The `v0.5.7` release failed because `.dockerignore` excluded the `build` directory from the Docker context. (Fixed in v0.5.8)
-- **Launcher Dependency:** Server functionality is now critically dependent on the launching process setting the correct `cwd`.
-- **`list_files` (`glob` path):** Potential issue with recursion/stats enabled needs investigation.
-- **Windows `chmod`/`chown`:** Effectiveness is limited by the OS.
+- **ESM Mocking Complexity:** Standard Jest mocking techniques (`jest.mock`, `spyOn`) proved unreliable in the current ESM setup. Workarounds (`unstable_mockModule` + `as any`) or alternative strategies (integration testing) were necessary.
+- **Launcher Dependency:** Server functionality relies on the launching process setting the correct `cwd`.
+- **Windows `chmod`/`chown`:** Effectiveness is limited.
 - **Cross-Device Moves/Copies:** May fail (`EXDEV`).
+- **Tool Description Updates:** Attempts to modify handler source code via tools failed due to tool limitations/bugs; postponed.

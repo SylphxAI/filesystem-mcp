@@ -1,3 +1,4 @@
+<!-- Version: 2.0 | Last Updated: 2025-06-06 | Updated By: Roo -->
 # Tech Context: Filesystem MCP Server
 
 ## 1. Core Technologies
@@ -6,6 +7,7 @@
   > = 18)
 - **Language:** TypeScript (Compiled to JavaScript for execution)
 - **Package Manager:** npm (Node Package Manager)
+- **Testing Framework:** Jest (with `ts-jest` for TypeScript support)
 
 ## 2. Key Libraries/Dependencies
 
@@ -29,48 +31,37 @@
 - **`detect-indent`:** Library for detecting the dominant indentation in code.
   Used by `edit_file`.
 - **`@types/diff`:** TypeScript type definitions for the `diff` library.
+- **`jest`:** Testing framework.
+- **`@types/jest`:** TypeScript type definitions for Jest.
+- **`ts-jest`:** Jest transformer for TypeScript, enabling tests to be written in TS and handling ESM complexities.
+- **`cross-env`:** Utility to set environment variables (like `NODE_OPTIONS`) cross-platform in npm scripts.
 
 ## 3. Development Setup
 
 - **Source Code:** Located in the `src` directory (`filesystem-mcp/src`).
+- **Tests:** Located in the `__tests__` directory.
 - **Main File:** `src/index.ts`.
 - **Configuration:**
-  - `tsconfig.json`: Configures the TypeScript compiler options (target ES
-    version, module system, output directory, etc.). Set to output JavaScript
-    files to the `build` directory.
+  - `tsconfig.json`: Configures the TypeScript compiler options for production builds.
+  - `tsconfig.test.json`: Extends `tsconfig.json`, adjusts settings (`rootDir`, `noEmit`) and includes test/mock files for Jest compilation via `ts-jest`.
+  - `jest.config.js`: Configures Jest, specifying `ts-jest` preset, test environment, and handling for ESM modules/dependencies.
   - `package.json`: Defines project metadata, dependencies, and npm scripts.
-    - `dependencies`: `@modelcontextprotocol/sdk`, `glob`.
-    - `devDependencies`: `typescript`, `@types/node`, `@types/glob`.
+    - `dependencies`: `@modelcontextprotocol/sdk`, `glob`, `zod`, `zod-to-json-schema`, `diff`, `detect-indent`.
+    - `devDependencies`: `typescript`, `@types/node`, `@types/glob`, `@types/diff`, `jest`, `@types/jest`, `ts-jest`, `cross-env`.
     - `scripts`:
-      - `build`: Compiles TypeScript code using `tsc` and potentially sets
-        execute permissions on the output script.
-      - `start`: (Optional, for direct testing) Runs the compiled JavaScript
-        server using `node build/index.js`.
-- **Build Output:** Compiled JavaScript code is placed in the `build` directory
-  (`filesystem-mcp/build`).
+      - `build`: Compiles TypeScript code using `tsc`.
+      - `watch`: Runs `tsc` in watch mode.
+      - `inspector`: Runs the MCP inspector tool.
+      - `test`: Runs Jest tests using `cross-env` to set `NODE_OPTIONS=--experimental-vm-modules` for ESM support.
+- **Build Output:** Compiled JavaScript code is placed in the `build` directory.
 - **Execution:** The server is intended to be run via `node build/index.js`.
 
 ## 4. Technical Constraints & Considerations
 
-- **Node.js Environment:** The server relies on the Node.js runtime and its
-  built-in modules, particularly `fs` (filesystem) and `path`.
-- **Permissions:** The server process runs with the permissions of the user who
-  started it. Filesystem operations might fail due to insufficient permissions
-  on the target files/directories. `chmod` might have limited effect or fail on
-  non-POSIX systems like Windows.
-- **Cross-Platform Compatibility:** While Node.js aims for cross-platform
-  compatibility, filesystem behaviors (path separators, case sensitivity,
-  `chmod` behavior) can differ slightly between Windows, macOS, and Linux. Code
-  uses `path.join`, `path.resolve`, `path.normalize`, and replaces backslashes
-  (`\`) with forward slashes (`/`) in output paths to mitigate some issues.
-- **Error Handling:** Relies on Node.js error codes (`ENOENT`, `EPERM`, etc.)
-  for specific filesystem error detection.
-- **Security Model:** Security relies entirely on the `resolvePath` function
-  correctly preventing access outside the `PROJECT_ROOT`. No other sandboxing
-  mechanism is implemented.
-- **Project Root Determination:** The effective `PROJECT_ROOT` for path
-  resolution is the server process's current working directory
-  (`process.cwd()`). This means the system launching the server (e.g., the agent
-  host environment) **must** set the correct working directory corresponding to
-  the target project at launch time to ensure the server operates on the
-  intended files.
+- **Node.js Environment:** Relies on Node.js runtime and built-in modules.
+- **Permissions:** Server process permissions limit filesystem operations.
+- **Cross-Platform Compatibility:** Filesystem behaviors differ. Code uses `path` module and normalizes slashes.
+- **Error Handling:** Relies on Node.js error codes and `McpError`.
+- **Security Model:** Relies on `resolvePath` function.
+- **Project Root Determination:** Uses `process.cwd()`. Launching process must set correct `cwd`.
+- **ESM Mocking:** Mocking ES Modules (especially in `node_modules`) with Jest and `ts-jest` proved challenging. Current test setup uses a mix of `jest.unstable_mockModule` (for `editFile`) and integration testing with temporary directories (for `listFiles`). Requires `NODE_OPTIONS=--experimental-vm-modules` flag for test execution.

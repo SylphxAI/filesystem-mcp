@@ -1,7 +1,15 @@
-<!-- Version: 1.0 | Last Updated: 2025-05-04 | Updated By: Cline -->
+<!-- Version: 1.1 | Last Updated: 2025-06-06 | Updated By: Roo -->
 
 # Cline Rules for filesystem-mcp Project
 
 ## Tool Usage Preferences
 
 - **Prioritize Edit Tools:** When modifying existing files, prefer using `apply_diff`, `insert_content`, or `search_and_replace` over `write_to_file`. `write_to_file` should primarily be used for creating new files or when a complete rewrite is necessary, as it can be less efficient for large files or minor edits.
+
+## Technical Notes & Workarounds
+
+- **Jest ESM Mocking:** Mocking ES Modules (especially `fs/promises`, `glob`, and local utilities) with Jest/`ts-jest` in this project is complex and standard methods (`jest.mock`, `spyOn`) often fail due to module loading order or immutability issues.
+    - **`editFile` Test Strategy:** Uses `jest.unstable_mockModule` with mock functions defined *outside* the factory, returning these external functions from the factory. Requires `as any` cast on mock function calls (`mockFn.mockResolvedValue(...)`) within tests to bypass TypeScript errors, although this might mask underlying issues if the mock isn't correctly applied.
+    - **`listFiles` Test Strategy:** Uses integration testing. Creates temporary directories/files using actual `fsPromises` in `beforeEach`/`afterEach` and tests the handler against this real (but temporary) filesystem state. This avoids mocking `fs` but makes tests slower and dependent on actual filesystem behavior.
+    - **Execution Requirement:** Tests require the `NODE_OPTIONS=--experimental-vm-modules` flag set via `cross-env` in the `npm test` script.
+- **`write_to_file` Tool Limitation:** This tool seems to incorrectly escape `&` characters to `&amp;amp;` within the `<content>` block, causing syntax errors when writing code containing `&`. Use alternative tools like `apply_diff` (carefully, as it has issues with `=======`) or `search_and_replace` for such content, or write the file in multiple steps if possible.

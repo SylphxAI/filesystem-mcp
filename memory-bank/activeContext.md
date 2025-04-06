@@ -1,77 +1,75 @@
-<!-- Version: 3.1 | Last Updated: 2025-06-04 | Updated By: Cline -->
-# Active Context: Filesystem MCP Server (v0.5.8 Release)
+<!-- Version: 4.0 | Last Updated: 2025-06-06 | Updated By: Roo -->
+# Active Context: Filesystem MCP Server (Testing Phase)
 
 ## 1. Current Work Focus
 
-Preparing to commit changes and tag version `0.5.8` after fixing the `.dockerignore` file, adding support link to README, and creating FUNDING.yml.
+Adding unit/integration tests using Jest for all tool handlers to ensure stability and correctness, and to catch regressions. Currently paused after successfully adding tests for `editFile` and `listFiles`.
 
 ## 2. Recent Changes/Decisions
 
-- **README Refinement & Correction:** Iteratively updated `README.md` (details omitted).
-- **Dockerization:** Created `.dockerignore` and `Dockerfile`, debugged build issues. Modified `Dockerfile` to copy pre-built code and install only production dependencies.
-- **CI/CD Setup (GitHub Actions):** Modified workflow to publish to npm and Docker Hub.
-- **Versioning:** Incremented version multiple times (up to `0.4.11`) for CI/CD triggers.
-- **Project Root Determination Changed:** Modified `src/utils/pathUtils.ts` to use `process.cwd()` as `PROJECT_ROOT`.
-- **Memory Bank Updated:** Updated relevant files to reflect the `process.cwd()` logic.
-- **Added `edit_file` Tool (Basic):** Implemented handler, schema, and basic logic.
-- **Troubleshooting Build Error:** Investigated and worked around a `tsc` error.
-- **Memory Bank Updated:** Updated files to include `edit_file` details.
-- **Verified Batch Error Handling:** Confirmed "continue on error" behavior for batch tools.
-- **Fixed `edit_file` Return Structure:** Corrected return statement for MCP compliance.
-- **Tested `edit_file`:** Successfully tested with mixed outcomes.
-- **Updated `README.md`:** Added `edit_file` details.
-- **Incremented Version:** Updated `package.json` to version `0.5.1`.
-- **Enhanced Path Error Reporting (`pathUtils.ts`):** Modified `src/utils/pathUtils.ts` to include more context in path-related error messages and added console logging.
-- **Created `.clinerules`:** Created `memory-bank/.clinerules` to document the user preference for prioritizing edit tools over `write_to_file`.
-- **Enhanced `readContent` Error Reporting:** Modified `src/handlers/readContent.ts` to include more context in `ENOENT` error messages.
-- **Updated `writeContent` Description:** Modified the description for the `write_content` tool to recommend using edit tools.
-- **Updated `editFile` Description:** Modified the description for the `edit_file` tool to reinforce its recommendation for modifications.
-- **Parallelized CI/CD:** Refactored `.github/workflows/publish.yml` to split npm and Docker publishing into separate, parallel jobs.
-- **Incremented Version to 0.5.3:** Updated `package.json` to version `0.5.3`.
-- **Created Changelog:** Generated and created `CHANGELOG.md` file documenting changes since v0.5.1 for the v0.5.3 release.
-- **Automated GitHub Releases:** Modified `.github/workflows/publish.yml` to add automatic GitHub Release creation on tag pushes.
-- **Fixed Docker CI/CD Artifact Extraction:** Corrected the `tar` command in the `publish-docker` job.
-- **Refined CI/CD Triggers:** Modified `.github/workflows/publish.yml` so that publishing jobs only run on version tag pushes.
-- **Incremented Version to 0.5.5:** Updated `package.json` to version `0.5.5`.
-- **Updated Changelog:** Added entry for v0.5.5 in `CHANGELOG.md`.
-- **Fixed CI/CD Artifacts:** Corrected artifact creation and extraction in `.github/workflows/publish.yml`.
-- **Simplified CI/CD (Final):** Refactored back to a single workflow (`publish.yml`) with conditional artifact upload and job execution based on trigger (main push vs tag push). Deleted `ci.yml` and `build-reusable.yml`.
-- **Incremented Version to 0.5.6:** Updated `package.json` to version `0.5.6` due to v0.5.5 being previously published to npm.
-- **Updated Changelog for v0.5.6:** Added entry for v0.5.6 in `CHANGELOG.md`.
-- **Added CI/CD Diagnostics:** Added `ls -la` steps in the `publish-docker` job in `.github/workflows/publish.yml` to help diagnose artifact download and extraction issues.
-- **Added `LICENSE` File:** Created `LICENSE` file with MIT license text.
-- **Updated `README.md`:** Added Glama.ai badge.
-- **Fixed CI Artifact Archiving:** Corrected `tar` command in `.github/workflows/publish.yml` to include the `build` directory itself, not just its contents (5f5c7c4).
-- **Incremented Version to 0.5.7:** Updated `package.json` and `CHANGELOG.md` (Release failed due to `.dockerignore`).
-- **Fixed `.dockerignore`:** Removed `build` directory exclusion to allow it in Docker build context.
-- **Incremented Version to 0.5.8:** Updated `package.json` and `CHANGELOG.md`.
-- **Updated `README.md`:** Added 'Support the Project' section with Buy Me a Coffee link.
-- **Created `.github/FUNDING.yml`:** Added funding file with Buy Me a Coffee link.
+- **README Refinement & Correction:** (Details omitted).
+- **Dockerization:** (Details omitted).
+- **CI/CD Setup (GitHub Actions):** (Details omitted).
+- **Versioning:** (Details omitted).
+- **Project Root Determination Changed:** (Details omitted).
+- **Memory Bank Updated:** (Details omitted).
+- **Added `edit_file` Tool (Basic):** (Details omitted).
+- **Troubleshooting Build Error:** (Details omitted).
+- **Memory Bank Updated:** (Details omitted).
+- **Verified Batch Error Handling:** (Details omitted).
+- **Fixed `edit_file` Return Structure:** (Details omitted).
+- **Tested `edit_file`:** (Details omitted).
+- **Updated `README.md`:** (Details omitted).
+- **Incremented Version:** (Details omitted).
+- **Enhanced Path Error Reporting (`pathUtils.ts`):** (Details omitted).
+- **Created `.clinerules`:** (Details omitted).
+- **Enhanced `readContent` Error Reporting:** (Details omitted).
+- **Updated `writeContent` Description:** (Details omitted).
+- **Updated `editFile` Description:** (Details omitted).
+- **Parallelized CI/CD:** (Details omitted).
+- **Incremented Version to 0.5.3:** (Details omitted).
+- **Created Changelog:** (Details omitted).
+- **Automated GitHub Releases:** (Details omitted).
+- **Fixed Docker CI/CD Artifact Extraction:** (Details omitted).
+- **Refined CI/CD Triggers:** (Details omitted).
+- **Incremented Version to 0.5.5:** (Details omitted).
+- **Updated Changelog:** (Details omitted).
+- **Fixed CI Artifact Archiving:** (Details omitted).
+- **Incremented Version to 0.5.6:** (Details omitted).
+- **Updated Changelog for v0.5.6:** (Details omitted).
+- **Added CI/CD Diagnostics:** (Details omitted).
+- **Added `LICENSE` File:** (Details omitted).
+- **Updated `README.md`:** (Details omitted).
+- **Fixed CI Artifact Archiving:** (Details omitted).
+- **Incremented Version to 0.5.7:** (Details omitted).
+- **Fixed `.dockerignore`:** (Details omitted).
+- **Incremented Version to 0.5.8:** (Details omitted).
+- **Updated `README.md`:** (Details omitted).
+- **Created `.github/FUNDING.yml`:** (Details omitted).
+- **Attempted Tool Description Updates:** Tried using `edit_file`, `apply_diff`, `search_and_replace` to modify handler descriptions directly in source code, but encountered tool limitations/bugs. Decided to postpone description updates.
+- **Added Jest Testing Framework:**
+    - Installed `jest`, `@types/jest`, `ts-jest`, `cross-env`.
+    - Created `jest.config.js` and `tsconfig.test.json` to handle TypeScript and ESM configuration.
+    - Added `test` script to `package.json`.
+    - Created `__tests__/handlers` directory structure.
+- **Implemented `editFile` Tests:** Created `__tests__/handlers/editFile.test.ts`. Encountered significant issues with ESM mocking (`unstable_mockModule`, `jest.mock`, `spyOn`). Eventually succeeded using `unstable_mockModule` with `as any` casts as a workaround for type errors. Tests are passing.
+- **Implemented `listFiles` Tests:** Created `__tests__/handlers/listFiles.test.ts`. Faced similar ESM mocking difficulties. Switched to an integration testing approach using temporary directories and actual `fs` calls. Tests are passing.
 
 ## 3. Next Steps / Considerations
 
-- **Update `progress.md`:** Reflect the `.dockerignore` fix, README update, FUNDING.yml creation, and version bump to `0.5.8`.
-- **Commit Changes:** Commit updated `README.md`, `.github/FUNDING.yml`, `.dockerignore`, `package.json`, `CHANGELOG.md`, and Memory Bank files.
-- **Tag Release:** Create git tag `v0.5.8`.
-- **Push Commit & Tag:** Push the commit and the new tag to `origin`.
-- **Monitor CI/CD:** Verify the `v0.5.8` release workflow completes successfully.
-- **Implement `edit_file` Regex Support:** (Post-release task) Add logic for `use_regex: true`.
+- **Continue Adding Tests:** Proceed with adding tests for the next handler (e.g., `statItems`, `readContent`, `writeContent`). Decide whether to use mocking (like `editFile`) or integration testing (like `listFiles`) based on complexity and mocking feasibility.
+- **Commit Testing Progress:** Commit the new test files, configuration files, and updated `package.json`.
+- **Refine Mocking Strategy:** Revisit ESM mocking issues later if a cleaner solution becomes apparent or if Jest/ts-jest updates improve compatibility.
+- **Implement `edit_file` Regex Support:** (Post-testing task).
+- **Code Cleanup:** (Post-testing task).
 
 ## 4. Active Decisions
 
-- `npx` is the primary recommended usage method.
-- Docker support is implemented and automated.
-- `README.md` structure and content are finalized, including support section.
-- Project Root Source: Uses `process.cwd()`.
-- `edit_file` Implemented (Basic).
-- Batch Error Handling: Confirmed "continue on error".
-- **Path Error Messages:** Enhanced with more context.
-- **Tool Preference:** Documented preference for edit tools in `.clinerules`.
-- **Tool Descriptions:** Updated `writeContent` and `editFile` descriptions.
-- **CI/CD Structure:** Simplified single workflow (`publish.yml`) handling CI checks and tag-triggered releases. Artifact handling fixed. Diagnostic steps added.
-- **Dockerfile:** Refactored to copy pre-built code and install production dependencies only.
-- **Release Version:** Set to `0.5.8`.
-- **Changelog:** Updated for `v0.5.8`.
-- **License:** Added MIT `LICENSE` file.
-- **README Badge:** Added Glama.ai badge.
-- **Funding File:** Added `.github/FUNDING.yml`.
+- **Testing Framework:** Jest with `ts-jest`.
+- **Testing Strategy:**
+    - `editFile`: Unit testing with `jest.unstable_mockModule` and `as any` casts (workaround).
+    - `listFiles`: Integration testing with temporary filesystem setup.
+    - Future handlers: Decide strategy based on dependencies and mocking difficulty.
+- **ESM Test Execution:** Using `cross-env NODE_OPTIONS=--experimental-vm-modules jest`.
+- **Test Configuration:** Using `jest.config.js` and `tsconfig.test.json`.
+- (Previous decisions remain active unless superseded).
