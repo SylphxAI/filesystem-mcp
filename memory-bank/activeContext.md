@@ -1,9 +1,9 @@
-<!-- Version: 4.0 | Last Updated: 2025-06-06 | Updated By: Roo -->
+<!-- Version: 4.1 | Last Updated: 2025-06-06 | Updated By: Roo -->
 # Active Context: Filesystem MCP Server (Testing Phase)
 
 ## 1. Current Work Focus
 
-Adding unit/integration tests using Jest for all tool handlers to ensure stability and correctness, and to catch regressions. Currently paused after successfully adding tests for `editFile` and `listFiles`.
+Adding unit/integration tests using Jest for all tool handlers to ensure stability and correctness, and to catch regressions before migrating to Vitest.
 
 ## 2. Recent Changes/Decisions
 
@@ -46,30 +46,30 @@ Adding unit/integration tests using Jest for all tool handlers to ensure stabili
 - **Incremented Version to 0.5.8:** (Details omitted).
 - **Updated `README.md`:** (Details omitted).
 - **Created `.github/FUNDING.yml`:** (Details omitted).
-- **Attempted Tool Description Updates:** Tried using `edit_file`, `apply_diff`, `search_and_replace` to modify handler descriptions directly in source code, but encountered tool limitations/bugs. Decided to postpone description updates.
-- **Added Jest Testing Framework:**
-    - Installed `jest`, `@types/jest`, `ts-jest`, `cross-env`.
-    - Created `jest.config.js` and `tsconfig.test.json` to handle TypeScript and ESM configuration.
-    - Added `test` script to `package.json`.
-    - Created `__tests__/handlers` directory structure.
-- **Implemented `editFile` Tests:** Created `__tests__/handlers/editFile.test.ts`. Encountered significant issues with ESM mocking (`unstable_mockModule`, `jest.mock`, `spyOn`). Eventually succeeded using `unstable_mockModule` with `as any` casts as a workaround for type errors. Tests are passing.
-- **Implemented `listFiles` Tests:** Created `__tests__/handlers/listFiles.test.ts`. Faced similar ESM mocking difficulties. Switched to an integration testing approach using temporary directories and actual `fs` calls. Tests are passing.
+- **Attempted Tool Description Updates:** (Details omitted).
+- **Added Jest Testing Framework:** (Details omitted).
+- **Implemented `editFile` Tests:** (Details omitted).
+- **Implemented `listFiles` Tests:** (Details omitted).
+- **Implemented `statItems` Tests:** Added integration tests using temporary filesystem and mocked path resolution. Fixed issues with mock logic and assertions.
+- **Implemented `readContent` Tests:** Added integration tests using temporary filesystem and mocked path resolution. Fixed issues with handler logic and assertions (especially for binary files).
+- **Implemented `writeContent` Tests:** Added integration tests using temporary filesystem and mocked path resolution. Fixed issues with assertions based on actual handler return structure.
+- **Implemented `deleteItems` Tests:** Added integration tests using temporary filesystem and mocked path resolution. Fixed handler logic for ENOENT and test assertions.
+- **Implemented `createDirectories` Tests:** Added integration tests using temporary filesystem and mocked path resolution.
 
 ## 3. Next Steps / Considerations
 
-- **Continue Adding Tests:** Proceed with adding tests for the next handler (e.g., `statItems`, `readContent`, `writeContent`). Decide whether to use mocking (like `editFile`) or integration testing (like `listFiles`) based on complexity and mocking feasibility.
-- **Commit Testing Progress:** Commit the new test files, configuration files, and updated `package.json`.
-- **Refine Mocking Strategy:** Revisit ESM mocking issues later if a cleaner solution becomes apparent or if Jest/ts-jest updates improve compatibility.
+- **Continue Adding Tests:** Proceed with adding tests for `moveItems`.
+- **Commit Testing Progress:** Commit new test files and updated Memory Bank.
+- **Refine Mocking Strategy:** (Postponed).
 - **Implement `edit_file` Regex Support:** (Post-testing task).
 - **Code Cleanup:** (Post-testing task).
+- **Migrate to Vitest:** After completing Jest tests for core handlers.
 
 ## 4. Active Decisions
 
-- **Testing Framework:** Jest with `ts-jest`.
-- **Testing Strategy:**
-    - `editFile`: Unit testing with `jest.unstable_mockModule` and `as any` casts (workaround).
-    - `listFiles`: Integration testing with temporary filesystem setup.
-    - Future handlers: Decide strategy based on dependencies and mocking difficulty.
+- **Testing Framework:** Jest with `ts-jest` (pending migration to Vitest).
+- **Testing Strategy:** Primarily integration testing with temporary filesystem and mocked `resolvePath` for handlers interacting with the filesystem.
+- **Skipped Tests:** Decided to skip tests for `chmodItems` and `chownItems` due to limited effectiveness and potential inconsistencies on Windows, prioritizing migration to Vitest.
 - **ESM Test Execution:** Using `cross-env NODE_OPTIONS=--experimental-vm-modules jest`.
 - **Test Configuration:** Using `jest.config.js` and `tsconfig.test.json`.
 - (Previous decisions remain active unless superseded).
