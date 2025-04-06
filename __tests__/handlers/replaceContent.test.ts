@@ -280,4 +280,42 @@ describe('handleReplaceContent Integration Tests', () => {
     expect(resultsArray[0].error).toMatch(/Failed to process file: Simulated generic error/);
   });
 
+
+  it('should handle replacing content in an empty file', async () => {
+    const emptyFileName = 'emptyFile.txt';
+    await fsPromises.writeFile(path.join(tempRootDir, emptyFileName), ''); // Create empty file
+
+    const request = {
+      paths: [emptyFileName],
+      operations: [{ search: 'anything', replace: 'something' }],
+    };
+    const rawResult = await replaceContentToolDefinition.handler(request);
+    const parsedResult = JSON.parse(rawResult.content[0].text);
+    const resultsArray = parsedResult.results;
+
+    expect(resultsArray).toHaveLength(1);
+    expect(resultsArray[0]).toEqual({ file: emptyFileName, modified: false, replacements: 0 });
+
+    // Verify content remains empty
+    const content = await fsPromises.readFile(path.join(tempRootDir, emptyFileName), 'utf-8');
+    expect(content).toBe('');
+  });
+
+  it('should handle replacing content with an empty string (deletion)', async () => {
+    const request = {
+      paths: ['fileA.txt'],
+      operations: [{ search: 'world', replace: '' }], // Replace 'world' with empty string
+    };
+    const rawResult = await replaceContentToolDefinition.handler(request);
+    const parsedResult = JSON.parse(rawResult.content[0].text);
+    const resultsArray = parsedResult.results;
+
+    expect(resultsArray).toHaveLength(1);
+    expect(resultsArray[0]).toEqual({ file: 'fileA.txt', modified: true, replacements: 2 });
+
+    // Verify content after deletion
+    const contentA = await fsPromises.readFile(path.join(tempRootDir, 'fileA.txt'), 'utf-8');
+    expect(contentA).toBe('Hello , !'); // Note the double space where 'world' was
+  });
+
 });

@@ -1,4 +1,4 @@
-<!-- Version: 4.3 | Last Updated: 2025-04-06 | Updated By: Roo -->
+<!-- Version: 4.5 | Last Updated: 2025-04-06 | Updated By: Roo -->
 # System Patterns: Filesystem MCP Server
 
 ## 1. Architecture Overview
@@ -53,6 +53,7 @@ graph LR
   - Implements basic indentation detection (`detect-indent`) and preservation
     for insertions/replacements.
   - Uses `diff` library to generate unified diff output.
+  - **Regex Support (Partial & Buggy):** Logic added to handle `use_regex: true`, but currently has issues (failing tests) related to state management (`currentContent`/`lines`) within the change loop.
 - **Error Handling:**
   - Uses `try...catch` blocks within each tool handler.
   - Catches specific Node.js filesystem errors (like `ENOENT`, `EPERM`,

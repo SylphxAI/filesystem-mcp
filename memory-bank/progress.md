@@ -1,14 +1,14 @@
-<!-- Version: 4.3 | Last Updated: 2025-04-06 | Updated By: Roo -->
-# Progress: Filesystem MCP Server (Post-Vitest Migration & Cleanup)
+<!-- Version: 4.5 | Last Updated: 2025-04-06 | Updated By: Roo -->
+# Progress: Filesystem MCP Server (Context Limit Transition)
 
 ## 1. What Works
 
 - **Server Initialization & Core MCP:** Starts, connects, lists tools.
 - **Path Security:** `resolvePath` prevents traversal and absolute paths. Enhanced error reporting implemented.
 - **Project Root:** Determined by `process.cwd()`.
-- **Core Tool Functionality:** Most tools (`create_directories`, `write_content`, `stat_items`, `read_content`, `move_items`, `copy_items`, `search_files`, `replace_content`, `delete_items`) have basic functionality.
+- **Core Tool Functionality:** Most tools (`create_directories`, `write_content`, `stat_items`, `read_content`, `move_items`, `copy_items`, `search_files`, `replace_content`, `delete_items`) have basic functionality and passing tests.
 - **Batch Error Handling:** Tools attempt all items and report individual results.
-- **`edit_file` Tool:** Basic text insertion, replacement, deletion, indentation preservation, diff output implemented and tested.
+- **`edit_file` Tool:** Basic text insertion, replacement, deletion, indentation preservation, diff output implemented and tested (passing). **Initial Regex support added, but 3 tests (insertion, regex replace/delete) are failing.**
 - **`listFiles` Tool:** Core functionality implemented and tested (integration tests).
 - **Documentation (`README.md`):** Improved usage, features, Docker info, contribution, support section, badges.
 - **Tool Descriptions:** Updated for `write_content` and `edit_file`.
@@ -21,7 +21,6 @@
 - **Funding File:** `.github/FUNDING.yml` added.
 - **Testing Framework:** Vitest configured with v8 coverage. `test` script updated.
 - **Tests Added & Passing (Vitest):**
-    - `editFile`
     - `listFiles`
     - `statItems`
     - `readContent`
@@ -32,23 +31,25 @@
     - `copyItems`
     - `searchFiles`
     - `replaceContent`
-- **Code Cleanup:** Removed diagnostic logs from source code.
+    - `editFile` (Plain text/deletion/occurrence/invalid regex tests pass)
 
 ## 2. What's Left to Build / Test
 
+- **Fix Failing `edit_file` Tests:** Debug and resolve issues with **insertion, regex replace, and regex delete** test cases.
 - **Add Tests for Remaining Handlers:**
     - `chmodItems` (**Skipped** - Windows limitations)
     - `chownItems` (**Skipped** - Windows limitations)
-- **Implement `edit_file` Regex Support:** Add functionality for using regex patterns.
-- **Comprehensive Testing:** Add tests for edge cases, permissions, large files, etc.
+- **Comprehensive Testing:** Add tests for edge cases, permissions, large files, etc. for all handlers (once `edit_file` is stable).
 
 ## 3. Current Status
 
 - **Testing Migration & Cleanup Complete:** Successfully migrated tests to Vitest and removed diagnostic logs.
-- **Ready for Next Phase:** Codebase has basic test coverage and is cleaned up. Ready for feature implementation (`edit_file` regex) or further testing.
+- **`edit_file` Regex Partially Implemented:** Logic added, but 3 tests reveal issues with state management or matching logic, particularly for insertion and regex replace/delete.
+- **Context Limit Transition:** Pausing work due to context limit and debugging difficulty.
 
 ## 4. Known Issues / Areas for Improvement
 
+- **`edit_file` Failing Tests:** Insertion, Regex replace, and Regex delete tests for `edit_file` are failing (status 'skipped'). Root cause likely related to state updates (`currentContent`/`lines`) within the loop. Debugging deferred.
 - **Launcher Dependency:** Server functionality relies on the launching process setting the correct `cwd`.
 - **Windows `chmod`/`chown`:** Effectiveness is limited. Tests skipped.
 - **Cross-Device Moves/Copies:** May fail (`EXDEV`).

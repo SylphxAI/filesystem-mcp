@@ -1,4 +1,4 @@
-<!-- Version: 4.3 | Last Updated: 2025-04-06 | Updated By: Roo -->
+<!-- Version: 4.5 | Last Updated: 2025-04-06 | Updated By: Roo -->
 # Product Context: Filesystem MCP Server
 
 ## 1. Problem Solved
