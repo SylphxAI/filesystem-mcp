@@ -47,7 +47,8 @@ const handleDeleteItemsFunc = async (args: unknown) => {
             if (targetPath === PROJECT_ROOT) {
                 return { path: pathOutput, success: false, error: 'Deleting the project root is not allowed.' };
             }
-            await fs.rm(targetPath, { recursive: true, force: true });
+            // Remove force: true so ENOENT is thrown for non-existent paths
+            await fs.rm(targetPath, { recursive: true });
             return { path: pathOutput, success: true };
         } catch (error: any) {
             if (error.code === 'ENOENT') {
