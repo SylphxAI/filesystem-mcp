@@ -1,4 +1,4 @@
-<!-- Version: 4.17 | Last Updated: 2025-04-06 | Updated By: Roo -->
+<!-- Version: 4.18 | Last Updated: 2025-04-06 | Updated By: Roo -->
 # Progress: Filesystem MCP Server
 
 ## 1. What Works
@@ -27,7 +27,7 @@
     - `deleteItems`
     - `createDirectories` (Improved coverage, 2 tests skipped - confirmed mocking issue for mkdir)
     - `moveItems`
-    - `copyItems` (Improved coverage, 4 tests skipped)
+    - `copyItems` (Improved coverage, 4 tests skipped - confirmed mocking issue for cp/copyFile)
     - `searchFiles` (Improved coverage, 3 tests skipped - confirmed mocking issue for readFile)
     - `replaceContent`
     - `editFile` (All tests passing)
