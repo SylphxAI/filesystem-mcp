@@ -6,27 +6,37 @@ export default defineConfig({
     environment: 'node', // Set the test environment to Node.js
     coverage: {
       provider: 'v8', // Use V8 for coverage collection
-      reporter: ['text', 'json', 'html'], // Coverage report formats
+      reporter: ['text', 'json', 'html', 'lcov'], // Added lcov reporter
       reportsDirectory: './coverage', // Explicitly set the output directory
-      // Temporarily remove include/exclude to test basic report generation
-      // include: ['src/**/*.ts'],
-      // exclude: [
-      //   'src/index.ts',
-      //   'src/utils/pathUtils.ts',
-      //   'src/utils/statsUtils.ts',
-      //   'src/**/*.d.ts',
-      //   '**/__mocks__/**',
-      //   '**/__tests__/**',
-      // ],
+      thresholds: {
+        // Added thresholds
+        lines: 90,
+        functions: 90,
+        branches: 90,
+        statements: 90,
+      },
+      include: ['src/**/*.ts'], // Restored include
+      exclude: [
+        // Restored and adjusted exclude
+        'src/index.ts', // Often just exports
+        'src/types/**', // Assuming types might be added later
+        '**/*.d.ts',
+        '**/*.config.ts',
+        '**/constants.ts', // Assuming constants might be added later
+        'src/handlers/chmodItems.ts', // Exclude due to Windows limitations
+        'src/handlers/chownItems.ts', // Exclude due to Windows limitations
+      ],
+      clean: true, // Added clean option
     },
-    // Vitest generally handles ESM better, but specific configs might be needed later
-    // For now, rely on defaults and tsconfig.json settings
-    // Ensure tsconfig.test.json or equivalent settings are compatible
+    // Removed setupFiles as './__tests__/setup.ts' does not exist
     deps: {
       optimizer: {
         ssr: {
           // Suggested replacement for deprecated 'inline' to handle problematic ESM dependencies
-          include: ['@modelcontextprotocol/sdk', '@modelcontextprotocol/sdk/stdio'],
+          include: [
+            '@modelcontextprotocol/sdk',
+            '@modelcontextprotocol/sdk/stdio',
+          ],
         },
       },
     },
@@ -37,7 +47,8 @@ export default defineConfig({
       '**/cypress/**',
       '**/.{idea,git,cache,output,temp}/**',
       '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
-      '__tests__/index.test.ts' // Exclude the index test
+      '__tests__/index.test.ts', // Exclude the index test
+      '**/*.bench.ts', // Added benchmark file exclusion
     ],
   },
 });

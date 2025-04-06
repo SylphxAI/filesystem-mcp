@@ -6,9 +6,54 @@ on:
       - main # Trigger on push to main branch
     tags:
       - 'v*.*.*' # Trigger on push of version tags (e.g., v0.5.5)
+  pull_request: # Added PR trigger
+    branches:
+      - main
+
+# Prevent concurrent runs for the same PR or branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  validate: # New validation job
+    name: Validate Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.1.7 # Specific version
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4.0.3 # Specific version
+        with:
+          node-version: '20'
+          cache: 'npm' # Added caching
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting
+        run: npm run check-format
+
+      - name: Lint code
+        run: npm run lint
+
+      - name: Perform type checking
+        run: npm run typecheck
+
+      - name: Run tests with coverage
+        run: npm run test:cov
+
+      - name: Upload coverage to Coveralls
+        uses: coverallsapp/github-action@v2.3.0 # Specific version
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./coverage/lcov.info # Verify path exists after test:cov
+          flag-name: run-${{ matrix.node-version || 'node-20' }} # Use matrix or default
+          parallel: false # Set to true if using parallel matrix later
+
   build:
+    needs: validate # Depends on validation passing
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get_version.outputs.version }}
@@ -16,12 +61,13 @@ jobs:
       archive_filename: ${{ steps.archive_build.outputs.archive_name }} # Actual .tar.gz filename
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.1.7 # Specific version
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.0.3 # Specific version
         with:
           node-version: '20'
+          cache: 'npm' # Added caching
 
       - name: Install dependencies
         run: npm ci
@@ -31,7 +77,6 @@ jobs:
 
       - name: Get package version
         id: get_version
-        # Use tag name if available, otherwise use package.json version
         run: |
           VERSION=""
           if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref }}" == refs/tags/v* ]]; then
@@ -46,23 +91,27 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v') # Condition: Only run for tags
         id: archive_build
         run: |
-          tar -czf build-artifacts.tar.gz build package.json package-lock.json README.md CHANGELOG.md Dockerfile .dockerignore
+          # Ensure scripts directory is included if postbuild.js is needed
+          tar -czf build-artifacts.tar.gz build package.json package-lock.json README.md CHANGELOG.md LICENSE Dockerfile .dockerignore scripts/postbuild.js
           echo "archive_name=build-artifacts.tar.gz" >> $GITHUB_OUTPUT
 
       - name: Upload build artifacts (only on tag push)
         if: startsWith(github.ref, 'refs/tags/v') # Condition: Only run for tags
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.3.4 # Specific version
         with:
           name: build-artifacts-archive # Use consistent name
           path: ${{ steps.archive_build.outputs.archive_name }}
 
   publish-npm:
-    needs: build
+    needs: [validate, build] # Depends on validate and build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v') # Condition: Only run for tags
+    permissions: # Added permissions for trusted publishing (recommended)
+      contents: read
+      id-token: write
     steps:
       - name: Download build artifacts archive
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.1.8 # Specific version
         with:
           name: ${{ needs.build.outputs.artifact_name }} # Use consistent artifact name
           path: .
@@ -71,23 +120,31 @@ jobs:
         run: tar -xzf build-artifacts.tar.gz # Use the correct archive filename
 
       - name: Set up Node.js for npm publish
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.0.3 # Specific version
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org/'
+          cache: 'npm' # Added caching
 
-      - name: Publish to npm
-        run: npm publish --access public
+      # Install only production dependencies before publishing (optional but good practice)
+      # - name: Install production dependencies
+      #   run: npm ci --omit=dev
+
+      - name: Publish to npm with provenance
+        run: npm publish --access public --provenance # Added provenance
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # Still needed for non-provenance or fallback
 
   publish-docker:
-    needs: build
+    needs: [validate, build] # Depends on validate and build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v') # Condition: Only run for tags
+    permissions: # Added permissions for docker login
+      contents: read
+      packages: write
     steps:
       - name: Download build artifacts archive
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.1.8 # Specific version
         with:
           name: ${{ needs.build.outputs.artifact_name }} # Use consistent artifact name
           path: .
@@ -102,31 +159,30 @@ jobs:
         run: ls -la
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v3.2.0 # Specific version
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3.5.0 # Specific version
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v3.2.0 # Specific version
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v5.5.1 # Specific version
         with:
           images: sylphlab/filesystem-mcp
-          # Use version from the build job output (which is derived from the tag)
           tags: |
             type=semver,pattern={{version}},value=${{ needs.build.outputs.version }}
             type=semver,pattern={{major}}.{{minor}},value=${{ needs.build.outputs.version }}
             type=sha,prefix=,suffix=,event=tag
-            type=raw,value=latest
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' }} # Only tag latest on actual tag pushes
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v6.5.0 # Specific version
         with:
           context: .
           push: true
@@ -136,15 +192,14 @@ jobs:
           cache-to: type=gha,mode=max
 
   create-release:
-    needs: [build, publish-npm, publish-docker] # Depend on build and both publish jobs
+    needs: [validate, build, publish-npm, publish-docker] # Depend on validate, build and both publish jobs
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v') # Condition: Only run for tags
     permissions:
-      contents: write
+      contents: write # Keep write permission
     steps:
-      # No need to checkout repo again if CHANGELOG is in artifact
       - name: Download build artifacts archive
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.1.8 # Specific version
         with:
           name: ${{ needs.build.outputs.artifact_name }} # Use consistent artifact name
           path: .
@@ -153,11 +208,11 @@ jobs:
         run: tar -xzf build-artifacts.tar.gz # Use the correct archive filename
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v2.0.6 # Specific version
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           body_path: CHANGELOG.md # Assumes CHANGELOG.md is in the artifact
-          # files: ${{ needs.build.outputs.archive_filename }} # Attach the actual archive file
+          # files: ${{ needs.build.outputs.archive_filename }} # Optionally attach the archive
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

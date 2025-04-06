@@ -1,0 +1,26 @@
+# .github/dependabot.yml
+version: 2
+updates:
+  # Dependency updates for npm
+  - package-ecosystem: 'npm'
+    directory: '/' # Location of package manifests
+    schedule:
+      interval: 'weekly' # Check for updates weekly
+    open-pull-requests-limit: 10 # Limit open PRs
+    versioning-strategy: 'auto' # Use default strategy
+    commit-message:
+      prefix: 'chore' # Use 'chore' for dependency updates
+      prefix-development: 'chore(dev)' # Use 'chore(dev)' for devDependencies
+      include: 'scope'
+    rebase-strategy: 'auto' # Automatically rebase PRs
+
+  # GitHub Actions updates
+  - package-ecosystem: 'github-actions'
+    directory: '/' # Location of workflow files
+    schedule:
+      interval: 'weekly' # Check for updates weekly
+    open-pull-requests-limit: 5 # Limit open PRs for actions
+    commit-message:
+      prefix: 'chore(ci)' # Use 'chore(ci)' for action updates
+      include: 'scope'
+    rebase-strategy: 'auto'

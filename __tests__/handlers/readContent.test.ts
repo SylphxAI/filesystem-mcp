@@ -4,23 +4,28 @@ import * as actualFsPromises from 'fs/promises'; // Import actual fs for fallbac
 
 import * as path from 'path';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { createTemporaryFilesystem, cleanupTemporaryFilesystem } from '../testUtils.js';
+import {
+  createTemporaryFilesystem,
+  cleanupTemporaryFilesystem,
+} from '../testUtils.js';
 
 // Mock pathUtils BEFORE importing the handler
 // Mock pathUtils using vi.mock (hoisted)
 const mockResolvePath = vi.fn<(userPath: string) => string>();
 vi.mock('../../src/utils/pathUtils.js', () => ({
-    PROJECT_ROOT: 'mocked/project/root', // Keep simple for now
-    resolvePath: mockResolvePath,
+  PROJECT_ROOT: 'mocked/project/root', // Keep simple for now
+  resolvePath: mockResolvePath,
 }));
 
 // Import the handler AFTER the mock
-const { readContentToolDefinition } = await import('../../src/handlers/readContent.js');
+const { readContentToolDefinition } = await import(
+  '../../src/handlers/readContent.js'
+);
 
 // Define the structure for the temporary filesystem
 const testStructure = {
   'file1.txt': 'Hello World!',
-  'dir1': {
+  dir1: {
     'file2.js': 'console.log("test");',
     'another.txt': 'More content here.',
   },
@@ -36,18 +41,24 @@ describe('handleReadContent Integration Tests', () => {
 
     // Configure the mock resolvePath
     mockResolvePath.mockImplementation((relativePath: string): string => {
-        // Simulate absolute path rejection first, as the original does
-        if (path.isAbsolute(relativePath)) {
-             throw new McpError(ErrorCode.InvalidParams, `Mocked Absolute paths are not allowed for ${relativePath}`);
-        }
-        // Resolve the path relative to the temp directory
-        const absolutePath = path.resolve(tempRootDir, relativePath);
-        // Simulate path traversal check
-        if (!absolutePath.startsWith(tempRootDir)) {
-            throw new McpError(ErrorCode.InvalidRequest, `Mocked Path traversal detected for ${relativePath}`);
-        }
-        // Return the resolved path. The actual fs.readFile in the handler will handle ENOENT.
-        return absolutePath;
+      // Simulate absolute path rejection first, as the original does
+      if (path.isAbsolute(relativePath)) {
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          `Mocked Absolute paths are not allowed for ${relativePath}`,
+        );
+      }
+      // Resolve the path relative to the temp directory
+      const absolutePath = path.resolve(tempRootDir, relativePath);
+      // Simulate path traversal check
+      if (!absolutePath.startsWith(tempRootDir)) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          `Mocked Path traversal detected for ${relativePath}`,
+        );
+      }
+      // Return the resolved path. The actual fs.readFile in the handler will handle ENOENT.
+      return absolutePath;
     });
   });
 
@@ -101,7 +112,9 @@ describe('handleReadContent Integration Tests', () => {
     expect(nonexistent.error).toBeDefined(); // Should have an error
     // Check the specific error message from the handler for ENOENT - updated based on handler code
     expect(nonexistent.error).toMatch(/File not found at resolved path/);
-    expect(nonexistent.error).toContain(path.resolve(tempRootDir, 'nonexistent.txt')); // Check resolved path is in the error message
+    expect(nonexistent.error).toContain(
+      path.resolve(tempRootDir, 'nonexistent.txt'),
+    ); // Check resolved path is in the error message
   });
 
   it('should return errors for directories', async () => {
@@ -120,7 +133,7 @@ describe('handleReadContent Integration Tests', () => {
     expect(dir1.error).toMatch(/Path is not a regular file: dir1/); // Match the updated error message
   });
 
-   it('should return error for absolute paths (caught by mock resolvePath)', async () => {
+  it('should return error for absolute paths (caught by mock resolvePath)', async () => {
     const absolutePath = path.resolve(tempRootDir, 'file1.txt');
     const request = { paths: [absolutePath] };
     const rawResult = await readContentToolDefinition.handler(request);
@@ -143,34 +156,36 @@ describe('handleReadContent Integration Tests', () => {
 
   it('should reject requests with empty paths array based on Zod schema', async () => {
     const request = { paths: [] };
-    await expect(readContentToolDefinition.handler(request)).rejects.toThrow(McpError);
-    await expect(readContentToolDefinition.handler(request)).rejects.toThrow(/Paths array cannot be empty/);
+    await expect(readContentToolDefinition.handler(request)).rejects.toThrow(
+      McpError,
+    );
+    await expect(readContentToolDefinition.handler(request)).rejects.toThrow(
+      /Paths array cannot be empty/,
+    );
   });
 
   // Note: Testing binary file reading might require adjustments based on how
   // the handler returns binary content (e.g., base64 encoded string).
   // Assuming it returns utf8 string for now, which might corrupt binary data.
   it('should attempt to read binary files (result might be corrupted if not handled)', async () => {
-     const request = {
-       paths: ['binaryFile.bin'],
-     };
-     const rawResult = await readContentToolDefinition.handler(request);
-     const result = JSON.parse(rawResult.content[0].text);
-     expect(result).toHaveLength(1);
-     const binaryFile = result[0];
-     expect(binaryFile.error).toBeUndefined(); // Should be successful read attempt
-     expect(binaryFile.content).toBeDefined();
-     // The content will likely be garbled UTF-8 interpretation of binary data
-     // Reading binary data as utf-8 might return garbled content, but the read itself should succeed.
-     // We just check that an error wasn't returned and some content was.
-     expect(binaryFile.error).toBeUndefined();
-     expect(binaryFile.content).toBeDefined();
-     // Optionally, check that the content is a string of expected length if the behavior is consistent
-     // expect(binaryFile.content.length).toBe(4); // This seems to be the observed behavior
-     expect(binaryFile.content).toBeDefined();
-   });
-
-
+    const request = {
+      paths: ['binaryFile.bin'],
+    };
+    const rawResult = await readContentToolDefinition.handler(request);
+    const result = JSON.parse(rawResult.content[0].text);
+    expect(result).toHaveLength(1);
+    const binaryFile = result[0];
+    expect(binaryFile.error).toBeUndefined(); // Should be successful read attempt
+    expect(binaryFile.content).toBeDefined();
+    // The content will likely be garbled UTF-8 interpretation of binary data
+    // Reading binary data as utf-8 might return garbled content, but the read itself should succeed.
+    // We just check that an error wasn't returned and some content was.
+    expect(binaryFile.error).toBeUndefined();
+    expect(binaryFile.content).toBeDefined();
+    // Optionally, check that the content is a string of expected length if the behavior is consistent
+    // expect(binaryFile.content.length).toBe(4); // This seems to be the observed behavior
+    expect(binaryFile.content).toBeDefined();
+  });
 
   it('should handle unexpected errors during path resolution', async () => {
     const errorPath = 'resolveErrorPath.txt';
@@ -183,8 +198,10 @@ describe('handleReadContent Integration Tests', () => {
       }
       // Fallback (might not be needed if only errorPath is requested)
       const absolutePath = path.resolve(tempRootDir, relativePath);
-      if (!absolutePath.startsWith(tempRootDir)) throw new McpError(ErrorCode.InvalidRequest, `Traversal`);
-      if (path.isAbsolute(relativePath)) throw new McpError(ErrorCode.InvalidParams, `Absolute`);
+      if (!absolutePath.startsWith(tempRootDir))
+        throw new McpError(ErrorCode.InvalidRequest, `Traversal`);
+      if (path.isAbsolute(relativePath))
+        throw new McpError(ErrorCode.InvalidParams, `Absolute`);
       return absolutePath;
     });
 
@@ -198,8 +215,8 @@ describe('handleReadContent Integration Tests', () => {
     expect(errorResult.content).toBeUndefined();
     expect(errorResult.error).toBeDefined();
     // Check for the unexpected resolve error message from line 82
-    expect(errorResult.error).toMatch(/Unexpected error resolving path: Simulated generic resolve error/);
+    expect(errorResult.error).toMatch(
+      /Unexpected error resolving path: Simulated generic resolve error/,
+    );
   });
-
 });
-

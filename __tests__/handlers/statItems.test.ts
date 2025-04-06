@@ -4,27 +4,31 @@ import * as path from 'path';
 // Import the definition object - will be mocked later
 // import { statItemsToolDefinition } from '../../src/handlers/statItems.js';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js'; // Match source import path
-import { createTemporaryFilesystem, cleanupTemporaryFilesystem } from '../testUtils.js'; // Assuming a test utility exists, add .js extension
+import {
+  createTemporaryFilesystem,
+  cleanupTemporaryFilesystem,
+} from '../testUtils.js'; // Assuming a test utility exists, add .js extension
 
 // Mock pathUtils BEFORE importing the handler that uses it
 // Mock pathUtils using vi.mock (hoisted)
 const mockResolvePath = vi.fn<(userPath: string) => string>();
 vi.mock('../../src/utils/pathUtils.js', () => ({
-    PROJECT_ROOT: 'mocked/project/root', // Keep simple for now
-    resolvePath: mockResolvePath,
+  PROJECT_ROOT: 'mocked/project/root', // Keep simple for now
+  resolvePath: mockResolvePath,
 }));
 
 // Now import the handler AFTER the mock is set up
-const { statItemsToolDefinition } = await import('../../src/handlers/statItems.js');
-
+const { statItemsToolDefinition } = await import(
+  '../../src/handlers/statItems.js'
+);
 
 // Define the structure for the temporary filesystem
 const testStructure = {
   'file1.txt': 'content1',
-  'dir1': {
+  dir1: {
     'file2.js': 'content2',
   },
-  'emptyDir': {},
+  emptyDir: {},
 };
 
 let tempRootDir: string;
@@ -38,16 +42,22 @@ describe('handleStatItems Integration Tests', () => {
     // Configure the mock resolvePath for this test run
     // Add explicit return type to the implementation function for clarity, although the fix is mainly in jest.fn()
     mockResolvePath.mockImplementation((relativePath: string): string => {
-        const absolutePath = path.resolve(tempRootDir, relativePath);
-        // Basic security check simulation (can be enhanced if needed)
-        if (!absolutePath.startsWith(tempRootDir)) {
-            throw new McpError(ErrorCode.InvalidRequest, `Mocked Path traversal detected for ${relativePath}`);
-        }
-        // Simulate absolute path rejection
-        if (path.isAbsolute(relativePath)) {
-             throw new McpError(ErrorCode.InvalidParams, `Mocked Absolute paths are not allowed for ${relativePath}`);
-        }
-        return absolutePath;
+      const absolutePath = path.resolve(tempRootDir, relativePath);
+      // Basic security check simulation (can be enhanced if needed)
+      if (!absolutePath.startsWith(tempRootDir)) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          `Mocked Path traversal detected for ${relativePath}`,
+        );
+      }
+      // Simulate absolute path rejection
+      if (path.isAbsolute(relativePath)) {
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          `Mocked Absolute paths are not allowed for ${relativePath}`,
+        );
+      }
+      return absolutePath;
     });
   });
 
@@ -66,7 +76,6 @@ describe('handleStatItems Integration Tests', () => {
     const rawResult = await statItemsToolDefinition.handler(request);
     // Assuming the handler returns { content: [{ type: 'text', text: JSON.stringify(results) }] }
     const result = JSON.parse(rawResult.content[0].text);
-
 
     expect(result).toHaveLength(4);
 
@@ -109,7 +118,9 @@ describe('handleStatItems Integration Tests', () => {
     expect(file1Stat).toBeDefined();
     expect(file1Stat?.status).toBe('success');
 
-    const nonexistentFile = result.find((r: any) => r.path === 'nonexistent.file');
+    const nonexistentFile = result.find(
+      (r: any) => r.path === 'nonexistent.file',
+    );
     expect(nonexistentFile).toBeDefined();
     expect(nonexistentFile?.status).toBe('error');
     // The handler currently returns a simple string message, not an McpError object directly in the result array
@@ -117,7 +128,9 @@ describe('handleStatItems Integration Tests', () => {
     // The handler returns a simple string message for ENOENT
     expect(nonexistentFile?.error).toBe('Path not found');
 
-    const nonexistentJs = result.find((r: any) => r.path === 'dir1/nonexistent.js');
+    const nonexistentJs = result.find(
+      (r: any) => r.path === 'dir1/nonexistent.js',
+    );
     expect(nonexistentJs).toBeDefined();
     expect(nonexistentJs?.status).toBe('error');
     expect(nonexistentJs?.error).toBe('Path not found');
@@ -157,8 +170,12 @@ describe('handleStatItems Integration Tests', () => {
     const request = {
       paths: [],
     };
-    await expect(statItemsToolDefinition.handler(request)).rejects.toThrow(McpError);
-    await expect(statItemsToolDefinition.handler(request)).rejects.toThrow(/Paths array cannot be empty/);
+    await expect(statItemsToolDefinition.handler(request)).rejects.toThrow(
+      McpError,
+    );
+    await expect(statItemsToolDefinition.handler(request)).rejects.toThrow(
+      /Paths array cannot be empty/,
+    );
   });
 
   it('should handle generic errors from resolvePath', async () => {
@@ -168,19 +185,25 @@ describe('handleStatItems Integration Tests', () => {
     // Temporarily override the mockResolvePath implementation for this specific test case
     // to throw a generic Error instead of McpError for the target path.
     mockResolvePath.mockImplementationOnce((relativePath: string): string => {
-        if (relativePath === errorPath) {
-            throw new Error(genericErrorMessage); // Throw a generic error
-        }
-        // Fallback to the standard mock implementation for any other paths (if needed)
-        // This part might not be strictly necessary if only errorPath is passed.
-        const absolutePath = path.resolve(tempRootDir, relativePath);
-        if (!absolutePath.startsWith(tempRootDir)) {
-            throw new McpError(ErrorCode.InvalidRequest, `Mocked Path traversal detected for ${relativePath}`);
-        }
-        if (path.isAbsolute(relativePath)) {
-             throw new McpError(ErrorCode.InvalidParams, `Mocked Absolute paths are not allowed for ${relativePath}`);
-        }
-        return absolutePath;
+      if (relativePath === errorPath) {
+        throw new Error(genericErrorMessage); // Throw a generic error
+      }
+      // Fallback to the standard mock implementation for any other paths (if needed)
+      // This part might not be strictly necessary if only errorPath is passed.
+      const absolutePath = path.resolve(tempRootDir, relativePath);
+      if (!absolutePath.startsWith(tempRootDir)) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          `Mocked Path traversal detected for ${relativePath}`,
+        );
+      }
+      if (path.isAbsolute(relativePath)) {
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          `Mocked Absolute paths are not allowed for ${relativePath}`,
+        );
+      }
+      return absolutePath;
     });
 
     const request = {
@@ -197,12 +220,13 @@ describe('handleStatItems Integration Tests', () => {
     expect(errorResult).toBeDefined();
     expect(errorResult?.status).toBe('error');
     // Check that the error message from the generic catch block is present
-    expect(errorResult?.error).toContain(`Failed to get stats: ${genericErrorMessage}`);
+    expect(errorResult?.error).toContain(
+      `Failed to get stats: ${genericErrorMessage}`,
+    );
 
     // No need to restore mockResolvePath as mockImplementationOnce only applies once.
     // The beforeEach block will set the standard implementation for the next test.
   });
-
 });
 
 // Placeholder for testUtils - needs actual implementation

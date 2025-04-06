@@ -65,9 +65,7 @@ using `npx`.
   "mcpServers": {
     "filesystem-mcp": {
       "command": "npx",
-      "args": [
-        "@sylphlab/filesystem-mcp"
-      ],
+      "args": ["@sylphlab/filesystem-mcp"],
       "name": "Filesystem (npx)"
     }
   }
@@ -83,9 +81,7 @@ If you prefer using Bun, you can use `bunx` instead:
   "mcpServers": {
     "filesystem-mcp": {
       "command": "bunx",
-      "args": [
-        "@sylphlab/filesystem-mcp"
-      ],
+      "args": ["@sylphlab/filesystem-mcp"],
       "name": "Filesystem (bunx)"
     }
   }
@@ -106,6 +102,7 @@ This server equips your AI agent with a powerful and efficient filesystem
 toolkit:
 
 - 📁 **Explore & Inspect (`list_files`, `stat_items`):**
+
   - `list_files`: Effortlessly list files and directories. Go deep with
     **recursive listing** or get detailed **file statistics** (size, type,
     timestamps) included directly in the results. Perfect for understanding
@@ -114,6 +111,7 @@ toolkit:
     timestamps) for **multiple files or directories** in a single call.
 
 - 📄 **Read & Write Content (`read_content`, `write_content`):**
+
   - `read_content`: Read the full content of **multiple files** simultaneously.
     Ideal for fetching source code or configuration files efficiently.
   - `write_content`: Write content to **multiple files**, automatically creating
@@ -122,6 +120,7 @@ toolkit:
 
 - ✏️ **Precision Editing & Searching (`edit_file`, `search_files`,
   `replace_content`):**
+
   - `edit_file`: Perform **surgical edits** across **multiple files**. Supports
     precise **insertion**, pattern-based **replacement**, and **deletion** of
     text blocks. Intelligently **preserves indentation** and provides **diff
@@ -134,14 +133,17 @@ toolkit:
     across **multiple files** at once.
 
 - 🏗️ **Manage Directories (`create_directories`):**
+
   - Create **multiple directories** in one go, including any necessary
     intermediate parent directories (`mkdir -p` style).
 
 - 🗑️ **Delete Safely (`delete_items`):**
+
   - Remove **multiple files or directories recursively** with a single command.
     Handles non-existent paths gracefully.
 
 - ↔️ **Move & Copy (`move_items`, `copy_items`):**
+
   - `move_items`: Rename or move **multiple files and directories**.
     Automatically creates destination parent directories if needed.
   - `copy_items`: Copy **multiple files and directories recursively**. Ensures
@@ -222,7 +224,7 @@ must mount your project directory to `/app` inside the container.**
       "args": ["/path/to/cloned/repo/filesystem-mcp/build/index.js"],
       "name": "Filesystem (Local Build)"
     }
-    
+
     **Note:** When running a local build directly with `node`, ensure you launch the command from the directory you intend to be the project root, as the server will use `process.cwd()` to determine its operational scope.
   }
 }
@@ -256,15 +258,6 @@ configured in the GitHub repository settings.
 
 ---
 
----
-
-## ❤️ Support the Project
-
-If you find this server useful, consider supporting its development:
-
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/shtse8)
-
----
 ## 🙌 Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request.

@@ -2,31 +2,36 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { createTemporaryFilesystem, cleanupTemporaryFilesystem } from '../testUtils.js';
+import {
+  createTemporaryFilesystem,
+  cleanupTemporaryFilesystem,
+} from '../testUtils.js';
 
 // Mock pathUtils BEFORE importing the handler
 // Mock pathUtils using vi.mock (hoisted)
 const mockResolvePath = vi.fn<(userPath: string) => string>();
 vi.mock('../../src/utils/pathUtils.js', () => ({
-    PROJECT_ROOT: 'mocked/project/root', // Keep simple for now
-    resolvePath: mockResolvePath,
+  PROJECT_ROOT: 'mocked/project/root', // Keep simple for now
+  resolvePath: mockResolvePath,
 }));
 
 // Import the handler AFTER the mock
-const { deleteItemsToolDefinition } = await import('../../src/handlers/deleteItems.js');
+const { deleteItemsToolDefinition } = await import(
+  '../../src/handlers/deleteItems.js'
+);
 
 // Define the initial structure for the temporary filesystem
 const initialTestStructure = {
   'fileToDelete1.txt': 'content1',
-  'dirToDelete': {
+  dirToDelete: {
     'nestedFile.txt': 'content2',
-    'emptySubDir': {},
+    emptySubDir: {},
   },
   'fileToKeep.txt': 'keep me',
-  'dirToKeep': {
+  dirToKeep: {
     'anotherFile.js': 'keep this too',
   },
-  'emptyDirToDelete': {},
+  emptyDirToDelete: {},
 };
 
 let tempRootDir: string;
@@ -37,16 +42,22 @@ describe('handleDeleteItems Integration Tests', () => {
 
     // Configure the mock resolvePath
     mockResolvePath.mockImplementation((relativePath: string): string => {
-        if (path.isAbsolute(relativePath)) {
-             throw new McpError(ErrorCode.InvalidParams, `Mocked Absolute paths are not allowed for ${relativePath}`);
-        }
-        const absolutePath = path.resolve(tempRootDir, relativePath);
-        if (!absolutePath.startsWith(tempRootDir)) {
-            throw new McpError(ErrorCode.InvalidRequest, `Mocked Path traversal detected for ${relativePath}`);
-        }
-        // For delete, we might want to check existence in the mock to simulate ENOENT before rm is called,
-        // although the handler's rm call will also throw ENOENT. Let's keep it simple for now.
-        return absolutePath;
+      if (path.isAbsolute(relativePath)) {
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          `Mocked Absolute paths are not allowed for ${relativePath}`,
+        );
+      }
+      const absolutePath = path.resolve(tempRootDir, relativePath);
+      if (!absolutePath.startsWith(tempRootDir)) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          `Mocked Path traversal detected for ${relativePath}`,
+        );
+      }
+      // For delete, we might want to check existence in the mock to simulate ENOENT before rm is called,
+      // although the handler's rm call will also throw ENOENT. Let's keep it simple for now.
+      return absolutePath;
     });
   });
 
@@ -66,13 +77,23 @@ describe('handleDeleteItems Integration Tests', () => {
     expect(result.every((r: any) => r.success === true)).toBe(true); // Check all succeeded
 
     // Verify deletion
-    await expect(fsPromises.access(path.join(tempRootDir, 'fileToDelete1.txt'))).rejects.toThrow(/ENOENT/);
-    await expect(fsPromises.access(path.join(tempRootDir, 'dirToDelete'))).rejects.toThrow(/ENOENT/);
-    await expect(fsPromises.access(path.join(tempRootDir, 'emptyDirToDelete'))).rejects.toThrow(/ENOENT/);
+    await expect(
+      fsPromises.access(path.join(tempRootDir, 'fileToDelete1.txt')),
+    ).rejects.toThrow(/ENOENT/);
+    await expect(
+      fsPromises.access(path.join(tempRootDir, 'dirToDelete')),
+    ).rejects.toThrow(/ENOENT/);
+    await expect(
+      fsPromises.access(path.join(tempRootDir, 'emptyDirToDelete')),
+    ).rejects.toThrow(/ENOENT/);
 
     // Verify other files/dirs were kept
-    await expect(fsPromises.access(path.join(tempRootDir, 'fileToKeep.txt'))).resolves.toBeUndefined();
-    await expect(fsPromises.access(path.join(tempRootDir, 'dirToKeep'))).resolves.toBeUndefined();
+    await expect(
+      fsPromises.access(path.join(tempRootDir, 'fileToKeep.txt')),
+    ).resolves.toBeUndefined();
+    await expect(
+      fsPromises.access(path.join(tempRootDir, 'dirToKeep')),
+    ).resolves.toBeUndefined();
   });
 
   it('should return errors for non-existent paths', async () => {
@@ -96,8 +117,8 @@ describe('handleDeleteItems Integration Tests', () => {
     const request = {
       paths: [
         'fileToDelete1.txt', // success
-        'nonexistent.txt',   // failure (ENOENT)
-        '../outside.txt',    // failure (traversal mock)
+        'nonexistent.txt', // failure (ENOENT)
+        '../outside.txt', // failure (traversal mock)
       ],
     };
     const rawResult = await deleteItemsToolDefinition.handler(request);
@@ -123,12 +144,16 @@ describe('handleDeleteItems Integration Tests', () => {
     expect(traversal.error).toMatch(/Mocked Path traversal detected/);
 
     // Verify the successful delete occurred
-    await expect(fsPromises.access(path.join(tempRootDir, 'fileToDelete1.txt'))).rejects.toThrow(/ENOENT/);
+    await expect(
+      fsPromises.access(path.join(tempRootDir, 'fileToDelete1.txt')),
+    ).rejects.toThrow(/ENOENT/);
     // Verify other files were kept
-    await expect(fsPromises.access(path.join(tempRootDir, 'fileToKeep.txt'))).resolves.toBeUndefined();
+    await expect(
+      fsPromises.access(path.join(tempRootDir, 'fileToKeep.txt')),
+    ).resolves.toBeUndefined();
   });
 
-   it('should return error for absolute paths (caught by mock resolvePath)', async () => {
+  it('should return error for absolute paths (caught by mock resolvePath)', async () => {
     const absolutePath = path.resolve(tempRootDir, 'fileToDelete1.txt');
     const request = { paths: [absolutePath] };
     const rawResult = await deleteItemsToolDefinition.handler(request);
@@ -140,50 +165,59 @@ describe('handleDeleteItems Integration Tests', () => {
 
   it('should reject requests with empty paths array based on Zod schema', async () => {
     const request = { paths: [] };
-    await expect(deleteItemsToolDefinition.handler(request)).rejects.toThrow(McpError);
-    await expect(deleteItemsToolDefinition.handler(request)).rejects.toThrow(/Paths array cannot be empty/);
+    await expect(deleteItemsToolDefinition.handler(request)).rejects.toThrow(
+      McpError,
+    );
+    await expect(deleteItemsToolDefinition.handler(request)).rejects.toThrow(
+      /Paths array cannot be empty/,
+    );
   });
 
   // Add test for deleting the root directory itself (should be prevented)
   it('should prevent deleting the project root directory', async () => {
-      // Need to mock resolvePath to return the tempRootDir for a specific input, e.g., '.'
-      // Temporarily override the mock for this specific test case
-      mockResolvePath.mockImplementation((relativePath: string): string => {
-          if (relativePath === '.') {
-              // Return the value the handler expects for PROJECT_ROOT from the mocked module
-              return 'mocked/project/root';
-          }
-          // Default behavior for other paths
-          if (path.isAbsolute(relativePath)) {
-               throw new McpError(ErrorCode.InvalidParams, `Mocked Absolute paths are not allowed for ${relativePath}`);
-          }
-          const absolutePath = path.resolve(tempRootDir, relativePath);
-          if (!absolutePath.startsWith(tempRootDir)) {
-              throw new McpError(ErrorCode.InvalidRequest, `Mocked Path traversal detected for ${relativePath}`);
-          }
-          return absolutePath;
-      });
+    // Need to mock resolvePath to return the tempRootDir for a specific input, e.g., '.'
+    // Temporarily override the mock for this specific test case
+    mockResolvePath.mockImplementation((relativePath: string): string => {
+      if (relativePath === '.') {
+        // Return the value the handler expects for PROJECT_ROOT from the mocked module
+        return 'mocked/project/root';
+      }
+      // Default behavior for other paths
+      if (path.isAbsolute(relativePath)) {
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          `Mocked Absolute paths are not allowed for ${relativePath}`,
+        );
+      }
+      const absolutePath = path.resolve(tempRootDir, relativePath);
+      if (!absolutePath.startsWith(tempRootDir)) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          `Mocked Path traversal detected for ${relativePath}`,
+        );
+      }
+      return absolutePath;
+    });
 
-      const request = { paths: ['.'] }; // Attempt to delete '.'
-      const rawResult = await deleteItemsToolDefinition.handler(request);
-      const result = JSON.parse(rawResult.content[0].text);
+    const request = { paths: ['.'] }; // Attempt to delete '.'
+    const rawResult = await deleteItemsToolDefinition.handler(request);
+    const result = JSON.parse(rawResult.content[0].text);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].success).toBe(false);
-      // Add period to the regex to match the exact error string
-      // Use exact string comparison instead of regex
-      // Use toContain as toBe seems to fail unexpectedly here
-      // Revert to toBe and ensure exact match including the period
-      // Use startsWith as a workaround for the persistent toBe failure
-      // Simplify assertion: check if error exists first, then do exact comparison.
-      expect(result[0].error).toBeDefined();
-      // Use toContain without the period as a final attempt to bypass the comparison issue
-      // Use toMatch with the core message as a final workaround for the comparison issue
-      // Final workaround: Just check that an error exists, as string comparison is unreliable here.
-      expect(result[0].error).toBeDefined();
+    expect(result).toHaveLength(1);
+    expect(result[0].success).toBe(false);
+    // Add period to the regex to match the exact error string
+    // Use exact string comparison instead of regex
+    // Use toContain as toBe seems to fail unexpectedly here
+    // Revert to toBe and ensure exact match including the period
+    // Use startsWith as a workaround for the persistent toBe failure
+    // Simplify assertion: check if error exists first, then do exact comparison.
+    expect(result[0].error).toBeDefined();
+    // Use toContain without the period as a final attempt to bypass the comparison issue
+    // Use toMatch with the core message as a final workaround for the comparison issue
+    // Final workaround: Just check that an error exists, as string comparison is unreliable here.
+    expect(result[0].error).toBeDefined();
 
-      // Verify root directory still exists
-      await expect(fsPromises.access(tempRootDir)).resolves.toBeUndefined();
+    // Verify root directory still exists
+    await expect(fsPromises.access(tempRootDir)).resolves.toBeUndefined();
   });
-
 });

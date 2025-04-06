@@ -14,27 +14,35 @@ import { editFileDefinition } from './editFile.js';
 
 // Define the structure for a tool definition (used internally and for index.ts)
 // We need Zod here to define the schema type correctly
-import { z } from 'zod';
+import type { z } from 'zod';
+
+// Define and export the expected MCP response structure
+export interface McpToolResponse {
+  // Add export keyword
+  content: { type: string; text: string }[];
+}
+
+// Define the structure for a tool definition
 export interface ToolDefinition {
-    name: string;
-    description: string;
-    schema: z.ZodType<any, any, any>; // Use Zod schema type
-    handler: (args: unknown) => Promise<any>; // Handler function type
+  name: string;
+  description: string;
+  schema: z.ZodType<any, any, any>; // Keep Zod schema type general
+  handler: (args: unknown) => Promise<McpToolResponse>; // Use specific return type
 }
 
 // Aggregate all tool definitions into a single array
 export const allToolDefinitions: ToolDefinition[] = [
-    listFilesToolDefinition,
-    statItemsToolDefinition,
-    readContentToolDefinition,
-    writeContentToolDefinition,
-    deleteItemsToolDefinition,
-    createDirectoriesToolDefinition,
-    chmodItemsToolDefinition,
-    chownItemsToolDefinition,
-    moveItemsToolDefinition,
-    copyItemsToolDefinition,
-    searchFilesToolDefinition,
-    replaceContentToolDefinition,
-    editFileDefinition,
+  listFilesToolDefinition,
+  statItemsToolDefinition,
+  readContentToolDefinition,
+  writeContentToolDefinition,
+  deleteItemsToolDefinition,
+  createDirectoriesToolDefinition,
+  chmodItemsToolDefinition,
+  chownItemsToolDefinition,
+  moveItemsToolDefinition,
+  copyItemsToolDefinition,
+  searchFilesToolDefinition,
+  replaceContentToolDefinition,
+  editFileDefinition,
 ];
