@@ -160,10 +160,8 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
                         let regex: RegExp;
                         try {
                             // Basic regex creation, consider adding flags from schema later (e.g., 'gm', 'gmi')
-                            // Ensure regex handles potential Windows line endings (\r\n) if \n is used
-                            const patternWithCRLF = search_pattern.replace(/\\n/g, '(\r?\n)');
-                            regex = new RegExp(patternWithCRLF, 'g');
-                            console.log(`[DEBUG editFile] Created regex: ${regex}`); // DEBUG Regex object
+                            regex = new RegExp(search_pattern, 'g'); // Use 'g' flag for potential multiple occurrences needed by match_occurrence logic
+                            // console.log(`[DEBUG editFile] Created regex: ${regex}`); // Keep commented out for now
                         } catch (e: any) {
                              // Set failure status for this specific change attempt due to invalid regex
                              fileResult.status = 'failed'; // Mark the file processing as failed overall
@@ -184,9 +182,7 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
                         // Find the Nth occurrence
                         // Ensure currentContent is not null before regex execution
                         if (currentContent !== null) {
-                            console.log(`[DEBUG editFile] Starting regex search for "${patternWithCRLF}" in content:\n---\n${currentContent}\n---`); // DEBUG
                             while ((match = regex.exec(currentContent)) !== null) {
-                                console.log(`[DEBUG editFile] Regex exec found match:`, match); // DEBUG
                                  // Prevent infinite loops with zero-width matches
                                  if (match.index === regex.lastIndex) {
                                      regex.lastIndex++;
@@ -220,22 +216,17 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
                                 // --- Replace ---
                                 const replacementLines = applyIndentation(replace_content, indent);
                                 const indentedReplacement = replacementLines.join('\n');
-                                console.log(`[DEBUG editFile] Regex Replace: Replacing with indented content.`); // DEBUG
                                 currentContent = currentContent.slice(0, matchStartIndex) + indentedReplacement + currentContent.slice(matchEndIndex);
                                 changeSucceeded = true;
-                                console.log(`[DEBUG editFile] Regex Replace: changeSucceeded set to true.`); // DEBUG
                                 // lines will be updated from currentContent later if changeSucceeded
                             } else {
                                 // --- Delete ---
-                                console.log(`[DEBUG editFile] Regex Delete: Deleting matched content.`); // DEBUG
                                 currentContent = currentContent.slice(0, matchStartIndex) + currentContent.slice(matchEndIndex);
                                 changeSucceeded = true;
-                                console.log(`[DEBUG editFile] Regex Delete: changeSucceeded set to true.`); // DEBUG
                                 // lines will be updated from currentContent later if changeSucceeded
                             }
                         } else {
                              console.warn(`[editFile] Regex pattern "${search_pattern}" not found (occurrence ${match_occurrence}) starting near line ${start_line} in ${relativePath}. Skipping change.`);
-                             console.log(`[DEBUG editFile] Regex pattern not found for occurrence ${match_occurrence}.`); // DEBUG
                              // Ensure changeSucceeded remains false if pattern not found
                              changeSucceeded = false;
                         }
@@ -314,7 +305,6 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
 
                 // If a change succeeded in this iteration, update the overall flag
                 // and synchronize the state variables (lines and currentContent)
-                console.log(`[DEBUG editFile] End of change iteration: changeSucceeded=${changeSucceeded}`); // DEBUG
                 if (changeSucceeded) {
                     changesAppliedToFile = true;
                     // Update the *other* state variable to ensure consistency for the next iteration
