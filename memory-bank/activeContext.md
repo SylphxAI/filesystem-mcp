@@ -1,9 +1,9 @@
-<!-- Version: 3.0 | Last Updated: 2025-06-04 | Updated By: Cline -->
+<!-- Version: 3.1 | Last Updated: 2025-06-04 | Updated By: Cline -->
 # Active Context: Filesystem MCP Server (v0.5.8 Release)
 
 ## 1. Current Work Focus
 
-Preparing to commit changes and tag version `0.5.8` after fixing the `.dockerignore` file which caused the previous Docker build failure and adding support link to README.
+Preparing to commit changes and tag version `0.5.8` after fixing the `.dockerignore` file, adding support link to README, and creating FUNDING.yml.
 
 ## 2. Recent Changes/Decisions
 
@@ -46,11 +46,12 @@ Preparing to commit changes and tag version `0.5.8` after fixing the `.dockerign
 - **Fixed `.dockerignore`:** Removed `build` directory exclusion to allow it in Docker build context.
 - **Incremented Version to 0.5.8:** Updated `package.json` and `CHANGELOG.md`.
 - **Updated `README.md`:** Added 'Support the Project' section with Buy Me a Coffee link.
+- **Created `.github/FUNDING.yml`:** Added funding file with Buy Me a Coffee link.
 
 ## 3. Next Steps / Considerations
 
-- **Update `progress.md`:** Reflect the `.dockerignore` fix, README update, and version bump to `0.5.8`.
-- **Commit Changes:** Commit updated `README.md`, `.dockerignore`, `package.json`, `CHANGELOG.md`, and Memory Bank files.
+- **Update `progress.md`:** Reflect the `.dockerignore` fix, README update, FUNDING.yml creation, and version bump to `0.5.8`.
+- **Commit Changes:** Commit updated `README.md`, `.github/FUNDING.yml`, `.dockerignore`, `package.json`, `CHANGELOG.md`, and Memory Bank files.
 - **Tag Release:** Create git tag `v0.5.8`.
 - **Push Commit & Tag:** Push the commit and the new tag to `origin`.
 - **Monitor CI/CD:** Verify the `v0.5.8` release workflow completes successfully.
@@ -73,3 +74,4 @@ Preparing to commit changes and tag version `0.5.8` after fixing the `.dockerign
 - **Changelog:** Updated for `v0.5.8`.
 - **License:** Added MIT `LICENSE` file.
 - **README Badge:** Added Glama.ai badge.
+- **Funding File:** Added `.github/FUNDING.yml`.

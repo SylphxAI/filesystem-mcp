@@ -1,4 +1,4 @@
-<!-- Version: 3.0 | Last Updated: 2025-06-04 | Updated By: Cline -->
+<!-- Version: 3.1 | Last Updated: 2025-06-04 | Updated By: Cline -->
 # Progress: Filesystem MCP Server (v0.5.8 Release)
 
 ## 1. What Works
@@ -29,10 +29,11 @@
 - **`.clinerules` Created:** Established `memory-bank/.clinerules` to capture project-specific patterns and user preferences.
 - **Changelog:** Updated `CHANGELOG.md` with entry for v0.5.8.
 - **License:** Added MIT `LICENSE` file.
+- **Funding File:** Created `.github/FUNDING.yml` with Buy Me a Coffee link.
 
 ## 2. What's Left to Build / Test
 
-- **Commit Changes:** Commit updated `README.md`, `.dockerignore`, `package.json`, `CHANGELOG.md`, and Memory Bank files.
+- **Commit Changes:** Commit updated `README.md`, `.github/FUNDING.yml`, `.dockerignore`, `package.json`, `CHANGELOG.md`, and Memory Bank files.
 - **Tag Release:** Create git tag `v0.5.8`.
 - **Push Commit & Tag:** Push the commit and the new tag to `origin`.
 - **Monitor CI/CD:** Verify the `v0.5.8` release workflow completes successfully.
@@ -45,6 +46,7 @@
 - **Release Prep Complete:** Version bumped to `0.5.8`, `CHANGELOG.md` updated.
 - **Docker Build Context Fixed:** Removed `build` exclusion from `.dockerignore`.
 - **README Updated:** Added 'Support the Project' section.
+- **Funding File Created:** Added `.github/FUNDING.yml`.
 - **Ready to Commit & Tag:** Waiting to commit fixes and version updates, then tag `v0.5.8`.
 
 ## 4. Known Issues / Areas for Improvement
