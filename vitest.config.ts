@@ -7,6 +7,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8', // Use V8 for coverage collection
       reporter: ['text', 'json', 'html'], // Coverage report formats
+      reportsDirectory: './coverage', // Explicitly set the output directory
       include: ['src/**/*.ts'], // Include all source files for coverage
       exclude: [ // Exclude files not relevant for coverage
         'src/index.ts', // Entry point might be hard to test directly

@@ -125,10 +125,10 @@ describe('editFile Handler', () => {
       const resultData = JSON.parse(result.content[0].text);
 
       expect(resultData.results[0].status).toBe('success');
-      // Correct the expected content to match the actual received content (remove extra spaces)
+      // Expect no leading spaces when inserting at the beginning without detected indent
       expect(mockWriteFileFn).toHaveBeenCalledWith(
           path.resolve(process.cwd(), 'insert.txt'),
-          '  inserted line 0\nline 1\nline 2', // Corrected expected string
+          'inserted line 0\nline 1\nline 2', // Removed leading spaces from expectation
           'utf-8'
       );
   });

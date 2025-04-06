@@ -31,7 +31,6 @@ const EditFileArgsSchema = z.object({
 // Infer the type from the Zod schema
 type EditFileArgs = z.infer<typeof EditFileArgsSchema>;
 type EditFileChange = z.infer<typeof EditFileChangeSchema>; // Keep this if used internally
-// Removed stray closing brace
 
 // --- Result Interfaces ---
 
@@ -60,8 +59,6 @@ function applyIndentation(content: string, indent: string): string[] {
 
 
 // --- Handler Function ---
-
-// Remove the manually defined interfaces as they are now inferred from Zod schemas
 
 // Define the expected MCP response structure type
 type McpToolResponse = { content: Array<{ type: 'text', text: string }> };
@@ -92,10 +89,12 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
         let absolutePath: string;
         let originalContent: string | null = null;
         let currentContent: string | null = null;
-        let fileResult: EditFileResultItem = { path: relativePath, status: 'skipped' }; // Default to skipped
-        let fileProcessed = false; // Track if any change was attempted for this file
+        // Initialize fileResult *inside* the loop for each file
+        let fileResult: EditFileResultItem = { path: relativePath, status: 'skipped' };
+        let fileProcessed = false;
+        let changesAppliedToFile = false; // Track success for *this* file
 
-        try {
+        try { // START OF THE MAIN TRY BLOCK FOR THIS FILE
             absolutePath = resolvePath(relativePath);
 
             // Read the original file content
@@ -110,7 +109,6 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
             }
 
             const fileChanges = changesByFile[relativePath];
-            let changesAppliedToFile = false; // Track if any change *succeeded* for this file
             let lines = currentContent.split('\n'); // Work with lines array
 
             // Sort changes by start_line descending to handle edits from bottom-up,
@@ -146,28 +144,26 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
                     const effectiveInsertionLine = Math.min(targetLineIndex, lines.length);
 
                     let indent = '';
-                    if (preserve_indentation) {
-                        // Try to get indent from the line *before* insertion, or file default
-                        if (effectiveInsertionLine > 0) {
-                            indent = getIndentation(lines[effectiveInsertionLine - 1]);
-                        } else if (lines.length > 0) {
-                            // If inserting at the very beginning, try to detect file indent
-                            indent = detectIndent(currentContent || '').indent || '';
-                        }
-                    }
-
+                    // Get indentation based on the line *before* the insertion point, if possible and requested.
+                    if (preserve_indentation && effectiveInsertionLine > 0 && effectiveInsertionLine <= lines.length) {
+                         indent = getIndentation(lines[effectiveInsertionLine - 1]);
+                    } // If inserting at line 0, indent remains ''
                     const replacementLines = applyIndentation(replace_content, indent);
                     lines.splice(effectiveInsertionLine, 0, ...replacementLines);
                     changeSucceeded = true;
+                    // currentContent will be updated from lines later if changeSucceeded
                 }
                 // --- Search/Replace/Delete Logic ---
-                else if (search_pattern) {
+                else if (search_pattern) { // Ensure search_pattern is defined before using it
                     if (use_regex) {
                         // --- Regex Matching ---
                         let regex: RegExp;
                         try {
                             // Basic regex creation, consider adding flags from schema later (e.g., 'gm', 'gmi')
-                            regex = new RegExp(search_pattern, 'g'); // Use 'g' to find all occurrences
+                            // Ensure regex handles potential Windows line endings (\r\n) if \n is used
+                            const patternWithCRLF = search_pattern.replace(/\\n/g, '(\r?\n)');
+                            regex = new RegExp(patternWithCRLF, 'g');
+                            console.log(`[DEBUG editFile] Created regex: ${regex}`); // DEBUG Regex object
                         } catch (e: any) {
                              // Set failure status for this specific change attempt due to invalid regex
                              fileResult.status = 'failed'; // Mark the file processing as failed overall
@@ -186,28 +182,33 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
                         regex.lastIndex = 0;
 
                         // Find the Nth occurrence
-                        while ((match = regex.exec(currentContent as string)) !== null) {
-                             // Prevent infinite loops with zero-width matches
-                             if (match.index === regex.lastIndex) {
-                                 regex.lastIndex++;
-                             }
+                        // Ensure currentContent is not null before regex execution
+                        if (currentContent !== null) {
+                            console.log(`[DEBUG editFile] Starting regex search for "${patternWithCRLF}" in content:\n---\n${currentContent}\n---`); // DEBUG
+                            while ((match = regex.exec(currentContent)) !== null) {
+                                console.log(`[DEBUG editFile] Regex exec found match:`, match); // DEBUG
+                                 // Prevent infinite loops with zero-width matches
+                                 if (match.index === regex.lastIndex) {
+                                     regex.lastIndex++;
+                                 }
 
-                             occurrencesFound++;
-                             if (occurrencesFound === match_occurrence) {
-                                 matchStartIndex = match.index;
-                                 matchEndIndex = match.index + match[0].length;
-                                 break; // Found the desired occurrence
-                             }
-                             lastIndex = regex.lastIndex; // Store last index for next iteration
+                                 occurrencesFound++;
+                                 if (occurrencesFound === match_occurrence) {
+                                     matchStartIndex = match.index;
+                                     matchEndIndex = match.index + match[0].length;
+                                     break; // Found the desired occurrence
+                                 }
+                                 lastIndex = regex.lastIndex; // Store last index for next iteration
+                            }
                         }
 
 
-                        if (matchStartIndex !== -1) {
+                        if (matchStartIndex !== -1 && currentContent !== null) { // Ensure currentContent is not null
                             // Match found!
                             let indent = '';
                             if (preserve_indentation) {
                                 // Find the line containing the start of the match
-                                const contentUpToMatch = (currentContent as string).substring(0, matchStartIndex);
+                                const contentUpToMatch = currentContent.substring(0, matchStartIndex);
                                 const linesUpToMatch = contentUpToMatch.split('\n');
                                 const lineIndexContainingMatch = linesUpToMatch.length - 1;
                                 if (lineIndexContainingMatch >= 0 && lineIndexContainingMatch < lines.length) {
@@ -219,93 +220,114 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
                                 // --- Replace ---
                                 const replacementLines = applyIndentation(replace_content, indent);
                                 const indentedReplacement = replacementLines.join('\n');
-                                currentContent = (currentContent as string).slice(0, matchStartIndex) + indentedReplacement + (currentContent as string).slice(matchEndIndex);
+                                console.log(`[DEBUG editFile] Regex Replace: Replacing with indented content.`); // DEBUG
+                                currentContent = currentContent.slice(0, matchStartIndex) + indentedReplacement + currentContent.slice(matchEndIndex);
                                 changeSucceeded = true;
+                                console.log(`[DEBUG editFile] Regex Replace: changeSucceeded set to true.`); // DEBUG
+                                // lines will be updated from currentContent later if changeSucceeded
                             } else {
                                 // --- Delete ---
-                                currentContent = (currentContent as string).slice(0, matchStartIndex) + (currentContent as string).slice(matchEndIndex);
+                                console.log(`[DEBUG editFile] Regex Delete: Deleting matched content.`); // DEBUG
+                                currentContent = currentContent.slice(0, matchStartIndex) + currentContent.slice(matchEndIndex);
                                 changeSucceeded = true;
+                                console.log(`[DEBUG editFile] Regex Delete: changeSucceeded set to true.`); // DEBUG
+                                // lines will be updated from currentContent later if changeSucceeded
                             }
                         } else {
                              console.warn(`[editFile] Regex pattern "${search_pattern}" not found (occurrence ${match_occurrence}) starting near line ${start_line} in ${relativePath}. Skipping change.`);
+                             console.log(`[DEBUG editFile] Regex pattern not found for occurrence ${match_occurrence}.`); // DEBUG
+                             // Ensure changeSucceeded remains false if pattern not found
+                             changeSucceeded = false;
                         }
                         // DO NOT continue here; let it fall through to the update logic below
                     }
                     // --- Plain Text Matching ---
                     else { // If search_pattern exists but use_regex is false
-                    // --- Plain Text Matching ---
-                    const searchLines = search_pattern.split('\n');
-                    let occurrencesFound = 0;
-                    let matchStartIndex = -1;
-                    let matchEndIndex = -1;
+                        // --- Plain Text Matching ---
+                        const searchLines = search_pattern.split('\n'); // search_pattern is guaranteed defined here
+                        let occurrencesFound = 0;
+                        let matchStartIndex = -1;
+                        let matchEndIndex = -1;
 
-                    // Adjust search start point based on targetLineIndex
-                    const searchStartLine = Math.min(targetLineIndex, lines.length -1); // Ensure search starts within bounds
+                        // Adjust search start point based on targetLineIndex
+                        const searchStartLine = Math.min(targetLineIndex, lines.length -1); // Ensure search starts within bounds
 
-                    for (let i = searchStartLine; i <= lines.length - searchLines.length; i++) {
-                        // Ensure we don't search past the end if targetLineIndex was high
-                        if (i < 0) continue;
+                        for (let i = searchStartLine; i <= lines.length - searchLines.length; i++) {
+                            // Ensure we don't search past the end if targetLineIndex was high
+                            if (i < 0) continue;
 
-                        let isMatch = true;
-                        for (let j = 0; j < searchLines.length; j++) {
-                            let fileLine = lines[i + j];
-                            let searchLine = searchLines[j];
+                            let isMatch = true;
+                            for (let j = 0; j < searchLines.length; j++) {
+                                let fileLine = lines[i + j];
+                                let searchLine = searchLines[j];
 
-                            if (ignore_leading_whitespace) {
-                                // Only trim if the search line isn't just whitespace itself
-                                if (searchLine.trim().length > 0) {
-                                    fileLine = fileLine.trimStart();
+                                if (ignore_leading_whitespace) {
+                                    // Only trim if the search line isn't just whitespace itself
+                                    if (searchLine.trim().length > 0) {
+                                        fileLine = fileLine.trimStart();
+                                    }
+                                    searchLine = searchLine.trimStart();
                                 }
-                                searchLine = searchLine.trimStart();
+                                // Simple string comparison
+                                if (fileLine !== searchLine) {
+                                    isMatch = false;
+                                    break;
+                                }
                             }
-                            // Simple string comparison
-                            if (fileLine !== searchLine) {
-                                isMatch = false;
-                                break;
+
+                            if (isMatch) {
+                                occurrencesFound++;
+                                if (occurrencesFound === match_occurrence) {
+                                    matchStartIndex = i;
+                                    matchEndIndex = i + searchLines.length;
+                                    break; // Found the desired occurrence
+                                }
                             }
                         }
 
-                        if (isMatch) {
-                            occurrencesFound++;
-                            if (occurrencesFound === match_occurrence) {
-                                matchStartIndex = i;
-                                matchEndIndex = i + searchLines.length;
-                                break; // Found the desired occurrence
+                        if (matchStartIndex !== -1) {
+                            // Match found!
+                            let indent = '';
+                            if (preserve_indentation && matchStartIndex < lines.length) {
+                                 indent = getIndentation(lines[matchStartIndex]);
                             }
-                        }
-                    }
 
-                    if (matchStartIndex !== -1) {
-                        // Match found!
-                        let indent = '';
-                        if (preserve_indentation && matchStartIndex < lines.length) {
-                             indent = getIndentation(lines[matchStartIndex]);
-                        }
-
-                        if (replace_content !== undefined) {
-                            // --- Replace ---
-                            const replacementLines = applyIndentation(replace_content, indent);
-                            lines.splice(matchStartIndex, matchEndIndex - matchStartIndex, ...replacementLines);
-                            changeSucceeded = true;
+                            if (replace_content !== undefined) {
+                                // --- Replace ---
+                                const replacementLines = applyIndentation(replace_content, indent);
+                                lines.splice(matchStartIndex, matchEndIndex - matchStartIndex, ...replacementLines);
+                                changeSucceeded = true;
+                                // currentContent will be updated from lines later if changeSucceeded
+                            } else {
+                                // --- Delete ---
+                                lines.splice(matchStartIndex, matchEndIndex - matchStartIndex);
+                                changeSucceeded = true;
+                                // currentContent will be updated from lines later if changeSucceeded
+                            }
                         } else {
-                            // --- Delete ---
-                            lines.splice(matchStartIndex, matchEndIndex - matchStartIndex);
-                            changeSucceeded = true;
+                             console.warn(`[editFile] Search pattern not found (occurrence ${match_occurrence}) starting near line ${start_line} in ${relativePath}. Skipping change.`);
+                             // Ensure changeSucceeded remains false if pattern not found
+                             changeSucceeded = false;
                         }
-                    } else {
-                         console.warn(`[editFile] Search pattern not found (occurrence ${match_occurrence}) starting near line ${start_line} in ${relativePath}. Skipping change.`);
-                    }
-                // End of the main 'else if (search_pattern)' block.
-                // The case where both search_pattern and replace_content are missing
-                // should be caught by the Zod schema refinement.
+                    } // End Plain Text Matching else block
+                } // End Search/Replace/Delete Logic (else if search_pattern)
 
-                }
+                // If a change succeeded in this iteration, update the overall flag
+                // and synchronize the state variables (lines and currentContent)
+                console.log(`[DEBUG editFile] End of change iteration: changeSucceeded=${changeSucceeded}`); // DEBUG
                 if (changeSucceeded) {
                     changesAppliedToFile = true;
-                    // Update the *other* state variable to ensure consistency
+                    // Update the *other* state variable to ensure consistency for the next iteration
                     if (use_regex) {
                         // Regex modified currentContent, so update lines from it
-                        lines = (currentContent as string).split('\n');
+                        // Ensure currentContent is not null before splitting
+                        if (currentContent !== null) {
+                            lines = currentContent.split('\n');
+                        } else {
+                            // This case should ideally not happen if changeSucceeded is true, but handle defensively
+                            console.error("[editFile] Inconsistency: changeSucceeded is true but currentContent is null during regex state update.");
+                            lines = []; // Reset lines to avoid errors
+                        }
                     } else {
                         // Insertion/Plain Text modified lines, so update currentContent from it
                         currentContent = lines.join('\n');
@@ -346,10 +368,9 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
             }
             // If !fileProcessed, it remains 'skipped' by default
 
-        }
-        } catch (error: any) {
+        } catch (error: any) { // CATCH BLOCK FOR THE MAIN FILE PROCESSING TRY
             console.error(`[editFile] Error processing ${relativePath}:`, error);
-            // Only set failure status and message if not already set by a more specific error (like invalid regex)
+            // Ensure failure status is set correctly, respecting previous specific errors
             if (fileResult.status !== 'failed' || !fileResult.message) {
                 fileResult.status = 'failed';
                 if (error instanceof McpError) {
@@ -360,14 +381,15 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
                     fileResult.message = `Unexpected error processing ${relativePath}: ${error.message || error}`;
                 }
             }
-        } finally {
+        } finally { // FINALLY BLOCK FOR THE MAIN FILE PROCESSING TRY
+            // Ensure the result for this file is always pushed
             results.push(fileResult);
         }
     } // End loop through files
 
     // Wrap the results in the standard MCP content structure
     return { content: [{ type: "text", text: JSON.stringify({ results }, null, 2) }] };
-}
+} // END OF handleEditFile FUNCTION
 
 // --- Tool Definition Export ---
 
