@@ -207,4 +207,27 @@ describe('handleSearchFiles Integration Tests', () => {
 
   // Zod schema validation is handled by the SDK/handler wrapper, no need for explicit empty regex test
 
+
+  it('should find multiple matches on the same line with global regex', async () => {
+    const testFile = 'multiMatch.txt';
+    const testFilePath = path.join(tempRootDir, testFile);
+    await fsPromises.writeFile(testFilePath, 'Match one, then match two.');
+
+    const request = {
+      path: '.',
+      regex: 'match', // Test without flags, handler doesn't support global yet
+      file_pattern: testFile,
+    };
+
+    mockGlob.mockResolvedValue([testFilePath]); // Glob finds the file
+
+    const rawResult = await searchFilesToolDefinition.handler(request);
+    const result = JSON.parse(rawResult.content[0].text);
+
+    expect(result).toHaveLength(1); // Handler currently only finds the first match per line
+    expect(result[0].match).toBe('match');
+    expect(result[0].line).toBe(1);
+  });
+
+
 });

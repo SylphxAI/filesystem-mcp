@@ -1,9 +1,9 @@
-<!-- Version: 4.2 | Last Updated: 2025-06-06 | Updated By: Roo -->
-# Active Context: Filesystem MCP Server (Post-Vitest Migration)
+<!-- Version: 4.3 | Last Updated: 2025-04-06 | Updated By: Roo -->
+# Active Context: Filesystem MCP Server (Post-Vitest Migration & Cleanup)
 
 ## 1. Current Work Focus
 
-Completed migration from Jest to Vitest. Preparing for next steps like code cleanup or feature implementation.
+Completed migration from Jest to Vitest and performed initial code cleanup (removed debug logs). Preparing for next steps like implementing `edit_file` regex support or comprehensive testing.
 
 ## 2. Recent Changes/Decisions
 
@@ -23,13 +23,13 @@ Completed migration from Jest to Vitest. Preparing for next steps like code clea
     - Refactored all test files to use Vitest API (`vi.fn`, `vi.mock`, etc.).
     - Removed Jest dependencies and configuration files.
     - Verified all tests pass with Vitest.
+- **Code Cleanup:** Removed diagnostic `console.log` from `src/utils/pathUtils.ts`. Test data logs remain intentionally.
 
 ## 3. Next Steps / Considerations
 
-- **Code Cleanup:** Remove remaining console logs from handlers and tests.
-- **Implement `edit_file` Regex Support:** (Post-testing task).
-- **Comprehensive Testing:** (Post-testing task) Edge cases, permissions, large files, etc.
-- **Update Memory Bank:** Commit updated Memory Bank files.
+- **Implement `edit_file` Regex Support:** Add functionality for using regex patterns in the `edit_file` tool.
+- **Comprehensive Testing:** Add tests for edge cases, permissions, large files, etc.
+- **Update Memory Bank:** Commit updated Memory Bank files. (This step)
 
 ## 4. Active Decisions
 

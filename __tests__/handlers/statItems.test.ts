@@ -160,6 +160,49 @@ describe('handleStatItems Integration Tests', () => {
     await expect(statItemsToolDefinition.handler(request)).rejects.toThrow(McpError);
     await expect(statItemsToolDefinition.handler(request)).rejects.toThrow(/Paths array cannot be empty/);
   });
+
+  it('should handle generic errors from resolvePath', async () => {
+    const errorPath = 'genericErrorPath.txt';
+    const genericErrorMessage = 'Simulated generic error from resolvePath';
+
+    // Temporarily override the mockResolvePath implementation for this specific test case
+    // to throw a generic Error instead of McpError for the target path.
+    mockResolvePath.mockImplementationOnce((relativePath: string): string => {
+        if (relativePath === errorPath) {
+            throw new Error(genericErrorMessage); // Throw a generic error
+        }
+        // Fallback to the standard mock implementation for any other paths (if needed)
+        // This part might not be strictly necessary if only errorPath is passed.
+        const absolutePath = path.resolve(tempRootDir, relativePath);
+        if (!absolutePath.startsWith(tempRootDir)) {
+            throw new McpError(ErrorCode.InvalidRequest, `Mocked Path traversal detected for ${relativePath}`);
+        }
+        if (path.isAbsolute(relativePath)) {
+             throw new McpError(ErrorCode.InvalidParams, `Mocked Absolute paths are not allowed for ${relativePath}`);
+        }
+        return absolutePath;
+    });
+
+    const request = {
+      paths: [errorPath],
+    };
+
+    // The handler should catch the generic error from resolvePath
+    // and enter the final catch block (lines 55-58 in statItems.ts)
+    const rawResult = await statItemsToolDefinition.handler(request);
+    const result = JSON.parse(rawResult.content[0].text);
+
+    expect(result).toHaveLength(1);
+    const errorResult = result.find((r: any) => r.path === errorPath);
+    expect(errorResult).toBeDefined();
+    expect(errorResult?.status).toBe('error');
+    // Check that the error message from the generic catch block is present
+    expect(errorResult?.error).toContain(`Failed to get stats: ${genericErrorMessage}`);
+
+    // No need to restore mockResolvePath as mockImplementationOnce only applies once.
+    // The beforeEach block will set the standard implementation for the next test.
+  });
+
 });
 
 // Placeholder for testUtils - needs actual implementation

@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fsPromises from 'fs/promises';
+import * as actualFsPromises from 'fs/promises'; // Import actual fs for fallback in mocks
+
 import * as path from 'path';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { createTemporaryFilesystem, cleanupTemporaryFilesystem } from '../testUtils.js';
@@ -168,4 +170,36 @@ describe('handleReadContent Integration Tests', () => {
      expect(binaryFile.content).toBeDefined();
    });
 
+
+
+  it('should handle unexpected errors during path resolution', async () => {
+    const errorPath = 'resolveErrorPath.txt';
+    const genericErrorMessage = 'Simulated generic resolve error';
+
+    // Mock resolvePath to throw a generic Error for this path
+    mockResolvePath.mockImplementationOnce((relativePath: string): string => {
+      if (relativePath === errorPath) {
+        throw new Error(genericErrorMessage);
+      }
+      // Fallback (might not be needed if only errorPath is requested)
+      const absolutePath = path.resolve(tempRootDir, relativePath);
+      if (!absolutePath.startsWith(tempRootDir)) throw new McpError(ErrorCode.InvalidRequest, `Traversal`);
+      if (path.isAbsolute(relativePath)) throw new McpError(ErrorCode.InvalidParams, `Absolute`);
+      return absolutePath;
+    });
+
+    const request = { paths: [errorPath] };
+    const rawResult = await readContentToolDefinition.handler(request);
+    const result = JSON.parse(rawResult.content[0].text);
+
+    expect(result).toHaveLength(1);
+    const errorResult = result.find((r: any) => r.path === errorPath);
+    expect(errorResult).toBeDefined();
+    expect(errorResult.content).toBeUndefined();
+    expect(errorResult.error).toBeDefined();
+    // Check for the unexpected resolve error message from line 82
+    expect(errorResult.error).toMatch(/Unexpected error resolving path: Simulated generic resolve error/);
+  });
+
 });
+

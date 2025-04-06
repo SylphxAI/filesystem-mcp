@@ -235,4 +235,49 @@ describe('handleReplaceContent Integration Tests', () => {
     await expect(replaceContentToolDefinition.handler(request)).rejects.toThrow(/Operations array cannot be empty/);
   });
 
+
+  it('should handle McpError during path resolution', async () => {
+    const request = {
+      paths: ['../traversal.txt'], // Path that triggers McpError in mockResolvePath
+      operations: [{ search: 'a', replace: 'b' }],
+    };
+    const rawResult = await replaceContentToolDefinition.handler(request);
+    const parsedResult = JSON.parse(rawResult.content[0].text);
+    const resultsArray = parsedResult.results;
+
+    expect(resultsArray).toHaveLength(1);
+    expect(resultsArray[0].modified).toBe(false);
+    expect(resultsArray[0].error).toMatch(/Mocked Path traversal detected/); // Check for McpError message
+  });
+
+  it('should handle generic errors during path resolution or fs operations', async () => {
+    const errorPath = 'genericErrorFile.txt';
+    const genericErrorMessage = 'Simulated generic error';
+
+    // Mock resolvePath to throw a generic Error for this path
+    mockResolvePath.mockImplementationOnce((relativePath: string): string => {
+      if (relativePath === errorPath) {
+        throw new Error(genericErrorMessage);
+      }
+      // Fallback for other paths
+      const absolutePath = path.resolve(tempRootDir, relativePath);
+      if (!absolutePath.startsWith(tempRootDir)) throw new McpError(ErrorCode.InvalidRequest, `Traversal`);
+      if (path.isAbsolute(relativePath)) throw new McpError(ErrorCode.InvalidParams, `Absolute`);
+      return absolutePath;
+    });
+
+    const request = {
+      paths: [errorPath],
+      operations: [{ search: 'a', replace: 'b' }],
+    };
+    const rawResult = await replaceContentToolDefinition.handler(request);
+    const parsedResult = JSON.parse(rawResult.content[0].text);
+    const resultsArray = parsedResult.results;
+
+    expect(resultsArray).toHaveLength(1);
+    expect(resultsArray[0].modified).toBe(false);
+    // Check for the generic error message from line 111
+    expect(resultsArray[0].error).toMatch(/Failed to process file: Simulated generic error/);
+  });
+
 });
