@@ -78,6 +78,10 @@ const handleReplaceContentFunc = async (args: unknown) => {
 
                     let regexFlags = 'g'; // Always global replace within a file
                     if (ignoreCase) regexFlags += 'i';
+                    // Add multiline flag 'm' automatically if regex contains start/end anchors
+                    if (useRegex && (searchPattern.includes('^') || searchPattern.includes('$'))) {
+                        regexFlags += 'm';
+                    }
 
                     const searchRegex = useRegex
                         ? new RegExp(searchPattern, regexFlags)
