@@ -42,9 +42,13 @@ const handleSearchFilesFunc = async (args: unknown) => {
     let searchRegex: RegExp;
     try {
         // Basic check for flags, assuming standard JS flags if present after last /
+        // Always add 'g' flag for searching, keep other user-provided flags if any
         const flagsMatch = regexString.match(/\/([gimyus]+)$/);
-        const flags = flagsMatch ? flagsMatch[1] : '';
+        let flags = flagsMatch ? flagsMatch[1] : '';
         const pattern = flagsMatch ? regexString.slice(1, flagsMatch.index) : regexString;
+        if (!flags.includes('g')) {
+            flags += 'g'; // Ensure global flag is always present
+        }
         searchRegex = new RegExp(pattern, flags);
     } catch (error: any) {
         throw new McpError(ErrorCode.InvalidParams, `Invalid regex pattern: ${error.message}`);
@@ -80,26 +84,42 @@ const handleSearchFilesFunc = async (args: unknown) => {
                 const fileContent = await fs.readFile(absoluteFilePath, 'utf-8');
                 const lines = fileContent.split('\n');
 
-                for (let i = 0; i < lines.length; i++) {
-                    const line = lines[i];
-                    let matchResult;
-                    // Reset lastIndex for global regex on each new line
-                    if (searchRegex.global) searchRegex.lastIndex = 0;
+                // Execute regex on the entire file content for multi-line support
+                // let matchResult; // Remove duplicate declaration
+                if (searchRegex.global) searchRegex.lastIndex = 0; // Reset for global search
 
-                    while ((matchResult = searchRegex.exec(line)) !== null) {
-                        const match = matchResult[0];
-                        const startContext = Math.max(0, i - CONTEXT_LINES);
-                        const endContext = Math.min(lines.length, i + CONTEXT_LINES + 1);
-                        const context = lines.slice(startContext, endContext);
-                        results.push({ file: fileRelative, line: i + 1, match: match, context: context });
+                // Execute regex on the entire file content for multi-line support
+                let matchResult;
+                if (searchRegex.global) searchRegex.lastIndex = 0; // Reset for global search
 
-                        // If regex is not global, break after the first match on the line
-                        if (!searchRegex.global) break;
-                        // Prevent infinite loops with zero-width matches in global regex
-                        if (matchResult.index === searchRegex.lastIndex) {
-                            searchRegex.lastIndex++;
-                        }
+                while ((matchResult = searchRegex.exec(fileContent)) !== null) {
+                    const match = matchResult[0];
+                    const matchStartIndex = matchResult.index;
+                    // console.log(`[DEBUG searchFiles] Match found: "${match}", index: ${matchStartIndex}, lastIndex before: ${searchRegex.lastIndex}`); // REMOVE DEBUG
+
+                    // Determine the line number of the match start
+                    const contentUpToMatch = fileContent.substring(0, matchStartIndex);
+                    const lineNumber = (contentUpToMatch.match(/\n/g) || []).length + 1; // 1-based line number
+
+                    // Determine context lines
+                    const startContextLineIndex = Math.max(0, lineNumber - 1 - CONTEXT_LINES);
+                    const endContextLineIndex = Math.min(lines.length, lineNumber + CONTEXT_LINES); // Use lines.length here
+                    const context = lines.slice(startContextLineIndex, endContextLineIndex);
+
+                    results.push({ file: fileRelative, line: lineNumber, match: match, context: context });
+
+                    // If regex is not global, break after the first match
+                    if (!searchRegex.global) {
+                         // console.log("[DEBUG searchFiles] Regex not global, breaking loop."); // REMOVE DEBUG
+                         break;
                     }
+                    // Prevent infinite loops with zero-width matches in global regex
+                    // AND ensure loop continues for global regex even if match is found
+                    if (matchResult.index === searchRegex.lastIndex) {
+                        // console.log("[DEBUG searchFiles] Zero-width match detected, incrementing lastIndex."); // REMOVE DEBUG
+                        searchRegex.lastIndex++;
+                    }
+                     // console.log(`[DEBUG searchFiles] Match processed, lastIndex after: ${searchRegex.lastIndex}`); // REMOVE DEBUG
                 }
             } catch (readError: any) {
                 // Ignore errors reading specific files (e.g., permission denied, binary files)

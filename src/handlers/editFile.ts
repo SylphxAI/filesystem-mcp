@@ -67,16 +67,14 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
     // Validate input using the Zod schema
     const validationResult = EditFileArgsSchema.safeParse(rawArgs);
     if (!validationResult.success) {
-        // Format Zod errors into a user-friendly message or structure
         const errorDetails = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
         throw new McpError(ErrorCode.InvalidParams, `Invalid arguments for editFile: ${errorDetails}`);
     }
-    const args: EditFileArgs = validationResult.data; // Use validated and typed data
+    const args: EditFileArgs = validationResult.data;
 
     const results: EditFileResultItem[] = [];
     const { changes, dry_run = false, output_diff = true } = args;
 
-    // Group changes by file path to process each file only once
     const changesByFile = changes.reduce((acc, change) => {
         if (!acc[change.path]) {
             acc[change.path] = [];
@@ -89,35 +87,33 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
         let absolutePath: string;
         let originalContent: string | null = null;
         let currentContent: string | null = null;
-        // Initialize fileResult *inside* the loop for each file
         let fileResult: EditFileResultItem = { path: relativePath, status: 'skipped' };
         let fileProcessed = false;
-        let changesAppliedToFile = false; // Track success for *this* file
+        let changesAppliedToFile = false;
 
-        try { // START OF THE MAIN TRY BLOCK FOR THIS FILE
+        try {
             absolutePath = resolvePath(relativePath);
 
-            // Read the original file content
             try {
                 originalContent = await fs.readFile(absolutePath, 'utf-8');
-                currentContent = originalContent; // Start with original content
+                currentContent = originalContent;
             } catch (readError: any) {
                 if (readError.code === 'ENOENT') {
                      throw new McpError(ErrorCode.InvalidRequest, `File not found: ${relativePath}`);
                 }
-                throw readError; // Re-throw other read errors
+                throw readError;
             }
 
             const fileChanges = changesByFile[relativePath];
-            let lines = currentContent.split('\n'); // Work with lines array
-
-            // Sort changes by start_line descending to handle edits from bottom-up,
-            // minimizing line number shifts affecting subsequent edits in the same pass.
+            // Sort changes by start_line descending
             fileChanges.sort((a, b) => b.start_line - a.start_line);
 
             for (const change of fileChanges) {
-                fileProcessed = true; // Mark that we attempted processing for this file
+                fileProcessed = true;
                 let changeSucceeded = false;
+                // IMPORTANT: Recalculate lines based on potentially modified currentContent at the start of each change iteration
+                let lines: string[] = (currentContent ?? '').split('\n'); // Add explicit type annotation
+
                 const {
                     search_pattern,
                     start_line,
@@ -128,96 +124,73 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
                     match_occurrence = 1
                 } = change;
 
-                const targetLineIndex = start_line - 1; // 0-based index
+                const targetLineIndex = start_line - 1;
 
                 if (targetLineIndex < 0) {
                      console.warn(`[editFile] Invalid start_line ${start_line} for change in ${relativePath}. Skipping change.`);
-                     continue; // Skip this specific change
+                     continue;
                 }
 
                 // --- Insertion Logic ---
                 if (!search_pattern && replace_content !== undefined) {
                     if (targetLineIndex > lines.length) {
                          console.warn(`[editFile] start_line ${start_line} is beyond the end of file ${relativePath} for insertion. Appending instead.`);
-                         // Adjust targetLineIndex if needed, or handle as error? For now, append.
                     }
                     const effectiveInsertionLine = Math.min(targetLineIndex, lines.length);
-
                     let indent = '';
-                    // Get indentation based on the line *before* the insertion point, if possible and requested.
                     if (preserve_indentation && effectiveInsertionLine > 0 && effectiveInsertionLine <= lines.length) {
                          indent = getIndentation(lines[effectiveInsertionLine - 1]);
-                    } // If inserting at line 0, indent remains ''
+                    }
                     const replacementLines = applyIndentation(replace_content, indent);
                     lines.splice(effectiveInsertionLine, 0, ...replacementLines);
+                    // Update currentContent immediately after modifying lines
+                    currentContent = lines.join('\n');
                     changeSucceeded = true;
-                    // currentContent will be updated from lines later if changeSucceeded
                 }
                 // --- Search/Replace/Delete Logic ---
-                else if (search_pattern) { // Ensure search_pattern is defined before using it
+                else if (search_pattern) {
                     if (use_regex) {
                         // --- Regex Matching ---
                         let regex: RegExp;
                         try {
-                            // Basic regex creation, consider adding flags from schema later (e.g., 'gm', 'gmi')
-                            // Remove 'g' flag to test if statefulness is the issue
-                            regex = new RegExp(search_pattern, 'g'); // Restore 'g' flag
-                            // console.log(`[DEBUG editFile] Created regex: ${regex}`); // Keep commented out for now
+                            regex = new RegExp(search_pattern, 'g');
                         } catch (e: any) {
-                             // Set failure status for this specific change attempt due to invalid regex
-                             fileResult.status = 'failed'; // Mark the file processing as failed overall
+                             fileResult.status = 'failed';
                              fileResult.message = `Invalid regex pattern "${search_pattern}" in ${relativePath}: ${e.message}`;
-                             console.error(`[editFile] ${fileResult.message}`); // Log as error
-                             // Skip further processing for *this specific change* as the regex is invalid
-                             continue;
+                             console.error(`[editFile] ${fileResult.message}`);
+                             continue; // Skip this change if regex is invalid
                         }
                         let occurrencesFound = 0;
                         let match: RegExpExecArray | null;
                         let matchStartIndex = -1;
                         let matchEndIndex = -1;
-                        let lastIndex = 0; // To avoid infinite loops with zero-width matches
 
-                        // Reset lastIndex before searching
-                        regex.lastIndex = 0;
+                        // Search within the *current* content state
+                        const contentToSearch = currentContent as string;
+                        regex.lastIndex = 0; // Reset before searching
 
-                        // Find the Nth occurrence by calling exec() repeatedly
-                        // Ensure currentContent is not null before regex execution
-                        if (currentContent !== null) {
-                            for (let k = 0; k < match_occurrence; k++) {
-                                match = regex.exec(currentContent);
-                                if (match === null) {
-                                    // Not enough occurrences found
-                                    matchStartIndex = -1; // Ensure it's marked as not found
-                                    break;
-                                }
-                                // Store the details of the Kth match
-                                matchStartIndex = match.index;
-                                matchEndIndex = match.index + match[0].length;
-                                occurrencesFound++; // Increment count
-
-                                // Prevent infinite loops with zero-width matches for the *next* iteration
-                                if (match.index === regex.lastIndex) {
-                                     regex.lastIndex++;
-                                }
-                                // If this is the last iteration (k === match_occurrence - 1), we found our target
-                                if (k === match_occurrence - 1) {
-                                     break;
-                                }
+                        for (let k = 0; k < match_occurrence; k++) {
+                            match = regex.exec(contentToSearch);
+                            if (match === null) {
+                                matchStartIndex = -1;
+                                break;
                             }
-                            // Check if we actually found the required number of occurrences
-                            if (occurrencesFound < match_occurrence) {
-                                matchStartIndex = -1; // Mark as not found if loop finished early
+                            matchStartIndex = match.index;
+                            matchEndIndex = match.index + match[0].length;
+                            occurrencesFound++;
+                            if (match.index === regex.lastIndex) {
+                                 regex.lastIndex++;
                             }
-                        } else {
-                             matchStartIndex = -1; // Mark as not found if currentContent is null
+                            if (k === match_occurrence - 1) break;
+                        }
+                        if (occurrencesFound < match_occurrence) {
+                            matchStartIndex = -1;
                         }
 
-
-                        if (matchStartIndex !== -1 && currentContent !== null) { // Ensure currentContent is not null
-                            // Match found!
+                        if (matchStartIndex !== -1 && currentContent !== null) {
                             let indent = '';
                             if (preserve_indentation) {
-                                // Find the line containing the start of the match
+                                // Determine indent based on the line where the match starts in the *current* content
                                 const contentUpToMatch = currentContent.substring(0, matchStartIndex);
                                 const linesUpToMatch = contentUpToMatch.split('\n');
                                 const lineIndexContainingMatch = linesUpToMatch.length - 1;
@@ -227,171 +200,131 @@ async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
                             }
 
                             if (replace_content !== undefined) {
-                                // --- Replace ---
                                 const replacementLines = applyIndentation(replace_content, indent);
                                 const indentedReplacement = replacementLines.join('\n');
                                 currentContent = currentContent.slice(0, matchStartIndex) + indentedReplacement + currentContent.slice(matchEndIndex);
                                 changeSucceeded = true;
-                                // lines will be updated from currentContent later if changeSucceeded
                             } else {
-                                // --- Delete ---
                                 currentContent = currentContent.slice(0, matchStartIndex) + currentContent.slice(matchEndIndex);
                                 changeSucceeded = true;
-                                // lines will be updated from currentContent later if changeSucceeded
                             }
                         } else {
                              console.warn(`[editFile] Regex pattern "${search_pattern}" not found (occurrence ${match_occurrence}) starting near line ${start_line} in ${relativePath}. Skipping change.`);
-                             // Ensure changeSucceeded remains false if pattern not found
                              changeSucceeded = false;
                         }
-                        // DO NOT continue here; let it fall through to the update logic below
                     }
                     // --- Plain Text Matching ---
-                    else { // If search_pattern exists but use_regex is false
-                        // --- Plain Text Matching ---
-                        const searchLines = search_pattern.split('\n'); // search_pattern is guaranteed defined here
+                    else {
+                        const searchLines = search_pattern.split('\n');
                         let occurrencesFound = 0;
                         let matchStartIndex = -1;
                         let matchEndIndex = -1;
-
-                        // Adjust search start point based on targetLineIndex
-                        const searchStartLine = Math.min(targetLineIndex, lines.length -1); // Ensure search starts within bounds
+                        const searchStartLine = Math.min(targetLineIndex, lines.length -1);
 
                         for (let i = searchStartLine; i <= lines.length - searchLines.length; i++) {
-                            // Ensure we don't search past the end if targetLineIndex was high
                             if (i < 0) continue;
-
                             let isMatch = true;
                             for (let j = 0; j < searchLines.length; j++) {
                                 let fileLine = lines[i + j];
                                 let searchLine = searchLines[j];
-
                                 if (ignore_leading_whitespace) {
-                                    // Only trim if the search line isn't just whitespace itself
                                     if (searchLine.trim().length > 0) {
                                         fileLine = fileLine.trimStart();
                                     }
                                     searchLine = searchLine.trimStart();
                                 }
-                                // Simple string comparison
                                 if (fileLine !== searchLine) {
                                     isMatch = false;
                                     break;
                                 }
                             }
-
                             if (isMatch) {
                                 occurrencesFound++;
                                 if (occurrencesFound === match_occurrence) {
                                     matchStartIndex = i;
                                     matchEndIndex = i + searchLines.length;
-                                    break; // Found the desired occurrence
+                                    break;
                                 }
                             }
                         }
 
                         if (matchStartIndex !== -1) {
-                            // Match found!
                             let indent = '';
                             if (preserve_indentation && matchStartIndex < lines.length) {
                                  indent = getIndentation(lines[matchStartIndex]);
                             }
-
                             if (replace_content !== undefined) {
-                                // --- Replace ---
                                 const replacementLines = applyIndentation(replace_content, indent);
                                 lines.splice(matchStartIndex, matchEndIndex - matchStartIndex, ...replacementLines);
+                                // Update currentContent immediately after modifying lines
+                                currentContent = lines.join('\n');
                                 changeSucceeded = true;
-                                // currentContent will be updated from lines later if changeSucceeded
                             } else {
-                                // --- Delete ---
                                 lines.splice(matchStartIndex, matchEndIndex - matchStartIndex);
+                                // Update currentContent immediately after modifying lines
+                                currentContent = lines.join('\n');
                                 changeSucceeded = true;
-                                // currentContent will be updated from lines later if changeSucceeded
                             }
                         } else {
                              console.warn(`[editFile] Search pattern not found (occurrence ${match_occurrence}) starting near line ${start_line} in ${relativePath}. Skipping change.`);
-                             // Ensure changeSucceeded remains false if pattern not found
                              changeSucceeded = false;
                         }
                     } // End Plain Text Matching else block
                 } // End Search/Replace/Delete Logic (else if search_pattern)
 
-                // If a change succeeded in this iteration, update the overall flag
-                // and synchronize the state variables (lines and currentContent)
+                // Update overall flag if this change succeeded
                 if (changeSucceeded) {
                     changesAppliedToFile = true;
-                    // Update the *other* state variable to ensure consistency for the next iteration
-                    if (use_regex) {
-                        // Regex modified currentContent, so update lines from it
-                        // Ensure currentContent is not null before splitting
-                        if (currentContent !== null) {
-                            lines = currentContent.split('\n');
-                        } else {
-                            // This case should ideally not happen if changeSucceeded is true, but handle defensively
-                            console.error("[editFile] Inconsistency: changeSucceeded is true but currentContent is null during regex state update.");
-                            lines = []; // Reset lines to avoid errors
-                        }
-                    } else {
-                        // Insertion/Plain Text modified lines, so update currentContent from it
-                        currentContent = lines.join('\n');
-                    }
-                    // Now both currentContent and lines should be consistent after the change
+                    // No need to explicitly sync lines/currentContent here anymore,
+                    // as lines is recalculated at the start of the loop,
+                    // and currentContent is updated directly within the modification logic.
                 }
 
             } // End loop through changes for this file
 
             // --- Finalize File Processing ---
             if (changesAppliedToFile && currentContent !== null && originalContent !== null) {
-                fileResult.status = 'success';
-
-                // Generate diff if requested
-                if (output_diff) {
-                    fileResult.diff = createPatch(
-                        relativePath, // File name for the diff header
-                        originalContent,
-                        currentContent, // Use the final state after all changes
-                        '', // oldHeader
-                        '', // newHeader
-                        { context: 3 } // Number of context lines
-                    );
-                }
-
-                // Write changes if not a dry run
-                if (!dry_run) {
-                    await fs.writeFile(absolutePath, currentContent, 'utf-8');
-                    fileResult.message = `File ${relativePath} modified successfully.`;
+                // Check if content actually changed before setting success
+                if (currentContent !== originalContent) {
+                    fileResult.status = 'success';
+                    if (output_diff) {
+                        fileResult.diff = createPatch(
+                            relativePath, originalContent, currentContent, '', '', { context: 3 }
+                        );
+                    }
+                    if (!dry_run) {
+                        await fs.writeFile(absolutePath, currentContent, 'utf-8');
+                        fileResult.message = `File ${relativePath} modified successfully.`;
+                    } else {
+                        fileResult.message = `File ${relativePath} changes calculated (dry run).`;
+                    }
                 } else {
-                    fileResult.message = `File ${relativePath} changes calculated (dry run).`;
+                    // Changes were applied, but resulted in the original content (e.g., replacing 'a' with 'a')
+                    fileResult.status = 'skipped'; // Or 'success' with a specific message? Skipped seems clearer.
+                    fileResult.message = `Changes applied to ${relativePath} resulted in no net change to content.`;
                 }
             } else if (fileProcessed && !changesAppliedToFile && fileResult.status !== 'failed') {
-                 // Processed the file, but no changes were applicable or succeeded,
-                 // AND the status wasn't already set to 'failed' (e.g., by invalid regex)
                  fileResult.status = 'skipped';
                  fileResult.message = `No applicable changes found or made for ${relativePath}.`;
             }
-            // If !fileProcessed, it remains 'skipped' by default
 
         } catch (error: any) { // CATCH BLOCK FOR THE MAIN FILE PROCESSING TRY
             console.error(`[editFile] Error processing ${relativePath}:`, error);
-            // Ensure failure status is set correctly, respecting previous specific errors
             if (fileResult.status !== 'failed' || !fileResult.message) {
                 fileResult.status = 'failed';
                 if (error instanceof McpError) {
                     fileResult.message = error.message;
-                } else if (error.code) { // Node.js fs errors
+                } else if (error.code) {
                     fileResult.message = `Filesystem error (${error.code}) processing ${relativePath}.`;
                 } else {
                     fileResult.message = `Unexpected error processing ${relativePath}: ${error.message || error}`;
                 }
             }
         } finally { // FINALLY BLOCK FOR THE MAIN FILE PROCESSING TRY
-            // Ensure the result for this file is always pushed
             results.push(fileResult);
         }
     } // End loop through files
 
-    // Wrap the results in the standard MCP content structure
     return { content: [{ type: "text", text: JSON.stringify({ results }, null, 2) }] };
 } // END OF handleEditFile FUNCTION
 

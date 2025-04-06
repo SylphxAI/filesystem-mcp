@@ -8,15 +8,16 @@ export default defineConfig({
       provider: 'v8', // Use V8 for coverage collection
       reporter: ['text', 'json', 'html'], // Coverage report formats
       reportsDirectory: './coverage', // Explicitly set the output directory
-      include: ['src/**/*.ts'], // Include all source files for coverage
-      exclude: [ // Exclude files not relevant for coverage
-        'src/index.ts', // Entry point might be hard to test directly
-        'src/utils/pathUtils.ts', // Relies heavily on process.cwd() at module load
-        'src/utils/statsUtils.ts', // Simple formatting utility
-        'src/**/*.d.ts',
-        '**/__mocks__/**',
-        '**/__tests__/**',
-      ],
+      // Temporarily remove include/exclude to test basic report generation
+      // include: ['src/**/*.ts'],
+      // exclude: [
+      //   'src/index.ts',
+      //   'src/utils/pathUtils.ts',
+      //   'src/utils/statsUtils.ts',
+      //   'src/**/*.d.ts',
+      //   '**/__mocks__/**',
+      //   '**/__tests__/**',
+      // ],
     },
     // Vitest generally handles ESM better, but specific configs might be needed later
     // For now, rely on defaults and tsconfig.json settings
