@@ -14,8 +14,30 @@ import { applyDiffTool } from './applyDiff.js';
 
 // Define the structure for a tool definition (used internally and for index.ts)
 // We need Zod here to define the schema type correctly
-import type { ZodType } from 'zod'; // Removed unused 'z' import
-import type { McpRequest, McpResponse } from '@modelcontextprotocol/sdk'; // Use import type
+import type { ZodType } from 'zod';
+// Remove SDK imports for McpRequest/Response
+// import type { McpRequest, McpResponse } from '@modelcontextprotocol/sdk/types.js';
+import type { McpError } from '@modelcontextprotocol/sdk/types.js'; // Keep McpError import
+
+// Define local interfaces based on usage observed in handlers
+export interface McpRequest<T = unknown> {
+  jsonrpc: '2.0';
+  method: string;
+  params: T;
+  id?: string | number | null;
+}
+
+// Define a base McpResponse and specific ones if needed
+export interface McpResponse<T = unknown> {
+  jsonrpc?: '2.0';
+  id?: string | number | null;
+  success?: boolean; // Common pattern in handlers
+  data?: T; // Common pattern in handlers
+  error?: McpError;
+  // Add other potential fields based on specific handler needs if necessary
+  // For example, listFiles uses 'content'
+  content?: { type: string; text: string }[];
+}
 
 // Define the structure for a tool definition
 // Matches the structure in individual tool files like applyDiff.ts
@@ -25,13 +47,13 @@ export interface ToolDefinition<TInput = unknown, TOutput = unknown> {
   description: string;
   inputSchema: ZodType<TInput>;
   outputSchema?: ZodType<TOutput>; // Output schema is optional
+  // Use the locally defined types here
   handler: (request: McpRequest<TInput>) => Promise<McpResponse<TOutput>>;
 }
 
 // Aggregate all tool definitions into a single array
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- TS cannot guarantee ToolDefinition<TInput, TOutput>[] matches ToolDefinition[]
-export const allToolDefinitions: ToolDefinition[] = [
-  // Remove unnecessary default type arguments
+// Let TypeScript infer the type
+export const allToolDefinitions = [
   listFilesToolDefinition,
   statItemsToolDefinition,
   readContentToolDefinition,

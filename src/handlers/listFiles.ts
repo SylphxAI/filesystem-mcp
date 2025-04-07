@@ -44,8 +44,10 @@ type ListFilesArgs = z.infer<typeof ListFilesArgsSchema>;
 // Define Dependencies Interface
 export interface ListFilesDependencies {
   stat: (p: PathLike, opts?: StatOptions) => Promise<Stats>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readdir: (p: PathLike, options?: any) => Promise<string[] | Dirent[]>;
+  readdir: (
+    p: PathLike,
+    options?: { withFileTypes?: true }, // Specify options type
+  ) => Promise<string[] | Dirent[]>;
   glob: (
     pattern: string | string[],
     options: GlobOptions,
@@ -135,7 +137,7 @@ function handleFileCase(
   absolutePath: string,
   stats: Stats,
 ): McpToolResponse {
-  const statsResult = deps.formatStats(relativePath, absolutePath, stats);
+  const statsResult = deps.formatStats(relativePath, absolutePath, stats); // Pass absolutePath
   const outputJson = JSON.stringify(statsResult, null, 2);
   return { content: [{ type: 'text', text: outputJson }] };
 }
@@ -157,6 +159,7 @@ async function listDirectoryNonRecursive(
   relativePath: string,
 ): Promise<ProcessedEntry[]> {
   const results: ProcessedEntry[] = [];
+  // Explicitly cast the result to Dirent[] as we use withFileTypes: true
   const entries = (await deps.readdir(absolutePath, {
     withFileTypes: true,
   })) as Dirent[];
@@ -219,7 +222,7 @@ function formatStatsResult(
 ): FormattedStats | { error: string } | undefined {
   const { deps, stats, statsError, relativeToRoot, absolutePath } = params; // Destructure
   if (stats) {
-    return deps.formatStats(relativeToRoot, absolutePath, stats);
+    return deps.formatStats(relativeToRoot, absolutePath, stats); // Pass absolutePath
   } else if (statsError) {
     return { error: statsError };
   }
@@ -295,7 +298,7 @@ async function listDirectoryWithGlob(
     const processingPromises = pathsFromGlob.map((entry) =>
       processGlobEntry({
         deps,
-        entryPath: entry as string,
+        entryPath: entry as string, // Assume string path from glob
         baseAbsolutePath: absolutePath,
         baseRelativePath: relativePath,
         includeStats,
@@ -318,7 +321,7 @@ async function listDirectoryWithGlob(
     throw new McpError(
       ErrorCode.InternalError,
       `Failed to list files using glob: ${errorMessage}`,
-      { cause: globError as Error },
+      { cause: globError as Error }, // Keep as Error for now
     );
   }
   return results;
@@ -424,7 +427,7 @@ export const handleListFilesFunc = async (
       throw new McpError(
         ErrorCode.InvalidRequest,
         `Path not found: ${relativeInputPath}`,
-        { cause: error as Error },
+        { cause: error instanceof Error ? error : undefined }, // Use safe cause
       );
     }
     // Re-throw known MCP errors
@@ -439,18 +442,18 @@ export const handleListFilesFunc = async (
     throw new McpError(
       ErrorCode.InternalError,
       `Failed to process path: ${errorMessage}`,
-      { cause: error as Error },
+      // Use cause directly if it's an Error, otherwise undefined
+      { cause: error instanceof Error ? error : undefined },
     );
   }
 };
 
 // --- Tool Definition ---
 const productionHandler = (args: unknown): Promise<McpToolResponse> => {
+  // Provide more specific types for fsPromises functions
   const dependencies: ListFilesDependencies = {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
-    stat: fsPromises.stat as any,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
-    readdir: fsPromises.readdir as any,
+    stat: fsPromises.stat,
+    readdir: fsPromises.readdir as ListFilesDependencies['readdir'], // Assert correct type
     glob: globFn,
     resolvePath: resolvePathUtil,
     PROJECT_ROOT: projectRootUtil,

@@ -95,7 +95,7 @@ async function processSingleStatOperation(
     return {
       path: pathOutput,
       status: 'success',
-      stats: formatStats(relativePath, targetPath, stats),
+      stats: formatStats(relativePath, targetPath, stats), // Pass targetPath as absolutePath
     };
   } catch (error: unknown) {
     return handleStatError(error, relativePath, pathOutput);

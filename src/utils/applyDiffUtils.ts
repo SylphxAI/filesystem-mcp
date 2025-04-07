@@ -52,31 +52,52 @@ function getContextAroundLine(
 }
 
 /**
- * Validates a single diff block structure.
+ * Validates the basic structure and types of a potential diff block.
  */
-// eslint-disable-next-line complexity -- Accepting complexity after splitting into helpers
+function hasValidDiffBlockStructure(diff: unknown): diff is {
+  search: string;
+  replace: string;
+  start_line: number;
+  end_line: number;
+} {
+  return (
+    !!diff &&
+    typeof diff === 'object' &&
+    'search' in diff &&
+    typeof diff.search === 'string' &&
+    'replace' in diff &&
+    typeof diff.replace === 'string' &&
+    'start_line' in diff &&
+    typeof diff.start_line === 'number' &&
+    'end_line' in diff &&
+    typeof diff.end_line === 'number'
+  );
+}
+
+/**
+ * Validates the line number logic within a diff block.
+ */
+function hasValidLineNumberLogic(diff: {
+  start_line: number;
+  end_line: number;
+}): boolean {
+  return diff.end_line >= diff.start_line;
+}
+
+/**
+ * Validates a single diff block structure and line logic.
+ */
 function validateDiffBlock(diff: unknown): diff is DiffBlock {
-  // Check basic structure and types first
-  if (
-    !diff ||
-    typeof diff !== 'object' ||
-    !('search' in diff) ||
-    typeof diff.search !== 'string' ||
-    !('replace' in diff) ||
-    typeof diff.replace !== 'string' ||
-    !('start_line' in diff) ||
-    typeof diff.start_line !== 'number' ||
-    !('end_line' in diff) ||
-    typeof diff.end_line !== 'number'
-  ) {
+  if (!hasValidDiffBlockStructure(diff)) {
     // console.error(`Invalid diff block structure:`, diff); // Avoid logging potentially large diffs
     return false;
   }
-  // Now check the line number logic (diff is narrowed to object with expected props)
-  if (diff.end_line < diff.start_line) {
+  // Now diff is narrowed to the correct structure
+  if (!hasValidLineNumberLogic(diff)) {
     // console.error(`Invalid line numbers: end_line (${String(diff.end_line)}) < start_line (${String(diff.start_line)})`);
     return false;
   }
+  // If both structure and line logic are valid, it conforms to DiffBlock
   return true;
 }
 
@@ -134,7 +155,8 @@ function verifyContentMatch(
     const error = `Content mismatch at lines ${String(start_line)}-${String(end_line)}.`;
     const contextLineNum =
       Number.isInteger(start_line) && start_line > 0 ? start_line : 1;
-    const context = `--- EXPECTED ---\n${normalizedSearch}\n--- ACTUAL ---\n${actualBlock}\n--- CONTEXT ---\n${getContextAroundLine(lines, contextLineNum)}`;
+    // Update context format to match test expectation
+    const context = `--- EXPECTED (Search Block) ---\n${normalizedSearch}\n--- ACTUAL (Lines ${String(start_line)}-${String(end_line)}) ---\n${actualBlock}\n--- CONTEXT ---\n${getContextAroundLine(lines, contextLineNum)}`;
     return { isMatch: false, error, context };
   }
   return { isMatch: true };

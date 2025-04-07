@@ -26,7 +26,7 @@ export interface FormattedStats {
  */
 export const formatStats = (
   relativePath: string,
-  absolutePath: string,
+  absolutePath: string, // Restore parameter
   stats: Stats,
 ): FormattedStats => {
   // Add return type annotation

@@ -1,4 +1,4 @@
-<!-- Version: 4.38 | Last Updated: 2025-07-04 | Updated By: Sylph -->
+<!-- Version: 4.39 | Last Updated: 2025-07-04 | Updated By: Sylph -->
 
 # Active Context: Filesystem MCP Server
 
@@ -16,6 +16,7 @@
 - Updated tool registration in `index.ts` and `handlers/index.ts`.
 - Removed `diff`, `@types/diff`, `detect-indent` dependencies from `package.json`.
 - Ran `pnpm install` to update lockfile.
+- Fixed TypeScript type errors in `src/index.ts` related to the `handleCallTool` function signature and return type, ensuring correct interaction between SDK's `setRequestHandler` and locally defined `McpRequest`/`McpResponse` types.
 - Attempted multiple rounds of ESLint fixes using `edit_file` and `write_content`.
 
 ## 3. Next Steps

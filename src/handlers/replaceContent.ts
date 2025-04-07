@@ -1,7 +1,10 @@
 // src/handlers/replaceContent.ts
 import { promises as fs, type PathLike, type Stats } from 'fs'; // Import necessary types
 import { z } from 'zod';
+// Import SDK Error/Code from dist, local types for Request/Response
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+// Import locally defined Request/Response types
+import type { McpResponse } from './index.js';
 import { resolvePath } from '../utils/pathUtils.js';
 import { escapeRegex } from '../utils/stringUtils.js'; // Import escapeRegex
 
@@ -67,14 +70,28 @@ function parseAndValidateArgs(args: unknown): ReplaceContentArgs {
     return ReplaceContentArgsSchema.parse(args);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      throw new McpError(
+      // Assign errors to a typed variable first
+      const zodErrors: z.ZodIssue[] = error.errors;
+      throw new McpError( // Disable unsafe call for McpError constructor
         ErrorCode.InvalidParams,
-        `Invalid arguments: ${error.errors.map((e) => `${e.path.join('.')} (${e.message})`).join(', ')}`,
+        `Invalid arguments: ${zodErrors.map((e) => `${e.path.join('.')} (${e.message})`).join(', ')}`,
       );
     }
-    throw new McpError(
+    // Determine error message more safely
+    let failureMessage = 'Unknown validation error';
+    if (error instanceof Error) {
+      failureMessage = error.message;
+    } else {
+      // Attempt to stringify non-Error objects, fallback to String()
+      try {
+        failureMessage = JSON.stringify(error);
+      } catch {
+        failureMessage = String(error);
+      }
+    }
+    throw new McpError( // Disable unsafe call for McpError constructor
       ErrorCode.InvalidParams,
-      `Argument validation failed: ${error instanceof Error ? error.message : String(error)}`,
+      `Argument validation failed: ${failureMessage}`,
     );
   }
 }
@@ -127,26 +144,54 @@ function applyReplaceOperation(
   return { newContent, replacementsMade: replacementsInOp };
 }
 
-/** Handles errors during file processing for replacement. */
-function handleReplaceError(error: unknown, relativePath: string): string {
-  // Default error message
-  let errorMessage = `Failed to process file: ${error instanceof Error ? error.message : String(error)}`;
+/** Maps common filesystem error codes to user-friendly messages. */
+function mapFsErrorCodeToMessage(
+  code: string,
+  relativePath: string,
+): string | null {
+  if (code === 'ENOENT') {
+    return 'File not found';
+  } else if (code === 'EISDIR') {
+    return 'Path is not a file';
+  } else if (code === 'EACCES' || code === 'EPERM') {
+    return `Permission denied processing file: ${relativePath}`;
+  }
+  return null; // Return null if code is not specifically handled
+}
 
-  // Handle McpError specifically (likely from resolvePath)
+/** Safely converts an unknown error value to a string. */
+function errorToString(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  // Attempt to stringify non-Error objects, fallback to String()
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+/** Handles errors during file processing for replacement. (Reduced Complexity) */
+function handleReplaceError(error: unknown, relativePath: string): string {
+  let errorMessage: string;
+
+  // Handle McpError specifically
   if (error instanceof McpError) {
-    errorMessage = error.message; // Use the McpError message directly
+    errorMessage = error.message;
   }
   // Handle common filesystem errors
   else if (error && typeof error === 'object' && 'code' in error) {
-    const code = String(error.code);
-    if (code === 'ENOENT') {
-      errorMessage = 'File not found';
-    } else if (code === 'EISDIR') {
-      errorMessage = 'Path is not a file';
-    } else if (code === 'EACCES' || code === 'EPERM') {
-      // Provide a more specific permission denied message
-      errorMessage = `Permission denied processing file: ${relativePath}`;
+    let mappedMessage: string | null = null;
+    if (typeof error.code === 'string' || typeof error.code === 'number') {
+      mappedMessage = mapFsErrorCodeToMessage(String(error.code), relativePath);
     }
+    errorMessage =
+      mappedMessage ?? `Failed to process file: ${errorToString(error)}`;
+  }
+  // Handle other errors
+  else {
+    errorMessage = `Failed to process file: ${errorToString(error)}`;
   }
 
   // Log the error regardless of type
@@ -241,7 +286,7 @@ export function processSettledReplaceResults(
         replacements: 0,
         modified: false,
         // Use the reason from the rejection
-        error: `Unexpected error during file processing: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
+        error: `Unexpected error during file processing: ${errorToString(result.reason)}`,
       };
     }
   });
@@ -279,6 +324,7 @@ async function processAllFilesReplacement(
 
 /** Main handler function (internal, accepts dependencies) */
 // Export for testing
+// Use locally defined McpResponse type
 export const handleReplaceContentInternal = async (
   args: unknown,
   deps: ReplaceContentDeps,
@@ -317,6 +363,7 @@ export const replaceContentToolDefinition = {
       }),
     ),
   }),
+  // Use locally defined McpResponse type
   handler: (
     args: unknown,
   ): Promise<McpResponse<{ results: ReplaceResult[] }>> => {

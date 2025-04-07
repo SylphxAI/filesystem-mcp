@@ -4,7 +4,10 @@ import { promises as fsPromises } from 'fs';
 import path from 'path';
 import { z } from 'zod';
 import { glob as globFn } from 'glob';
+// Import SDK types from the correct path
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+// Import the LOCAL McpResponse type (assuming it's exported from handlers/index)
+import type { McpResponse as LocalMcpResponse } from './index.js';
 import {
   resolvePath as resolvePathUtil,
   PROJECT_ROOT as projectRootUtil,
@@ -247,10 +250,11 @@ async function searchFileContent(
 }
 
 /** Main handler function */
+// Use the imported local McpResponse type
 export const handleSearchFilesFunc = async (
   deps: SearchFilesDependencies,
   args: unknown,
-): Promise<McpResponse<SearchFilesResponseData>> => {
+): Promise<LocalMcpResponse<SearchFilesResponseData>> => {
   // Updated response type
   const {
     path: relativePath,
@@ -319,9 +323,16 @@ export const searchFilesToolDefinition = {
       }),
     ),
   }),
-  handler: (args: unknown): Promise<McpResponse<SearchFilesResponseData>> => {
+  // Use the imported local McpResponse type
+  handler: (
+    args: unknown,
+  ): Promise<LocalMcpResponse<SearchFilesResponseData>> => {
     const deps: SearchFilesDependencies = {
-      readFile: fsPromises.readFile, // Removed 'as any'
+      // Cast fsPromises.readFile to the expected simpler signature
+      readFile: fsPromises.readFile as (
+        p: PathLike,
+        options?: BufferEncoding | { encoding: BufferEncoding },
+      ) => Promise<string>,
       glob: globFn,
       resolvePath: resolvePathUtil,
       PROJECT_ROOT: projectRootUtil,

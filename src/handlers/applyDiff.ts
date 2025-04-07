@@ -1,13 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { promises as fs, type PathLike } from 'fs';
 import { z } from 'zod';
-// Corrected SDK import paths
-import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/dist/types';
-import type {
-  McpRequest,
-  McpResponse,
-} from '@modelcontextprotocol/sdk/dist/types';
-import type { ToolDefinition } from '@modelcontextprotocol/sdk/dist/server';
+// Correct SDK imports
+import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import type { ToolDefinition } from '@modelcontextprotocol/sdk/server'; // Import from server index
+// Import locally defined Request/Response types
+import type { McpRequest, McpResponse } from './index.js';
 
 import {
   applyDiffInputSchema,
@@ -383,7 +381,7 @@ export const applyDiffTool: ToolDefinition<ApplyDiffInput, ApplyDiffOutput> = {
     try {
       // Zod handles undefined argsToParse based on schema.
       // Safely access arguments using optional chaining.
-      const argsToParse = request?.params?.arguments; // Keep optional chaining for safety
+      const argsToParse = request.params.arguments; // Keep optional chaining for safety
       const validatedArgs = applyDiffInputSchema.parse(argsToParse);
 
       // Call the internal handler with validated arguments
