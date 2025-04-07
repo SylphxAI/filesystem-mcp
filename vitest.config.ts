@@ -36,6 +36,8 @@ export default defineConfig({
           include: [
             '@modelcontextprotocol/sdk',
             '@modelcontextprotocol/sdk/stdio',
+            '@modelcontextprotocol/sdk/dist/types', // Add specific dist path
+            '@modelcontextprotocol/sdk/dist/server', // Add specific dist path
           ],
         },
       },
