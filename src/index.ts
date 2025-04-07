@@ -38,6 +38,7 @@ const server = new Server(
 // Helper function to convert Zod schema to JSON schema for MCP
 const generateInputSchema = (schema: ZodTypeAny): Record<string, unknown> => {
   // Pass ZodTypeAny directly
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   return zodToJsonSchema(schema, { target: 'openApi3' }) as Record<
     string,
     unknown
@@ -59,6 +60,7 @@ server.setRequestHandler(
       name: def.name,
       description: def.description,
       // Assert type for generateInputSchema
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       inputSchema: generateInputSchema(def.inputSchema as ZodTypeAny),
     }));
     return { tools: availableTools };
@@ -110,7 +112,9 @@ const handleCallTool = async (
   sdkRequest: CallToolRequest,
 ): Promise<Record<string, unknown>> => {
   // Find the corresponding tool definition
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const toolDefinition: ToolDefinition | undefined = allToolDefinitions.find(
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     (def) => def.name === sdkRequest.params.name,
   );
 
