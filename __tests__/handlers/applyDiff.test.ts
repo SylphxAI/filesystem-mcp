@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { promises as fs, type PathLike } from 'fs'; // Import PathLike
+import { type PathLike } from 'fs'; // Import PathLike
 import path from 'path';
 // Import internal handler and dependency type
 import {

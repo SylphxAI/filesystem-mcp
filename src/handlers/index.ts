@@ -29,7 +29,9 @@ export interface ToolDefinition<TInput = unknown, TOutput = unknown> {
 }
 
 // Aggregate all tool definitions into a single array
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- TS cannot guarantee ToolDefinition<TInput, TOutput>[] matches ToolDefinition[]
 export const allToolDefinitions: ToolDefinition[] = [
+  // Remove unnecessary default type arguments
   listFilesToolDefinition,
   statItemsToolDefinition,
   readContentToolDefinition,

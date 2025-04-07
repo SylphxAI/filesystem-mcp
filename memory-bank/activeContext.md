@@ -1,4 +1,4 @@
-<!-- Version: 4.37 | Last Updated: 2025-07-04 | Updated By: Sylph -->
+<!-- Version: 4.38 | Last Updated: 2025-07-04 | Updated By: Sylph -->
 
 # Active Context: Filesystem MCP Server
 
@@ -21,7 +21,7 @@
 ## 3. Next Steps
 
 1.  **KNOWN ISSUE:** Fix failing tests in `__tests__/handlers/applyDiff.test.ts` related to mock setup or assertions.
-2.  **KNOWN ISSUE:** Address remaining ESLint `unsafe` and `restrict-template-expressions` errors primarily in `applyDiff.ts` and `applyDiffUtils.ts`.
+2.  **KNOWN ISSUE:** Manually address remaining ESLint errors (approx. 85) primarily related to type safety (`@typescript-eslint/no-unsafe-*`), complexity, and line limits in `applyDiff.ts` and `applyDiffUtils.ts`.
 3.  Enhance `apply_diff` tests further (edge cases, large files).
 4.  Consider adding performance benchmarks for `apply_diff`.
 5.  Update `README.md` with details about the new `apply_diff` tool and remove mentions of `edit_file`.

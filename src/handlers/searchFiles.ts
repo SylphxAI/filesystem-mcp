@@ -51,7 +51,10 @@ export const SearchFilesArgsSchema = z
 type SearchFilesArgs = z.infer<typeof SearchFilesArgsSchema>;
 
 export interface SearchFilesDependencies {
-  readFile: (p: PathLike, options?: any) => Promise<string>;
+  readFile: (
+    p: PathLike,
+    options?: BufferEncoding | { encoding: BufferEncoding },
+  ) => Promise<string>;
   glob: typeof globFn;
   resolvePath: typeof resolvePathUtil;
   PROJECT_ROOT: string;
@@ -170,43 +173,47 @@ function processFileMatch(
   };
 }
 
-// Modified to return an error object instead of logging to console
+// Refactored to reduce complexity and return an error object
 function handleFileReadError(
   readError: unknown,
   fileRelative: string,
 ): SearchResultItem | null {
-  let errorMessage: string | null = null;
-  if (
-    readError &&
-    typeof readError === 'object' &&
-    'code' in readError &&
-    readError.code !== 'ENOENT' // Ignore file not found
-  ) {
-    errorMessage =
-      readError instanceof Error ? readError.message : 'Unknown read error';
+  // Check if it's a Node.js error object
+  const isNodeError =
+    readError && typeof readError === 'object' && 'code' in readError;
+
+  // Ignore ENOENT errors silently
+  if (isNodeError && (readError as NodeJS.ErrnoException).code === 'ENOENT') {
+    return null;
+  }
+
+  // Determine the error message
+  let errorMessage: string;
+  if (readError instanceof Error) {
+    errorMessage = readError.message;
+  } else {
+    errorMessage = String(readError); // Handle non-Error types
+  }
+
+  // Log appropriately
+  if (isNodeError) {
     console.warn(
-      `[Filesystem MCP - searchFiles] Could not read or process file ${fileRelative} during search: ${errorMessage}`,
+      `[Filesystem MCP - searchFiles] Filesystem error processing file ${fileRelative}: ${errorMessage} (Code: ${String((readError as NodeJS.ErrnoException).code)})`,
+      readError,
     );
-  } else if (
-    !(readError && typeof readError === 'object' && 'code' in readError)
-  ) {
-    // Log and capture non-filesystem errors
-    errorMessage =
-      readError instanceof Error ? readError.message : String(readError);
+  } else {
     console.warn(
-      `[Filesystem MCP - searchFiles] Non-filesystem error processing file ${fileRelative}:`,
+      `[Filesystem MCP - searchFiles] Non-filesystem error processing file ${fileRelative}: ${errorMessage}`,
       readError,
     );
   }
 
-  if (errorMessage) {
-    return {
-      type: 'error',
-      file: fileRelative,
-      error: `Read/Process Error: ${errorMessage}`,
-    };
-  }
-  return null; // Indicate no reportable error occurred
+  // Return the error item
+  return {
+    type: 'error',
+    file: fileRelative,
+    error: `Read/Process Error: ${String(errorMessage)}`, // Explicit String conversion
+  };
 }
 
 // Modified to return SearchResultItem[] which includes potential errors
@@ -314,7 +321,7 @@ export const searchFilesToolDefinition = {
   }),
   handler: (args: unknown): Promise<McpResponse<SearchFilesResponseData>> => {
     const deps: SearchFilesDependencies = {
-      readFile: fsPromises.readFile as any,
+      readFile: fsPromises.readFile, // Removed 'as any'
       glob: globFn,
       resolvePath: resolvePathUtil,
       PROJECT_ROOT: projectRootUtil,

@@ -1,4 +1,4 @@
-<!-- Version: 4.31 | Last Updated: 2025-07-04 | Updated By: Sylph -->
+<!-- Version: 4.32 | Last Updated: 2025-07-04 | Updated By: Sylph -->
 
 # Progress: Filesystem MCP Server
 
@@ -52,7 +52,7 @@
 - **Mocking Issues:** Resolved by switching from `vi.mock`/`vi.spyOn` to direct dependency injection for core logic functions in tests.
 - **Coverage Reports:** Generation fixed. Coverage improved but some branches remain uncovered due to mocking issues.
 - **`applyDiff.test.ts` Failures:** Tests for the new tool are failing, likely due to issues with mocking `fs` methods or incorrect assertions related to paths.
-- **ESLint Errors:** Significant number of `unsafe` and `restrict-template-expressions` errors remain, particularly in `applyDiff.ts` and `applyDiffUtils.ts`.
+- **ESLint Errors:** Significant number of errors (approx. 85) remain after multiple automated fix attempts, primarily related to type safety (`@typescript-eslint/no-unsafe-*`), complexity, and line limits in `applyDiff.ts` and `applyDiffUtils.ts`. Requires manual review.
 - **`README.md` Placeholders:** Needs content for sections like Performance, Design Philosophy, etc.
 - **Launcher Dependency:** Server functionality relies on the launching process setting the correct `cwd`.
 - **Windows `chmod`/`chown`:** Effectiveness is limited. Tests skipped.

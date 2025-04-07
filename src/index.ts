@@ -61,7 +61,8 @@ server.setRequestHandler(
     const availableTools = allToolDefinitions.map((def) => ({
       name: def.name,
       description: def.description,
-      inputSchema: generateInputSchema(def.schema), // Generate JSON schema from Zod schema
+
+      inputSchema: generateInputSchema(def.schema as ZodTypeAny), // Generate JSON schema from Zod schema
     }));
     return { tools: availableTools };
   },
