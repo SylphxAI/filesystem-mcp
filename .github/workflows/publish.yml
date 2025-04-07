@@ -26,11 +26,11 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4.0.3 # Specific version
         with:
-              - name: Install pnpm globally
-                run: npm install -g pnpm
-        
           node-version: '22' # Use latest LTS
           cache: 'pnpm' # Use pnpm cache
+
+      - name: Install pnpm globally
+        run: npm install -g pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile # Use pnpm install
@@ -62,9 +62,6 @@ jobs:
       version: ${{ steps.get_version.outputs.version }}
       artifact_name: build-artifacts-archive # Consistent name for upload/download
       archive_filename: ${{ steps.archive_build.outputs.archive_name }} # Actual .tar.gz filename
-            - name: Install pnpm globally
-              run: npm install -g pnpm
-      
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4.1.7 # Specific version
@@ -74,6 +71,9 @@ jobs:
         with:
           node-version: '22' # Use latest LTS
           cache: 'pnpm' # Use pnpm cache
+
+      - name: Install pnpm globally
+        run: npm install -g pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile # Use pnpm install
@@ -120,9 +120,6 @@ jobs:
         uses: actions/download-artifact@v4.1.8 # Specific version
         with:
           name: ${{ needs.build.outputs.artifact_name }} # Use consistent artifact name
-                - name: Install pnpm globally
-                  run: npm install -g pnpm
-          
           path: .
 
       - name: Extract build artifacts
@@ -134,6 +131,9 @@ jobs:
           node-version: '22' # Use latest LTS
           registry-url: 'https://registry.npmjs.org/'
           cache: 'pnpm' # Use pnpm cache
+
+      - name: Install pnpm globally
+        run: npm install -g pnpm
 
       # Install only production dependencies before publishing (optional but good practice)
       # - name: Install production dependencies

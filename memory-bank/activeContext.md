@@ -9,7 +9,7 @@
 
 ## 2. Recent Changes/Decisions
 
-- **GitHub Actions:** Added explicit `npm install -g pnpm` step to `validate`, `build`, and `publish-npm` jobs in `.github/workflows/publish.yml` to fix potential `pnpm` not found errors.
+- **GitHub Actions:** Corrected YAML syntax in `.github/workflows/publish.yml` after previous failed edits. Ensured `npm install -g pnpm` step is correctly placed after `setup-node` in `validate`, `build`, and `publish-npm` jobs.
 
 - Removed `edit_file` tool and related files (`editFile.ts`, `editFileUtils.ts`, `editFile.test.ts`).
 - Added `apply_diff` tool (`applyDiff.ts`, `applyDiffUtils.ts`, `applyDiffSchema.ts`, `applyDiff.test.ts`).
