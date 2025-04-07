@@ -1,6 +1,20 @@
 // src/utils/stringUtils.ts
 
 /**
+ * Escapes special characters in a string for use in a regular expression.
+ * @param str The string to escape.
+ * @returns The escaped string.
+ */
+export function escapeRegex(str: string): string {
+  // Escape characters with special meaning either inside or outside character sets.
+  // Use a simple backslash escape for characters like *, +, ?, ^, $, {}, (), |, [], \.
+  // - Outside character sets, escape special characters: * + ? ^ $ { } ( ) | [ ] \
+  // - Inside character sets, escape special characters: ^ - ] \
+  // This function handles the common cases for use outside character sets.
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}
+
+/**
  * Gets the leading whitespace (indentation) of a line.
  * @param line The line to check.
  * @returns The leading whitespace, or an empty string if no line or no whitespace.

@@ -7,13 +7,24 @@ import { glob as globFn } from 'glob';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import {
   resolvePath as resolvePathUtil,
-  PROJECT_ROOT as projectRootUtil, // Import the constant again
+  PROJECT_ROOT as projectRootUtil,
 } from '../utils/pathUtils.js';
 
 // --- Types ---
 
-interface McpToolResponse {
-  content: { type: 'text'; text: string }[];
+// Define a unified result type that can hold either a match or an error
+interface SearchResultItem {
+  type: 'match' | 'error';
+  file: string;
+  line?: number;
+  match?: string;
+  context?: string[];
+  error?: string; // Error message
+}
+
+// Define the structure for the final response data
+interface SearchFilesResponseData {
+  results: SearchResultItem[];
 }
 
 export const SearchFilesArgsSchema = z
@@ -40,20 +51,12 @@ export const SearchFilesArgsSchema = z
 type SearchFilesArgs = z.infer<typeof SearchFilesArgsSchema>;
 
 export interface SearchFilesDependencies {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   readFile: (p: PathLike, options?: any) => Promise<string>;
   glob: typeof globFn;
   resolvePath: typeof resolvePathUtil;
-  PROJECT_ROOT: string; // Expect the constant string again
+  PROJECT_ROOT: string;
   pathRelative: (from: string, to: string) => string;
   pathJoin: (...paths: string[]) => string;
-}
-
-interface SearchResult {
-  file: string;
-  line: number;
-  match: string;
-  context: string[];
 }
 
 interface SearchFileParams {
@@ -66,7 +69,6 @@ const CONTEXT_LINES = 2; // Number of lines before and after the match
 
 // --- Helper Functions ---
 
-/** Parses and validates the input arguments. */
 function parseAndValidateArgs(args: unknown): SearchFilesArgs {
   try {
     return SearchFilesArgsSchema.parse(args);
@@ -77,11 +79,13 @@ function parseAndValidateArgs(args: unknown): SearchFilesArgs {
         `Invalid arguments: ${error.errors.map((e) => `${e.path.join('.')} (${e.message})`).join(', ')}`,
       );
     }
-    throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
+    throw new McpError(
+      ErrorCode.InvalidParams,
+      `Argument validation failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
-/** Compiles the search regex from the user input string. */
 function compileSearchRegex(regexString: string): RegExp {
   try {
     let pattern = regexString;
@@ -92,7 +96,6 @@ function compileSearchRegex(regexString: string): RegExp {
       pattern = regexParts[1];
       flags = regexParts[2] ?? '';
     }
-    // Ensure 'g' flag is present if not already, for iterating matches
     if (!flags.includes('g')) {
       flags += 'g';
     }
@@ -106,7 +109,6 @@ function compileSearchRegex(regexString: string): RegExp {
   }
 }
 
-/** Finds files to search using glob. */
 async function findFilesToSearch(
   deps: SearchFilesDependencies,
   relativePath: string,
@@ -132,19 +134,19 @@ async function findFilesToSearch(
       `[Filesystem MCP - searchFiles] Glob error in ${targetPath}:`,
       error,
     );
+    // Throw a more specific error about glob failing
     throw new McpError(
       ErrorCode.InternalError,
-      `Failed to find files using glob: ${errorMessage}`,
+      `Failed to find files using glob in '${relativePath}': ${errorMessage}`,
     );
   }
 }
 
-/** Processes a single match found in a file. */
 function processFileMatch(
   fileContent: string,
   matchResult: RegExpExecArray,
   fileRelative: string,
-): SearchResult {
+): SearchResultItem {
   const lines = fileContent.split('\n');
   const match = matchResult[0];
   const matchStartIndex = matchResult.index;
@@ -160,6 +162,7 @@ function processFileMatch(
   const context = lines.slice(startContextLineIndex, endContextLineIndex);
 
   return {
+    type: 'match',
     file: fileRelative,
     line: lineNumber,
     match: match,
@@ -167,61 +170,71 @@ function processFileMatch(
   };
 }
 
-/** Handles errors during file reading or processing. */
-function handleFileReadError(readError: unknown, fileRelative: string): void {
+// Modified to return an error object instead of logging to console
+function handleFileReadError(
+  readError: unknown,
+  fileRelative: string,
+): SearchResultItem | null {
+  let errorMessage: string | null = null;
   if (
     readError &&
     typeof readError === 'object' &&
     'code' in readError &&
-    readError.code !== 'ENOENT' // Ignore file not found, might be race condition
+    readError.code !== 'ENOENT' // Ignore file not found
   ) {
-    const message =
+    errorMessage =
       readError instanceof Error ? readError.message : 'Unknown read error';
     console.warn(
-      `[Filesystem MCP - searchFiles] Could not read or process file ${fileRelative} during search: ${message}`,
+      `[Filesystem MCP - searchFiles] Could not read or process file ${fileRelative} during search: ${errorMessage}`,
     );
   } else if (
     !(readError && typeof readError === 'object' && 'code' in readError)
   ) {
-    // Log non-filesystem errors
+    // Log and capture non-filesystem errors
+    errorMessage =
+      readError instanceof Error ? readError.message : String(readError);
     console.warn(
       `[Filesystem MCP - searchFiles] Non-filesystem error processing file ${fileRelative}:`,
       readError,
     );
   }
+
+  if (errorMessage) {
+    return {
+      type: 'error',
+      file: fileRelative,
+      error: `Read/Process Error: ${errorMessage}`,
+    };
+  }
+  return null; // Indicate no reportable error occurred
 }
 
-/** Searches content of a single file for regex matches. */
+// Modified to return SearchResultItem[] which includes potential errors
 async function searchFileContent(
   params: SearchFileParams,
-): Promise<SearchResult[]> {
+): Promise<SearchResultItem[]> {
   const { deps, absoluteFilePath, searchRegex } = params;
-  // Use the injected PROJECT_ROOT constant
   const fileRelative = deps
     .pathRelative(deps.PROJECT_ROOT, absoluteFilePath)
     .replace(/\\/g, '/');
-  const fileResults: SearchResult[] = [];
+  const fileResults: SearchResultItem[] = [];
 
   try {
     const fileContent = await deps.readFile(absoluteFilePath, 'utf-8');
-    searchRegex.lastIndex = 0; // Reset regex state for global searches
+    searchRegex.lastIndex = 0;
 
-    // Use matchAll for iterating through global regex matches
-    const matches = fileContent.matchAll(searchRegex); // searchRegex guaranteed to have 'g' flag by compileSearchRegex
+    const matches = fileContent.matchAll(searchRegex);
 
     for (const matchResult of matches) {
-      // matchAll guarantees index is present
-      // processFileMatch expects RegExpExecArray, which is compatible enough with MatchArray from matchAll
       fileResults.push(
-        processFileMatch(
-          fileContent,
-          matchResult, // Remove unnecessary assertion
-          fileRelative,
-        ),
+        processFileMatch(fileContent, matchResult, fileRelative),
       );
     }
   } catch (readError: unknown) {
-    handleFileReadError(readError, fileRelative);
+    const errorResult = handleFileReadError(readError, fileRelative);
+    if (errorResult) {
+      fileResults.push(errorResult); // Add error to results
+    }
   }
   return fileResults;
 }
@@ -230,7 +243,8 @@ async function searchFileContent(
 export const handleSearchFilesFunc = async (
   deps: SearchFilesDependencies,
   args: unknown,
-): Promise<McpToolResponse> => {
+): Promise<McpResponse<SearchFilesResponseData>> => {
+  // Updated response type
   const {
     path: relativePath,
     regex: regexString,
@@ -238,7 +252,7 @@ export const handleSearchFilesFunc = async (
   } = parseAndValidateArgs(args);
 
   const searchRegex = compileSearchRegex(regexString);
-  const allResults: SearchResult[] = [];
+  const allResults: SearchResultItem[] = [];
 
   try {
     const filesToSearch = await findFilesToSearch(
@@ -252,9 +266,10 @@ export const handleSearchFilesFunc = async (
     );
 
     const resultsPerFile = await Promise.all(searchPromises);
+    // Flatten results (which now include potential errors)
     resultsPerFile.forEach((fileResults) => allResults.push(...fileResults));
   } catch (error: unknown) {
-    // Errors from findFilesToSearch or Promise.all rejections
+    // Errors from findFilesToSearch or Promise.all rejections (should be less likely now)
     if (error instanceof McpError) throw error;
 
     const errorMessage =
@@ -265,11 +280,16 @@ export const handleSearchFilesFunc = async (
       `[Filesystem MCP - searchFiles] Error during search setup or execution:`,
       error,
     );
-    throw new McpError(ErrorCode.InternalError, errorMessage);
+    // Include a general error if the whole process fails unexpectedly
+    allResults.push({ type: 'error', file: 'general', error: errorMessage });
+    // Don't throw, return the collected results including the general error
+    // throw new McpError(ErrorCode.InternalError, errorMessage);
   }
 
+  // Return the structured data including matches and errors
   return {
-    content: [{ type: 'text', text: JSON.stringify(allResults, null, 2) }],
+    success: true,
+    data: { results: allResults },
   };
 };
 
@@ -277,15 +297,27 @@ export const handleSearchFilesFunc = async (
 export const searchFilesToolDefinition = {
   name: 'search_files',
   description:
-    'Search for a regex pattern within files in a specified directory (read-only).',
+    'Search for a regex pattern within files in a specified directory (read-only). Returns matches and any errors encountered.',
   schema: SearchFilesArgsSchema,
-  handler: (args: unknown): Promise<McpToolResponse> => {
+  // Define output schema
+  outputSchema: z.object({
+    results: z.array(
+      z.object({
+        type: z.enum(['match', 'error']),
+        file: z.string(),
+        line: z.number().int().optional(),
+        match: z.string().optional(),
+        context: z.array(z.string()).optional(),
+        error: z.string().optional(),
+      }),
+    ),
+  }),
+  handler: (args: unknown): Promise<McpResponse<SearchFilesResponseData>> => {
     const deps: SearchFilesDependencies = {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
       readFile: fsPromises.readFile as any,
       glob: globFn,
       resolvePath: resolvePathUtil,
-      PROJECT_ROOT: projectRootUtil, // Inject the constant again
+      PROJECT_ROOT: projectRootUtil,
       pathRelative: path.relative.bind(path),
       pathJoin: path.join.bind(path),
     };

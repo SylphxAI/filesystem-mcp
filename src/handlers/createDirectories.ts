@@ -25,8 +25,16 @@ interface CreateDirResult {
   path: string;
   success: boolean;
   note?: string;
-  error?: string;
+  error?: string; // Added error field back
   resolvedPath?: string;
+}
+
+// --- Define Dependencies Interface ---
+export interface CreateDirsDeps {
+  mkdir: typeof fs.mkdir;
+  stat: typeof fs.stat;
+  resolvePath: typeof resolvePath;
+  PROJECT_ROOT: string;
 }
 
 // --- Helper Functions ---
@@ -42,7 +50,11 @@ function parseAndValidateArgs(args: unknown): CreateDirsArgs {
         `Invalid arguments: ${error.errors.map((e) => `${e.path.join('.')} (${e.message})`).join(', ')}`,
       );
     }
-    throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
+    // Throw a more specific error for non-Zod issues during parsing
+    throw new McpError(
+      ErrorCode.InvalidParams,
+      `Argument validation failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
@@ -50,9 +62,10 @@ function parseAndValidateArgs(args: unknown): CreateDirsArgs {
 async function handleEexistError(
   targetPath: string,
   pathOutput: string,
+  deps: CreateDirsDeps, // Added deps
 ): Promise<CreateDirResult> {
   try {
-    const stats: Stats = await fs.stat(targetPath);
+    const stats: Stats = await deps.stat(targetPath); // Use deps.stat
     if (stats.isDirectory()) {
       return {
         path: pathOutput,
@@ -87,18 +100,19 @@ function handleDirectoryCreationError(
   error: unknown,
   pathOutput: string,
   targetPath: string,
+  // No deps needed here as it only formats errors
 ): CreateDirResult {
+  // Handle McpError specifically (likely from resolvePath)
   if (error instanceof McpError) {
-    // Re-throw McpErrors related to path resolution if needed,
-    // otherwise format them for the result.
     return {
       path: pathOutput,
       success: false,
-      error: error.message, // Or a more specific message
-      resolvedPath: targetPath || 'Resolution failed',
+      error: error.message, // Use the McpError message directly
+      resolvedPath: targetPath || 'Resolution failed', // targetPath might be empty if resolvePath failed early
     };
   }
 
+  // Handle filesystem errors (like EPERM, EACCES, etc.)
   const errorMessage = error instanceof Error ? error.message : String(error);
   let specificError = `Failed to create directory: ${errorMessage}`;
   let logMessage = `[Filesystem MCP - createDirs] Error creating directory ${targetPath}:`;
@@ -108,7 +122,7 @@ function handleDirectoryCreationError(
       specificError = `Permission denied creating directory: ${errorMessage}`;
       logMessage = `[Filesystem MCP - createDirs] Permission error creating directory ${targetPath}:`;
     }
-    // Note: EEXIST is handled by handleEexistError
+    // Note: EEXIST is handled separately by handleEexistError
   }
 
   console.error(logMessage, error);
@@ -121,14 +135,16 @@ function handleDirectoryCreationError(
 }
 
 /** Processes the creation of a single directory. */
-async function processSingleDirectoryCreation( // Remove export
-  relativePath: string,
+async function processSingleDirectoryCreation(
+  relativePath: string, // Corrected signature: relativePath first
+  deps: CreateDirsDeps, // Corrected signature: deps second
 ): Promise<CreateDirResult> {
-  const pathOutput = relativePath.replace(/\\/g, '/');
+  const pathOutput = relativePath.replace(/\\/g, '/'); // Normalize for output consistency
   let targetPath = '';
   try {
-    targetPath = resolvePath(relativePath);
-    if (targetPath === PROJECT_ROOT) {
+    targetPath = deps.resolvePath(relativePath); // Use deps.resolvePath
+    if (targetPath === deps.PROJECT_ROOT) {
+      // Use deps.PROJECT_ROOT
       return {
         path: pathOutput,
         success: false,
@@ -136,41 +152,41 @@ async function processSingleDirectoryCreation( // Remove export
         resolvedPath: targetPath,
       };
     }
-    // console.log(`Attempting mkdir: ${targetPath}`); // Debug log
-    await fs.mkdir(targetPath, { recursive: true });
-    // console.log(`Success mkdir: ${targetPath}`); // Debug log
+    await deps.mkdir(targetPath, { recursive: true }); // Use deps.mkdir
     return { path: pathOutput, success: true, resolvedPath: targetPath };
   } catch (error: unknown) {
-    // console.error(`Error mkdir ${targetPath}:`, error); // Debug log
     if (
       error &&
       typeof error === 'object' &&
       'code' in error &&
       error.code === 'EEXIST'
     ) {
-      return await handleEexistError(targetPath, pathOutput);
+      // Pass deps to handleEexistError
+      return await handleEexistError(targetPath, pathOutput, deps);
     }
+    // Pass potential McpError from resolvePath or other errors
     return handleDirectoryCreationError(error, pathOutput, targetPath);
   }
 }
 
 /** Processes results from Promise.allSettled. */
-export function processSettledResults( // Add export for testing
+export function processSettledResults( // Keep export for testing
   results: PromiseSettledResult<CreateDirResult>[],
   originalPaths: string[],
 ): CreateDirResult[] {
   return results.map((result, index) => {
-    const originalPath = originalPaths[index] ?? 'unknown_path'; // Fallback
+    const originalPath = originalPaths[index] ?? 'unknown_path';
     const pathOutput = originalPath.replace(/\\/g, '/');
 
     if (result.status === 'fulfilled') {
       return result.value;
     } else {
-      // Handle unexpected rejections (errors not caught in processSingleDirectoryCreation)
+      // Handle unexpected rejections (errors not caught/formatted by processSingleDirectoryCreation)
       console.error(
         `[Filesystem MCP - createDirs] Unexpected rejection for path ${originalPath}:`,
         result.reason,
       );
+      // Format the unexpected error into a standard result structure
       return {
         path: pathOutput,
         success: false,
@@ -181,19 +197,38 @@ export function processSettledResults( // Add export for testing
   });
 }
 
-/** Main handler function */
-const handleCreateDirectoriesFunc = async (
+/** Main handler function (internal, accepts dependencies) */
+// Export for testing
+export const handleCreateDirectoriesInternal = async (
   args: unknown,
+  deps: CreateDirsDeps,
 ): Promise<McpToolResponse> => {
-  const { paths: pathsToCreate } = parseAndValidateArgs(args);
+  let pathsToCreate: string[];
+  try {
+    // Validate arguments first
+    const validatedArgs = parseAndValidateArgs(args);
+    pathsToCreate = validatedArgs.paths;
+  } catch (error) {
+    // If validation fails, re-throw the McpError from parseAndValidateArgs
+    if (error instanceof McpError) {
+      throw error;
+    }
+    // Wrap unexpected validation errors
+    throw new McpError(
+      ErrorCode.InvalidParams,
+      `Unexpected error during argument validation: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 
-  const creationPromises = pathsToCreate.map(processSingleDirectoryCreation);
+  // Proceed with validated paths
+  const creationPromises = pathsToCreate.map((p) =>
+    processSingleDirectoryCreation(p, deps),
+  );
   const settledResults = await Promise.allSettled(creationPromises);
 
   const outputResults = processSettledResults(settledResults, pathsToCreate);
 
   // Sort results by original path order for predictability
-  // Create a map for quick lookup of original index
   const originalIndexMap = new Map(
     pathsToCreate.map((p, i) => [p.replace(/\\/g, '/'), i]),
   );
@@ -208,11 +243,20 @@ const handleCreateDirectoriesFunc = async (
   };
 };
 
-// Export the complete tool definition
+// Export the complete tool definition using the production handler
 export const createDirectoriesToolDefinition = {
   name: 'create_directories',
   description:
     'Create multiple specified directories (including intermediate ones).',
   schema: CreateDirsArgsSchema,
-  handler: handleCreateDirectoriesFunc,
+  handler: (args: unknown): Promise<McpToolResponse> => {
+    // Production handler provides real dependencies
+    const productionDeps: CreateDirsDeps = {
+      mkdir: fs.mkdir,
+      stat: fs.stat,
+      resolvePath: resolvePath,
+      PROJECT_ROOT: PROJECT_ROOT,
+    };
+    return handleCreateDirectoriesInternal(args, productionDeps);
+  },
 };

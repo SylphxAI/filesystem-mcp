@@ -441,5 +441,168 @@ describe('listFiles Handler (Integration)', () => {
     });
   });
 
-  // Add more tests...
+  it('should handle stat errors gracefully during non-recursive list', async () => {
+    if (!tempTestDir) throw new Error('Temp directory not created');
+    const testDirPathRelative = path.relative(process.cwd(), tempTestDir!);
+
+    // Create a file and a potentially problematic entry (like a broken symlink simulation)
+    await fsPromises.writeFile(
+      path.join(tempTestDir, 'goodFile.txt'),
+      'content',
+    );
+    // We'll mock readdir to return an entry, and stat to fail for that entry
+    const mockReaddir = mockDependencies.readdir as Mock;
+    mockReaddir.mockResolvedValue([
+      { name: 'goodFile.txt', isDirectory: () => false, isFile: () => true },
+      {
+        name: 'badEntry',
+        isDirectory: () => false,
+        isFile: () => false,
+        isSymbolicLink: () => true,
+      }, // Simulate needing stat
+    ]);
+
+    const mockStat = mockDependencies.stat as Mock;
+    mockStat.mockImplementation(async (p: PathLike) => {
+      if (p.toString().endsWith('badEntry')) {
+        throw new Error('Mocked stat failure for bad entry');
+      }
+      // Use actual stat for the good file
+      const actualFsPromises =
+        await vi.importActual<typeof fsPromises>('fs/promises');
+      return actualFsPromises.stat(p);
+    });
+
+    const args = {
+      path: testDirPathRelative,
+      recursive: false,
+      include_stats: false,
+    };
+    const result = await handleListFilesFunc(mockDependencies, args);
+    const resultData = JSON.parse(result.content[0].text);
+
+    // Should still list the good file, and the bad entry (assuming not a dir)
+    expect(resultData).toHaveLength(2);
+    expect(resultData).toEqual(
+      expect.arrayContaining([
+        `${testDirPathRelative}/goodFile.txt`.replace(/\\\\/g, '/'),
+        `${testDirPathRelative}/badEntry`.replace(/\\\\/g, '/'), // Assumes not a dir if stat fails
+      ]),
+    );
+  });
+
+  it('should skip current directory entry (.) when returned by glob', async () => {
+    if (!tempTestDir) throw new Error('Temp directory not created');
+    const testDirPathRelative = path.relative(process.cwd(), tempTestDir!);
+    await fsPromises.writeFile(path.join(tempTestDir, 'file1.txt'), 'content');
+
+    // Mock glob to return '.' along with the file
+    mockGlob.mockResolvedValue(['.', 'file1.txt']);
+
+    const args = {
+      path: testDirPathRelative,
+      recursive: false,
+      include_stats: true,
+    }; // Use glob path
+    const result = await handleListFilesFunc(mockDependencies, args);
+    const resultData = JSON.parse(result.content[0].text);
+
+    expect(resultData).toHaveLength(1); // '.' should be skipped
+    expect(resultData[0].path).toBe(
+      `${testDirPathRelative}/file1.txt`.replace(/\\\\/g, '/'),
+    );
+  });
+
+  it('should handle stat errors within glob results when include_stats is true', async () => {
+    if (!tempTestDir) throw new Error('Temp directory not created');
+    const testDirPathRelative = path.relative(process.cwd(), tempTestDir!);
+    await fsPromises.writeFile(path.join(tempTestDir, 'file1.txt'), 'content');
+    await fsPromises.writeFile(
+      path.join(tempTestDir, 'file2-stat-error.txt'),
+      'content2',
+    );
+
+    // Mock glob to return both files
+    mockGlob.mockResolvedValue(['file1.txt', 'file2-stat-error.txt']);
+
+    // Mock stat to fail for the second file
+    const mockStat = mockDependencies.stat as Mock;
+    mockStat.mockImplementation(async (p: PathLike) => {
+      if (p.toString().endsWith('file2-stat-error.txt')) {
+        throw new Error('Mocked stat error for glob');
+      }
+      const actualFsPromises =
+        await vi.importActual<typeof fsPromises>('fs/promises');
+      return actualFsPromises.stat(p);
+    });
+
+    const args = {
+      path: testDirPathRelative,
+      recursive: false,
+      include_stats: true,
+    }; // Use glob path
+    const result = await handleListFilesFunc(mockDependencies, args);
+    const resultData = JSON.parse(result.content[0].text);
+
+    expect(resultData).toHaveLength(2);
+    const file1Result = resultData.find((r: any) =>
+      r.path.endsWith('file1.txt'),
+    );
+    const file2Result = resultData.find((r: any) =>
+      r.path.endsWith('file2-stat-error.txt'),
+    );
+
+    expect(file1Result?.stats?.error).toBeUndefined();
+    expect(file2Result?.stats?.error).toMatch(
+      /Could not get stats: Mocked stat error for glob/,
+    );
+  });
+
+  it('should throw McpError if glob itself throws an error', async () => {
+    if (!tempTestDir) throw new Error('Temp directory not created');
+    const testDirPathRelative = path.relative(process.cwd(), tempTestDir!);
+    const globError = new Error('Internal glob failure');
+    mockGlob.mockRejectedValue(globError);
+
+    const args = {
+      path: testDirPathRelative,
+      recursive: true,
+      include_stats: true,
+    }; // Use glob path
+
+    await expect(handleListFilesFunc(mockDependencies, args)).rejects.toThrow(
+      McpError,
+    );
+    await expect(
+      handleListFilesFunc(mockDependencies, args),
+    ).rejects.toMatchObject({
+      code: ErrorCode.InternalError,
+      message: expect.stringContaining(
+        'Failed to list files using glob: Internal glob failure',
+      ),
+    });
+  });
+
+  it('should handle generic errors during initial stat (non-ENOENT)', async () => {
+    if (!tempTestDir) throw new Error('Temp directory not created');
+    const testDirPathRelative = path.relative(process.cwd(), tempTestDir!);
+    const genericError = new Error('Generic stat failure');
+    (mockDependencies.stat as Mock).mockRejectedValue(genericError);
+
+    const args = { path: testDirPathRelative };
+
+    await expect(handleListFilesFunc(mockDependencies, args)).rejects.toThrow(
+      McpError,
+    );
+    await expect(
+      handleListFilesFunc(mockDependencies, args),
+    ).rejects.toMatchObject({
+      code: ErrorCode.InternalError,
+      message: expect.stringContaining(
+        'Failed to process path: Generic stat failure',
+      ),
+    });
+  });
+
+  // Add more tests..." // Keep this line for potential future additions
 });

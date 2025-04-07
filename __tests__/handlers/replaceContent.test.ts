@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type Mock,
+} from 'vitest';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
@@ -8,17 +16,19 @@ import {
 } from '../testUtils.js';
 
 // Mock pathUtils BEFORE importing the handler
-// Mock pathUtils using vi.mock (hoisted)
 const mockResolvePath = vi.fn<(userPath: string) => string>();
 vi.mock('../../src/utils/pathUtils.js', () => ({
   PROJECT_ROOT: 'mocked/project/root', // Keep simple for now
   resolvePath: mockResolvePath,
 }));
 
-// Import the handler AFTER the mock
-const { replaceContentToolDefinition } = await import(
-  '../../src/handlers/replaceContent.js'
-);
+// Import the internal function, deps type, and exported helper
+const {
+  handleReplaceContentInternal,
+  // ReplaceContentDeps, // Removed unused import
+  processSettledReplaceResults, // Import the helper
+} = await import('../../src/handlers/replaceContent.js');
+import type { ReplaceContentDeps } from '../../src/handlers/replaceContent.js'; // Import type separately
 
 // Define the initial structure
 const initialTestStructure = {
@@ -33,8 +43,20 @@ const initialTestStructure = {
 let tempRootDir: string;
 
 describe('handleReplaceContent Integration Tests', () => {
+  let mockDependencies: ReplaceContentDeps;
+  let mockReadFile: Mock;
+  let mockWriteFile: Mock;
+  let mockStat: Mock;
+
   beforeEach(async () => {
     tempRootDir = await createTemporaryFilesystem(initialTestStructure);
+
+    // Mock implementations for dependencies
+    const actualFsPromises =
+      await vi.importActual<typeof fsPromises>('fs/promises');
+    mockReadFile = vi.fn().mockImplementation(actualFsPromises.readFile);
+    mockWriteFile = vi.fn().mockImplementation(actualFsPromises.writeFile);
+    mockStat = vi.fn().mockImplementation(actualFsPromises.stat);
 
     // Configure the mock resolvePath
     mockResolvePath.mockImplementation((relativePath: string): string => {
@@ -51,14 +73,21 @@ describe('handleReplaceContent Integration Tests', () => {
           `Mocked Path traversal detected for ${relativePath}`,
         );
       }
-      // For replace, we need the handler to read the file, so no existence check here.
       return absolutePath;
     });
+
+    // Assign mock dependencies
+    mockDependencies = {
+      readFile: mockReadFile,
+      writeFile: mockWriteFile,
+      stat: mockStat,
+      resolvePath: mockResolvePath, // Use the vi.fn mock directly
+    };
   });
 
   afterEach(async () => {
     await cleanupTemporaryFilesystem(tempRootDir);
-    vi.clearAllMocks(); // Clear all mocks
+    vi.restoreAllMocks(); // Use restoreAllMocks to reset spies/mocks
   });
 
   it('should replace simple text in specified files', async () => {
@@ -66,24 +95,26 @@ describe('handleReplaceContent Integration Tests', () => {
       paths: ['fileA.txt', 'fileB.log'],
       operations: [{ search: 'world', replace: 'planet' }],
     };
-    const rawResult = await replaceContentToolDefinition.handler(request);
-    const parsedResult = JSON.parse(rawResult.content[0].text);
-    const resultsArray = parsedResult.results; // Extract the results array
-
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    // Updated to access data directly
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
     expect(resultsArray).toHaveLength(2);
-    // Check properties within the results array
-    expect(resultsArray[0]).toEqual({
+    expect(resultsArray?.[0]).toEqual({
       file: 'fileA.txt',
       modified: true,
       replacements: 2,
     });
-    expect(resultsArray[1]).toEqual({
+    expect(resultsArray?.[1]).toEqual({
       file: 'fileB.log',
       modified: true,
       replacements: 2,
     });
 
-    // Verify replacements
     const contentA = await fsPromises.readFile(
       path.join(tempRootDir, 'fileA.txt'),
       'utf-8',
@@ -102,24 +133,25 @@ describe('handleReplaceContent Integration Tests', () => {
     const request = {
       paths: ['fileA.txt'],
       operations: [
-        { search: 'world', replace: 'galaxy' }, // First replace world -> galaxy
-        { search: 'galaxy', replace: 'universe' }, // Then replace galaxy -> universe
+        { search: 'world', replace: 'galaxy' },
+        { search: 'galaxy', replace: 'universe' },
       ],
     };
-    const rawResult = await replaceContentToolDefinition.handler(request);
-    const parsedResult = JSON.parse(rawResult.content[0].text);
-    const resultsArray = parsedResult.results;
-
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
     expect(resultsArray).toHaveLength(1);
-    // Total replacements should reflect the final state after all ops
-    // Note: The handler seems to return 'file' not 'path', and 'modified' not 'success'
-    expect(resultsArray[0]).toEqual({
+    // Replacements are counted per operation on the state *before* that operation
+    expect(resultsArray?.[0]).toEqual({
       file: 'fileA.txt',
       modified: true,
       replacements: 4,
-    }); // 2 replacements in op1, 2 in op2
+    }); // 2 from op1 + 2 from op2
 
-    // Verify final content
     const contentA = await fsPromises.readFile(
       path.join(tempRootDir, 'fileA.txt'),
       'utf-8',
@@ -134,19 +166,20 @@ describe('handleReplaceContent Integration Tests', () => {
         { search: '^(Error|Warning):', replace: 'Log[$1]:', use_regex: true },
       ],
     };
-    const rawResult = await replaceContentToolDefinition.handler(request);
-    const parsedResult = JSON.parse(rawResult.content[0].text);
-    const resultsArray = parsedResult.results;
-
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
     expect(resultsArray).toHaveLength(1);
-    // Check actual properties
-    expect(resultsArray[0]).toEqual({
+    expect(resultsArray?.[0]).toEqual({
       file: 'fileB.log',
       modified: true,
       replacements: 2,
-    }); // Regex should now replace both Error and Warning with 'm' flag added
+    });
 
-    // Verify regex replacement
     const contentB = await fsPromises.readFile(
       path.join(tempRootDir, 'fileB.log'),
       'utf-8',
@@ -163,18 +196,20 @@ describe('handleReplaceContent Integration Tests', () => {
         { search: 'hello', replace: 'Greetings', ignore_case: true },
       ],
     };
-    const rawResult = await replaceContentToolDefinition.handler(request);
-    const parsedResult = JSON.parse(rawResult.content[0].text);
-    const resultsArray = parsedResult.results;
-
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
     expect(resultsArray).toHaveLength(1);
-    expect(resultsArray[0]).toEqual({
+    expect(resultsArray?.[0]).toEqual({
       file: 'fileA.txt',
       modified: true,
       replacements: 1,
     });
 
-    // Verify replacement
     const contentA = await fsPromises.readFile(
       path.join(tempRootDir, 'fileA.txt'),
       'utf-8',
@@ -187,18 +222,20 @@ describe('handleReplaceContent Integration Tests', () => {
       paths: ['noReplace.txt'],
       operations: [{ search: 'world', replace: 'planet' }],
     };
-    const rawResult = await replaceContentToolDefinition.handler(request);
-    const parsedResult = JSON.parse(rawResult.content[0].text);
-    const resultsArray = parsedResult.results;
-
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
     expect(resultsArray).toHaveLength(1);
-    expect(resultsArray[0]).toEqual({
+    expect(resultsArray?.[0]).toEqual({
       file: 'noReplace.txt',
       modified: false,
       replacements: 0,
     });
 
-    // Verify content unchanged
     const content = await fsPromises.readFile(
       path.join(tempRootDir, 'noReplace.txt'),
       'utf-8',
@@ -211,13 +248,16 @@ describe('handleReplaceContent Integration Tests', () => {
       paths: ['nonexistent.txt'],
       operations: [{ search: 'a', replace: 'b' }],
     };
-    const rawResult = await replaceContentToolDefinition.handler(request);
-    const parsedResult = JSON.parse(rawResult.content[0].text);
-    const resultsArray = parsedResult.results;
-
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
     expect(resultsArray).toHaveLength(1);
-    expect(resultsArray[0].modified).toBe(false); // Check modified flag
-    expect(resultsArray[0].error).toMatch(/File not found/); // Match actual error
+    expect(resultsArray?.[0].modified).toBe(false);
+    expect(resultsArray?.[0].error).toMatch(/File not found/);
   });
 
   it('should return error if path is a directory', async () => {
@@ -225,13 +265,16 @@ describe('handleReplaceContent Integration Tests', () => {
       paths: ['dir1'],
       operations: [{ search: 'a', replace: 'b' }],
     };
-    const rawResult = await replaceContentToolDefinition.handler(request);
-    const parsedResult = JSON.parse(rawResult.content[0].text);
-    const resultsArray = parsedResult.results;
-
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
     expect(resultsArray).toHaveLength(1);
-    expect(resultsArray[0].modified).toBe(false);
-    expect(resultsArray[0].error).toMatch(/Path is not a file/); // Match actual error
+    expect(resultsArray?.[0].modified).toBe(false);
+    expect(resultsArray?.[0].error).toMatch(/Path is not a file/);
   });
 
   it('should handle mixed success and failure paths', async () => {
@@ -239,30 +282,29 @@ describe('handleReplaceContent Integration Tests', () => {
       paths: ['fileA.txt', 'nonexistent.txt', 'dir1'],
       operations: [{ search: 'world', replace: 'sphere' }],
     };
-    const rawResult = await replaceContentToolDefinition.handler(request);
-    const parsedResult = JSON.parse(rawResult.content[0].text);
-    const resultsArray = parsedResult.results;
-
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
     expect(resultsArray).toHaveLength(3);
-
-    const successA = resultsArray.find((r: any) => r.file === 'fileA.txt');
+    const successA = resultsArray?.find((r: any) => r.file === 'fileA.txt');
     expect(successA).toEqual({
       file: 'fileA.txt',
       modified: true,
       replacements: 2,
     });
-
-    const failNonExist = resultsArray.find(
+    const failNonExist = resultsArray?.find(
       (r: any) => r.file === 'nonexistent.txt',
     );
-    expect(failNonExist.modified).toBe(false);
-    expect(failNonExist.error).toMatch(/File not found/);
+    expect(failNonExist?.modified).toBe(false);
+    expect(failNonExist?.error).toMatch(/File not found/);
+    const failDir = resultsArray?.find((r: any) => r.file === 'dir1');
+    expect(failDir?.modified).toBe(false);
+    expect(failDir?.error).toMatch(/Path is not a file/);
 
-    const failDir = resultsArray.find((r: any) => r.file === 'dir1');
-    expect(failDir.modified).toBe(false);
-    expect(failDir.error).toMatch(/Path is not a file/);
-
-    // Verify successful replacement
     const contentA = await fsPromises.readFile(
       path.join(tempRootDir, 'fileA.txt'),
       'utf-8',
@@ -276,12 +318,16 @@ describe('handleReplaceContent Integration Tests', () => {
       paths: [absolutePath],
       operations: [{ search: 'a', replace: 'b' }],
     };
-    const rawResult = await replaceContentToolDefinition.handler(request);
-    const parsedResult = JSON.parse(rawResult.content[0].text);
-    const resultsArray = parsedResult.results;
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
     expect(resultsArray).toHaveLength(1);
-    expect(resultsArray[0].modified).toBe(false);
-    expect(resultsArray[0].error).toMatch(
+    expect(resultsArray?.[0].modified).toBe(false);
+    expect(resultsArray?.[0].error).toMatch(
       /Mocked Absolute paths are not allowed/,
     );
   });
@@ -291,32 +337,36 @@ describe('handleReplaceContent Integration Tests', () => {
       paths: ['../outside.txt'],
       operations: [{ search: 'a', replace: 'b' }],
     };
-    const rawResult = await replaceContentToolDefinition.handler(request);
-    const parsedResult = JSON.parse(rawResult.content[0].text);
-    const resultsArray = parsedResult.results;
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
     expect(resultsArray).toHaveLength(1);
-    expect(resultsArray[0].modified).toBe(false);
-    expect(resultsArray[0].error).toMatch(/Mocked Path traversal detected/);
+    expect(resultsArray?.[0].modified).toBe(false);
+    expect(resultsArray?.[0].error).toMatch(/Mocked Path traversal detected/);
   });
 
   it('should reject requests with empty paths array based on Zod schema', async () => {
     const request = { paths: [], operations: [{ search: 'a', replace: 'b' }] };
-    await expect(replaceContentToolDefinition.handler(request)).rejects.toThrow(
-      McpError,
-    );
-    await expect(replaceContentToolDefinition.handler(request)).rejects.toThrow(
-      /Paths array cannot be empty/,
-    );
+    await expect(
+      handleReplaceContentInternal(request, mockDependencies),
+    ).rejects.toThrow(McpError);
+    await expect(
+      handleReplaceContentInternal(request, mockDependencies),
+    ).rejects.toThrow(/Paths array cannot be empty/);
   });
 
   it('should reject requests with empty operations array based on Zod schema', async () => {
     const request = { paths: ['fileA.txt'], operations: [] };
-    await expect(replaceContentToolDefinition.handler(request)).rejects.toThrow(
-      McpError,
-    );
-    await expect(replaceContentToolDefinition.handler(request)).rejects.toThrow(
-      /Operations array cannot be empty/,
-    );
+    await expect(
+      handleReplaceContentInternal(request, mockDependencies),
+    ).rejects.toThrow(McpError);
+    await expect(
+      handleReplaceContentInternal(request, mockDependencies),
+    ).rejects.toThrow(/Operations array cannot be empty/);
   });
 
   it('should handle McpError during path resolution', async () => {
@@ -324,25 +374,23 @@ describe('handleReplaceContent Integration Tests', () => {
       paths: ['../traversal.txt'], // Path that triggers McpError in mockResolvePath
       operations: [{ search: 'a', replace: 'b' }],
     };
-    const rawResult = await replaceContentToolDefinition.handler(request);
-    const parsedResult = JSON.parse(rawResult.content[0].text);
-    const resultsArray = parsedResult.results;
-
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
     expect(resultsArray).toHaveLength(1);
-    expect(resultsArray[0].modified).toBe(false);
-    expect(resultsArray[0].error).toMatch(/Mocked Path traversal detected/); // Check for McpError message
+    expect(resultsArray?.[0].modified).toBe(false);
+    expect(resultsArray?.[0].error).toMatch(/Mocked Path traversal detected/);
   });
 
   it('should handle generic errors during path resolution or fs operations', async () => {
     const errorPath = 'genericErrorFile.txt';
     const genericErrorMessage = 'Simulated generic error';
-
-    // Mock resolvePath to throw a generic Error for this path
     mockResolvePath.mockImplementationOnce((relativePath: string): string => {
-      if (relativePath === errorPath) {
-        throw new Error(genericErrorMessage);
-      }
-      // Fallback for other paths
+      if (relativePath === errorPath) throw new Error(genericErrorMessage);
       const absolutePath = path.resolve(tempRootDir, relativePath);
       if (!absolutePath.startsWith(tempRootDir))
         throw new McpError(ErrorCode.InvalidRequest, `Traversal`);
@@ -355,38 +403,41 @@ describe('handleReplaceContent Integration Tests', () => {
       paths: [errorPath],
       operations: [{ search: 'a', replace: 'b' }],
     };
-    const rawResult = await replaceContentToolDefinition.handler(request);
-    const parsedResult = JSON.parse(rawResult.content[0].text);
-    const resultsArray = parsedResult.results;
-
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
     expect(resultsArray).toHaveLength(1);
-    expect(resultsArray[0].modified).toBe(false);
-    // Check for the generic error message from line 111
-    expect(resultsArray[0].error).toMatch(
+    expect(resultsArray?.[0].modified).toBe(false);
+    expect(resultsArray?.[0].error).toMatch(
       /Failed to process file: Simulated generic error/,
     );
   });
 
   it('should handle replacing content in an empty file', async () => {
     const emptyFileName = 'emptyFile.txt';
-    await fsPromises.writeFile(path.join(tempRootDir, emptyFileName), ''); // Create empty file
-
+    await fsPromises.writeFile(path.join(tempRootDir, emptyFileName), '');
     const request = {
       paths: [emptyFileName],
       operations: [{ search: 'anything', replace: 'something' }],
     };
-    const rawResult = await replaceContentToolDefinition.handler(request);
-    const parsedResult = JSON.parse(rawResult.content[0].text);
-    const resultsArray = parsedResult.results;
-
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
     expect(resultsArray).toHaveLength(1);
-    expect(resultsArray[0]).toEqual({
+    expect(resultsArray?.[0]).toEqual({
       file: emptyFileName,
       modified: false,
       replacements: 0,
     });
 
-    // Verify content remains empty
     const content = await fsPromises.readFile(
       path.join(tempRootDir, emptyFileName),
       'utf-8',
@@ -397,24 +448,173 @@ describe('handleReplaceContent Integration Tests', () => {
   it('should handle replacing content with an empty string (deletion)', async () => {
     const request = {
       paths: ['fileA.txt'],
-      operations: [{ search: 'world', replace: '' }], // Replace 'world' with empty string
+      operations: [{ search: 'world', replace: '' }],
     };
-    const rawResult = await replaceContentToolDefinition.handler(request);
-    const parsedResult = JSON.parse(rawResult.content[0].text);
-    const resultsArray = parsedResult.results;
-
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
     expect(resultsArray).toHaveLength(1);
-    expect(resultsArray[0]).toEqual({
+    expect(resultsArray?.[0]).toEqual({
       file: 'fileA.txt',
       modified: true,
       replacements: 2,
     });
 
-    // Verify content after deletion
     const contentA = await fsPromises.readFile(
       path.join(tempRootDir, 'fileA.txt'),
       'utf-8',
     );
-    expect(contentA).toBe('Hello , !'); // Note the double space where 'world' was
+    expect(contentA).toBe('Hello , !');
+  });
+
+  // --- New Tests for Coverage ---
+
+  it('should handle regex with line anchors (^ or $)', async () => {
+    const request = {
+      paths: ['fileB.log'],
+      operations: [
+        { search: '^Error.*', replace: 'FIRST_LINE_ERROR', use_regex: true }, // Matches first line
+        // The second regex needs 'm' flag to match end of line, not just end of string
+        {
+          search: 'deprecated.$', // Corrected regex to only match the word at the end
+          replace: 'LAST_LINE_DEPRECATED',
+          use_regex: true,
+        },
+      ],
+    };
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
+    // First op replaces 1, second replaces 1 (due to multiline flag being added)
+    expect(resultsArray?.[0].replacements).toBe(2);
+    const contentB = await fsPromises.readFile(
+      path.join(tempRootDir, 'fileB.log'),
+      'utf-8',
+    );
+    // Corrected expectation based on corrected regex
+    expect(contentB).toBe(
+      'FIRST_LINE_ERROR\nWarning: world might be LAST_LINE_DEPRECATED',
+    );
+  });
+
+  it('should handle invalid regex pattern', async () => {
+    const request = {
+      paths: ['fileA.txt'],
+      operations: [
+        { search: '[invalid regex', replace: 'wont happen', use_regex: true },
+      ],
+    };
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
+    expect(resultsArray).toHaveLength(1);
+    expect(resultsArray?.[0]).toEqual({
+      file: 'fileA.txt',
+      modified: false,
+      replacements: 0,
+    });
+    const contentA = await fsPromises.readFile(
+      path.join(tempRootDir, 'fileA.txt'),
+      'utf-8',
+    );
+    expect(contentA).toBe('Hello world, world!');
+  });
+
+  it('should handle read permission errors (EACCES)', async () => {
+    // Mock the readFile dependency
+    mockReadFile.mockImplementation(async () => {
+      const error = new Error('Permission denied') as NodeJS.ErrnoException;
+      error.code = 'EACCES';
+      throw error;
+    });
+    const request = {
+      paths: ['fileA.txt'],
+      operations: [{ search: 'world', replace: 'planet' }],
+    };
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
+    expect(resultsArray).toHaveLength(1);
+    expect(resultsArray?.[0].modified).toBe(false);
+    expect(resultsArray?.[0].error).toMatch(
+      /Permission denied processing file: fileA.txt/,
+    );
+    // Restore handled by afterEach
+  });
+
+  it('should handle write permission errors (EPERM)', async () => {
+    // Mock the writeFile dependency
+    mockWriteFile.mockImplementation(async () => {
+      const error = new Error(
+        'Operation not permitted',
+      ) as NodeJS.ErrnoException;
+      error.code = 'EPERM';
+      throw error;
+    });
+    const request = {
+      paths: ['fileA.txt'],
+      operations: [{ search: 'world', replace: 'planet' }],
+    };
+    const rawResult = await handleReplaceContentInternal(
+      request,
+      mockDependencies,
+    );
+    const resultsArray = rawResult.data?.results;
+    expect(rawResult.success).toBe(true);
+    expect(resultsArray).toBeDefined();
+    expect(resultsArray).toHaveLength(1);
+    expect(resultsArray?.[0].modified).toBe(false); // Write failed
+    expect(resultsArray?.[0].replacements).toBe(2); // Replacements happened before write attempt
+    expect(resultsArray?.[0].error).toMatch(
+      /Permission denied processing file: fileA.txt/,
+    );
+    // Restore handled by afterEach
+  });
+
+  it('should correctly process settled results including rejections (direct test)', () => {
+    // processSettledReplaceResults is now imported at the top
+    const originalPaths = ['path/success', 'path/failed'];
+    const mockReason = new Error('Mocked rejection reason');
+    const settledResults: PromiseSettledResult<any>[] = [
+      {
+        status: 'fulfilled',
+        value: { file: 'path/success', replacements: 1, modified: true },
+      },
+      { status: 'rejected', reason: mockReason },
+    ];
+
+    const processed = processSettledReplaceResults(
+      settledResults,
+      originalPaths,
+    );
+
+    expect(processed).toHaveLength(2);
+    expect(processed[0]).toEqual({
+      file: 'path/success',
+      replacements: 1,
+      modified: true,
+    });
+    expect(processed[1]).toEqual({
+      file: 'path/failed',
+      replacements: 0,
+      modified: false,
+      error: `Unexpected error during file processing: ${mockReason.message}`,
+    });
   });
 });

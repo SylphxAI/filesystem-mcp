@@ -1,4 +1,4 @@
-<!-- Version: 4.5 | Last Updated: 2025-04-06 | Updated By: Roo -->
+<!-- Version: 4.6 | Last Updated: 2025-07-04 | Updated By: Sylph -->
 
 # Project Brief: Filesystem MCP Server
 
@@ -36,8 +36,7 @@ and secure manner, operating relative to a defined project root directory.
     directory.
   - `replace_content`: Search and replace content within files across multiple
     specified paths (files or directories).
-  - `edit_file`: Perform advanced, selective edits (insert, replace, delete)
-    based on patterns, preserving indentation.
+    - `apply_diff`: Applies multiple search/replace diff blocks to multiple files atomically per file.
 - **Technology Stack:** Use Node.js and TypeScript. Leverage the
   `@modelcontextprotocol/sdk` for MCP implementation and `glob` for file
   searching/listing.

@@ -60,14 +60,13 @@ function parseAndValidateArgs(args: unknown): WriteContentArgs {
     return WriteContentArgsSchema.parse(args);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call
       throw new McpError(
-        ErrorCode.InvalidParams, // eslint-disable-line @typescript-eslint/no-unsafe-member-access
+        ErrorCode.InvalidParams,
         `Invalid arguments: ${error.errors.map((e) => `${e.path.join('.')} (${e.message})`).join(', ')}`,
       );
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call
-    throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed'); // eslint-disable-line @typescript-eslint/no-unsafe-member-access
+
+    throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
   }
 }
 
@@ -79,7 +78,6 @@ function handleWriteError(
   append: boolean,
 ): WriteResult {
   if (error instanceof McpError) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     return { path: pathOutput, success: false, error: error.message };
   }
   const errorMessage = error instanceof Error ? error.message : String(error);

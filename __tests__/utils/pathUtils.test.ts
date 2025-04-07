@@ -156,8 +156,6 @@ describe('pathUtils', () => {
     });
 
     it('should throw McpError if the input path is not a string', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const userPath: any = 123;
       // Test with override (should still fail type check before override matters)
       expect(() => resolvePath(userPath, MOCK_PROJECT_ROOT_OVERRIDE)).toThrow(

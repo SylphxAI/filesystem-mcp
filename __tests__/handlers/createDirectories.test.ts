@@ -1,7 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type Mock,
+} from 'vitest'; // Added Mock type
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-// import type * as fs from 'fs'; // Removed unused import
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import {
   createTemporaryFilesystem,
@@ -13,17 +20,18 @@ vi.mock('../../src/utils/pathUtils.js'); // Mock the entire module
 
 // Import the handler and the internal function for mocking
 import {
-  createDirectoriesToolDefinition,
+  handleCreateDirectoriesInternal, // Import internal function
+  CreateDirsDeps, // Import deps type
   processSettledResults, // Import the function to test directly
 } from '../../src/handlers/createDirectories.js';
 // Import the mocked functions/constants we need to interact with
-// Note: We import resolvePath here to use vi.mocked(resolvePath) later
-import { resolvePath, PROJECT_ROOT } from '../../src/utils/pathUtils.js';
+// Removed unused PROJECT_ROOT import
+import { resolvePath } from '../../src/utils/pathUtils.js';
 
-// Define the initial structure (can be empty for this test)
+// Define the initial structure
 const initialTestStructure = {
   existingDir: {},
-  'existingFile.txt': 'hello', // Add existing file for testing EEXIST case
+  'existingFile.txt': 'hello',
 };
 
 let tempRootDir: string;
@@ -38,17 +46,21 @@ interface CreateDirResultForTest {
 }
 
 describe('handleCreateDirectories Integration Tests', () => {
-  // No top-level spy declarations needed anymore
+  let mockDependencies: CreateDirsDeps;
+  let mockMkdir: Mock;
+  let mockStat: Mock;
 
   beforeEach(async () => {
     tempRootDir = await createTemporaryFilesystem(initialTestStructure);
+    // Mock implementations for dependencies
+    const actualFsPromises =
+      await vi.importActual<typeof fsPromises>('fs/promises');
+    mockMkdir = vi.fn().mockImplementation(actualFsPromises.mkdir);
+    mockStat = vi.fn().mockImplementation(actualFsPromises.stat);
 
-    // Configure the mock resolvePath (remains the same)
-    // Set the default implementation for the mocked resolvePath in beforeEach
+    // Configure the mock resolvePath
     vi.mocked(resolvePath).mockImplementation(
       (relativePath: string): string => {
-        // Use MOCK_PROJECT_ROOT defined within the mock factory if needed,
-        // but here we use tempRootDir for dynamic paths based on test setup.
         if (path.isAbsolute(relativePath)) {
           throw new McpError(
             ErrorCode.InvalidParams,
@@ -65,40 +77,43 @@ describe('handleCreateDirectories Integration Tests', () => {
         return absolutePath;
       },
     );
-    // Set the default implementation for the mocked PROJECT_ROOT
-    // Note: Since PROJECT_ROOT is a const, we can't directly mock its value easily
-    // after the module is loaded. The vi.mock factory is the primary way.
-    // We'll rely on the value set in the vi.mock factory ('mocked/project/root').
-    // If tests need to assert against it, they should use that mocked value.
+
+    // Assign mock dependencies
+    mockDependencies = {
+      mkdir: mockMkdir,
+      stat: mockStat,
+      resolvePath: vi.mocked(resolvePath),
+      PROJECT_ROOT: tempRootDir, // Use actual temp root for mock
+    };
   });
 
   afterEach(async () => {
     await cleanupTemporaryFilesystem(tempRootDir);
-    // vi.clearAllMocks(); // clearAllMocks might interfere with module-level mocks like pathUtils
-    vi.restoreAllMocks(); // Restore all spies after each test
+    vi.restoreAllMocks();
   });
 
   it('should create a single new directory', async () => {
     const request = { paths: ['newDir1'] };
-    const rawResult = await createDirectoriesToolDefinition.handler(request);
+    const rawResult = await handleCreateDirectoriesInternal(
+      request,
+      mockDependencies,
+    );
     const result = JSON.parse(rawResult.content[0].text);
-
     expect(result).toHaveLength(1);
-    // Use objectContaining to ignore extra properties like resolvedPath
     expect(result[0]).toEqual(
       expect.objectContaining({ path: 'newDir1', success: true }),
     );
-
-    // Verify directory creation
     const stats = await fsPromises.stat(path.join(tempRootDir, 'newDir1'));
     expect(stats.isDirectory()).toBe(true);
   });
 
   it('should create multiple new directories', async () => {
     const request = { paths: ['multiDir1', 'multiDir2'] };
-    const rawResult = await createDirectoriesToolDefinition.handler(request);
+    const rawResult = await handleCreateDirectoriesInternal(
+      request,
+      mockDependencies,
+    );
     const result = JSON.parse(rawResult.content[0].text);
-
     expect(result).toHaveLength(2);
     expect(result[0]).toEqual(
       expect.objectContaining({ path: 'multiDir1', success: true }),
@@ -106,8 +121,6 @@ describe('handleCreateDirectories Integration Tests', () => {
     expect(result[1]).toEqual(
       expect.objectContaining({ path: 'multiDir2', success: true }),
     );
-
-    // Verify directory creation
     const stats1 = await fsPromises.stat(path.join(tempRootDir, 'multiDir1'));
     expect(stats1.isDirectory()).toBe(true);
     const stats2 = await fsPromises.stat(path.join(tempRootDir, 'multiDir2'));
@@ -116,15 +129,15 @@ describe('handleCreateDirectories Integration Tests', () => {
 
   it('should create nested directories', async () => {
     const request = { paths: ['nested/dir/structure'] };
-    const rawResult = await createDirectoriesToolDefinition.handler(request);
+    const rawResult = await handleCreateDirectoriesInternal(
+      request,
+      mockDependencies,
+    );
     const result = JSON.parse(rawResult.content[0].text);
-
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual(
       expect.objectContaining({ path: 'nested/dir/structure', success: true }),
     );
-
-    // Verify directory creation
     const stats = await fsPromises.stat(
       path.join(tempRootDir, 'nested/dir/structure'),
     );
@@ -133,58 +146,71 @@ describe('handleCreateDirectories Integration Tests', () => {
 
   it('should succeed if directory already exists', async () => {
     const request = { paths: ['existingDir'] };
-    const rawResult = await createDirectoriesToolDefinition.handler(request);
+    const rawResult = await handleCreateDirectoriesInternal(
+      request,
+      mockDependencies,
+    );
     const result = JSON.parse(rawResult.content[0].text);
-
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual(
       expect.objectContaining({ path: 'existingDir', success: true }),
-    ); // fs.mkdir recursive doesn't error
-
-    // Verify directory still exists
+    ); // Note: mkdir recursive succeeds silently if dir exists
     const stats = await fsPromises.stat(path.join(tempRootDir, 'existingDir'));
     expect(stats.isDirectory()).toBe(true);
   });
 
   it('should return error if path is an existing file', async () => {
-    const filePath = 'existingFile.txt'; // This file is created in initialTestStructure
+    const filePath = 'existingFile.txt';
     const request = { paths: [filePath] };
-    const rawResult = await createDirectoriesToolDefinition.handler(request);
-    const result = JSON.parse(rawResult.content[0].text);
+    // Mock mkdir to throw EEXIST first for this specific path
+    mockMkdir.mockImplementation(async (p: string) => {
+      if (p.endsWith(filePath)) {
+        const error = new Error('File already exists') as NodeJS.ErrnoException;
+        error.code = 'EEXIST';
+        throw error;
+      }
+      const actualFsPromises =
+        await vi.importActual<typeof fsPromises>('fs/promises');
+      return actualFsPromises.mkdir(p, { recursive: true });
+    });
+    // Mock stat to return file stats for this path
+    mockStat.mockImplementation(async (p: string) => {
+      if (p.endsWith(filePath)) {
+        const actualStat = await fsPromises.stat(
+          path.join(tempRootDir, filePath),
+        );
+        return { ...actualStat, isFile: () => true, isDirectory: () => false };
+      }
+      const actualFsPromises =
+        await vi.importActual<typeof fsPromises>('fs/promises');
+      return actualFsPromises.stat(p);
+    });
 
+    const rawResult = await handleCreateDirectoriesInternal(
+      request,
+      mockDependencies,
+    );
+    const result = JSON.parse(rawResult.content[0].text);
     expect(result).toHaveLength(1);
     expect(result[0].success).toBe(false);
-    // Match the actual error message observed in the previous run
     expect(result[0].error).toMatch(/Path exists but is not a directory/);
   });
 
   it('should handle mixed success and failure cases', async () => {
-    const request = {
-      paths: [
-        'newGoodDir', // success
-        'existingDir', // success (already exists)
-        '../outsideDir', // failure (traversal mock)
-      ],
-    };
-    const rawResult = await createDirectoriesToolDefinition.handler(request);
+    const request = { paths: ['newGoodDir', 'existingDir', '../outsideDir'] };
+    const rawResult = await handleCreateDirectoriesInternal(
+      request,
+      mockDependencies,
+    );
     const result = JSON.parse(rawResult.content[0].text);
-
     expect(result).toHaveLength(3);
-
     const successNew = result.find((r: any) => r.path === 'newGoodDir');
-    expect(successNew).toBeDefined();
-    expect(successNew.success).toBe(true);
-
+    expect(successNew?.success).toBe(true);
     const successExisting = result.find((r: any) => r.path === 'existingDir');
-    expect(successExisting).toBeDefined();
-    expect(successExisting.success).toBe(true);
-
+    expect(successExisting?.success).toBe(true);
     const traversal = result.find((r: any) => r.path === '../outsideDir');
-    expect(traversal).toBeDefined();
-    expect(traversal.success).toBe(false);
-    expect(traversal.error).toMatch(/Mocked Path traversal detected/);
-
-    // Verify the successful creation occurred
+    expect(traversal?.success).toBe(false);
+    expect(traversal?.error).toMatch(/Mocked Path traversal detected/);
     const statsNew = await fsPromises.stat(
       path.join(tempRootDir, 'newGoodDir'),
     );
@@ -194,7 +220,10 @@ describe('handleCreateDirectories Integration Tests', () => {
   it('should return error for absolute paths (caught by mock resolvePath)', async () => {
     const absolutePath = path.resolve(tempRootDir, 'newAbsoluteDir');
     const request = { paths: [absolutePath] };
-    const rawResult = await createDirectoriesToolDefinition.handler(request);
+    const rawResult = await handleCreateDirectoriesInternal(
+      request,
+      mockDependencies,
+    );
     const result = JSON.parse(rawResult.content[0].text);
     expect(result).toHaveLength(1);
     expect(result[0].success).toBe(false);
@@ -204,88 +233,71 @@ describe('handleCreateDirectories Integration Tests', () => {
   it('should reject requests with empty paths array based on Zod schema', async () => {
     const request = { paths: [] };
     await expect(
-      createDirectoriesToolDefinition.handler(request),
+      handleCreateDirectoriesInternal(request, mockDependencies),
     ).rejects.toThrow(McpError);
     await expect(
-      createDirectoriesToolDefinition.handler(request),
+      handleCreateDirectoriesInternal(request, mockDependencies),
     ).rejects.toThrow(/Paths array cannot be empty/);
   });
 
   it('should return error when attempting to create the project root', async () => {
-    // Override the implementation for this specific test case
     vi.mocked(resolvePath).mockImplementationOnce(
       (relativePath: string): string => {
-        if (relativePath === 'try_root') {
-          // Use the value defined in the vi.mock factory
-          return vi.mocked(PROJECT_ROOT);
-        }
-        // Fallback to default mock behavior set in beforeEach for other paths
+        if (relativePath === 'try_root') return mockDependencies.PROJECT_ROOT; // Use PROJECT_ROOT from deps
         const absolutePath = path.resolve(tempRootDir, relativePath);
-        if (!absolutePath.startsWith(tempRootDir)) {
+        if (!absolutePath.startsWith(tempRootDir))
           throw new McpError(
             ErrorCode.InvalidRequest,
             `Mocked Path traversal detected for ${relativePath}`,
           );
-        }
         return absolutePath;
       },
     );
-
     const request = { paths: ['try_root'] };
-    const rawResult = await createDirectoriesToolDefinition.handler(request);
+    const rawResult = await handleCreateDirectoriesInternal(
+      request,
+      mockDependencies,
+    );
     const result = JSON.parse(rawResult.content[0].text);
-
     expect(result).toHaveLength(1);
     expect(result[0].success).toBe(false);
     expect(result[0].error).toMatch(/Creating the project root is not allowed/);
-    expect(result[0].resolvedPath).toBe(vi.mocked(PROJECT_ROOT)); // Check resolved path against mocked value
+    expect(result[0].resolvedPath).toBe(mockDependencies.PROJECT_ROOT);
   });
 
-  // Removed tests relying on fsPromises spies due to instability
-
   it.skip('should handle unexpected errors during path resolution within the map', async () => {
-    // Skip due to persistent mocking/assertion issues
-    // Mock resolvePath to throw a generic error for a specific path *after* initial validation
     const genericError = new Error('Mocked unexpected resolve error');
     vi.mocked(resolvePath).mockImplementationOnce(
       (relativePath: string): string => {
-        if (relativePath === 'unexpected_resolve_error') {
-          throw genericError;
-        }
-        // Fallback to default mock behavior set in beforeEach
+        if (relativePath === 'unexpected_resolve_error') throw genericError;
         const absolutePath = path.resolve(tempRootDir, relativePath);
-        if (!absolutePath.startsWith(tempRootDir)) {
+        if (!absolutePath.startsWith(tempRootDir))
           throw new McpError(ErrorCode.InvalidRequest, 'Traversal');
-        }
         return absolutePath;
       },
     );
-
     const request = { paths: ['goodDir', 'unexpected_resolve_error'] };
-    const rawResult = await createDirectoriesToolDefinition.handler(request);
+    const rawResult = await handleCreateDirectoriesInternal(
+      request,
+      mockDependencies,
+    );
     const result = JSON.parse(rawResult.content[0].text);
-
     expect(result).toHaveLength(2);
     const goodResult = result.find((r: any) => r.path === 'goodDir');
     const badResult = result.find(
       (r: any) => r.path === 'unexpected_resolve_error',
     );
-
     expect(goodResult?.success).toBe(true);
     expect(badResult?.success).toBe(false);
-    // This error is caught by the inner catch in processSingleDirectoryCreation
-    // The error message reflects this.
     expect(badResult?.error).toMatch(
       /Failed to create directory: Mocked unexpected resolve error/,
     );
     expect(badResult?.resolvedPath).toBe('Resolution failed');
   });
 
-  // Test case for processSettledResults directly
   it('should correctly process settled results including rejections', () => {
     const originalPaths = ['path/success', 'path/failed'];
     const mockReason = new Error('Mocked rejection reason');
-    // Use the simplified local type for testing
     const settledResults: PromiseSettledResult<CreateDirResultForTest>[] = [
       {
         status: 'fulfilled',
@@ -297,10 +309,7 @@ describe('handleCreateDirectories Integration Tests', () => {
       },
       { status: 'rejected', reason: mockReason },
     ];
-
-    // Call the exported function directly
     const processed = processSettledResults(settledResults, originalPaths);
-
     expect(processed).toHaveLength(2);
     expect(processed[0]).toEqual({
       path: 'path/success',
@@ -316,12 +325,85 @@ describe('handleCreateDirectories Integration Tests', () => {
   });
 
   it('should throw McpError for invalid top-level arguments (e.g., paths not an array)', async () => {
-    const invalidRequest = { paths: 'not-an-array' }; // Invalid structure
+    const invalidRequest = { paths: 'not-an-array' };
     await expect(
-      createDirectoriesToolDefinition.handler(invalidRequest),
+      handleCreateDirectoriesInternal(invalidRequest, mockDependencies),
     ).rejects.toThrow(McpError);
     await expect(
-      createDirectoriesToolDefinition.handler(invalidRequest),
-    ).rejects.toThrow(/Invalid arguments: paths/); // Check Zod error message
+      handleCreateDirectoriesInternal(invalidRequest, mockDependencies),
+    ).rejects.toThrow(/Invalid arguments: paths/);
   });
-});
+
+  // --- New Tests for Error Handling ---
+
+  it('should handle EPERM/EACCES errors during directory creation', async () => {
+    // Mock the mkdir dependency to throw a permission error
+    mockMkdir.mockImplementation(async () => {
+      const error = new Error(
+        'Operation not permitted',
+      ) as NodeJS.ErrnoException;
+      error.code = 'EPERM';
+      throw error;
+    });
+    const request = { paths: ['perm_denied_dir'] };
+    const rawResult = await handleCreateDirectoriesInternal(
+      request,
+      mockDependencies,
+    );
+    const result = JSON.parse(rawResult.content[0].text);
+    expect(result).toHaveLength(1);
+    expect(result[0].success).toBe(false);
+    expect(result[0].error).toMatch(/Permission denied creating directory/);
+    expect(result[0].path).toBe('perm_denied_dir');
+    // No need to restore spy, restoreAllMocks in afterEach handles vi.fn mocks
+  });
+
+  it('should handle errors when stating an existing path in EEXIST handler', async () => {
+    // Mock the mkdir dependency to throw EEXIST first
+    mockMkdir.mockImplementation(async () => {
+      const error = new Error('File already exists') as NodeJS.ErrnoException;
+      error.code = 'EEXIST';
+      throw error;
+    });
+    // Mock the stat dependency to throw an error *after* mkdir fails with EEXIST
+    mockStat.mockImplementation(async () => {
+      throw new Error('Mocked stat error');
+    });
+    const request = { paths: ['stat_error_dir'] };
+    const rawResult = await handleCreateDirectoriesInternal(
+      request,
+      mockDependencies,
+    );
+    const result = JSON.parse(rawResult.content[0].text);
+    expect(result).toHaveLength(1);
+    expect(result[0].success).toBe(false);
+    expect(result[0].error).toMatch(
+      /Failed to stat existing path: Mocked stat error/,
+    );
+    expect(result[0].path).toBe('stat_error_dir');
+    // No need to restore spies
+  });
+
+  it('should handle McpError from resolvePath during creation', async () => {
+    // Mock resolvePath dependency to throw McpError
+    const mcpError = new McpError(
+      ErrorCode.InvalidRequest,
+      'Mocked resolve error',
+    );
+    vi.mocked(mockDependencies.resolvePath).mockImplementationOnce(() => {
+      // Mock via deps object
+      throw mcpError;
+    });
+    const request = { paths: ['resolve_mcp_error'] };
+    const rawResult = await handleCreateDirectoriesInternal(
+      request,
+      mockDependencies,
+    );
+    const result = JSON.parse(rawResult.content[0].text);
+    expect(result).toHaveLength(1);
+    expect(result[0].success).toBe(false);
+    expect(result[0].error).toBe(mcpError.message);
+    expect(result[0].path).toBe('resolve_mcp_error');
+    expect(result[0].resolvedPath).toBe('Resolution failed');
+  });
+}); // End of describe block

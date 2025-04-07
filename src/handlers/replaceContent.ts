@@ -1,14 +1,11 @@
 // src/handlers/replaceContent.ts
-import { promises as fs } from 'fs';
+import { promises as fs, type PathLike, type Stats } from 'fs'; // Import necessary types
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { resolvePath } from '../utils/pathUtils.js';
+import { escapeRegex } from '../utils/stringUtils.js'; // Import escapeRegex
 
 // --- Types ---
-
-interface McpToolResponse {
-  content: { type: 'text'; text: string }[];
-}
 
 export const ReplaceOperationSchema = z
   .object({
@@ -50,6 +47,18 @@ interface ReplaceResult {
   error?: string;
 }
 
+// --- Define Dependencies Interface ---
+export interface ReplaceContentDeps {
+  readFile: (path: PathLike, options: BufferEncoding) => Promise<string>;
+  writeFile: (
+    path: PathLike,
+    data: string,
+    options: BufferEncoding,
+  ) => Promise<void>;
+  stat: (path: PathLike) => Promise<Stats>;
+  resolvePath: typeof resolvePath;
+}
+
 // --- Helper Functions ---
 
 /** Parses and validates the input arguments. */
@@ -63,81 +72,84 @@ function parseAndValidateArgs(args: unknown): ReplaceContentArgs {
         `Invalid arguments: ${error.errors.map((e) => `${e.path.join('.')} (${e.message})`).join(', ')}`,
       );
     }
-    throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
+    throw new McpError(
+      ErrorCode.InvalidParams,
+      `Argument validation failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
-/** Applies a single replace operation to content. */
+/** Creates the RegExp object based on operation options. */
+function createSearchRegex(op: ReplaceOperation): RegExp | null {
+  const { search, use_regex, ignore_case } = op;
+  let regexFlags = 'g'; // Always global replace within a file
+  if (ignore_case) regexFlags += 'i';
+
+  // Add multiline flag ONLY if using regex AND it contains start/end anchors
+  if (use_regex && (search.includes('^') || search.includes('$'))) {
+    if (!regexFlags.includes('m')) {
+      regexFlags += 'm';
+    }
+  }
+
+  try {
+    return use_regex
+      ? new RegExp(search, regexFlags)
+      : new RegExp(escapeRegex(search), regexFlags); // Escape if not regex
+  } catch (e) {
+    console.warn(
+      `[Filesystem MCP - replaceContent] Invalid regex pattern provided "${search}":`,
+      e,
+    );
+    return null; // Return null for invalid regex
+  }
+}
+
+/** Applies a single replace operation to content. Refactored for complexity. */
 function applyReplaceOperation(
   currentContent: string,
   op: ReplaceOperation,
 ): { newContent: string; replacementsMade: number } {
-  let replacementsInOp = 0;
-  const searchPattern = op.search;
-  const replacementText = op.replace;
-  const useRegex = op.use_regex;
-  const ignoreCase = op.ignore_case;
-
-  let regexFlags = 'g'; // Always global replace within a file
-  if (ignoreCase) regexFlags += 'i';
-  // Add multiline flag if regex contains start/end anchors
-  if (
-    useRegex &&
-    (searchPattern.includes('^') || searchPattern.includes('$'))
-  ) {
-    regexFlags += 'm';
-  }
-
-  let searchRegex: RegExp;
-  try {
-    searchRegex = useRegex
-      ? new RegExp(searchPattern, regexFlags)
-      : new RegExp(
-          searchPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), // Escape special chars for literal search
-          regexFlags,
-        );
-  } catch (e) {
-    // If regex compilation fails even for literal search (unlikely but possible), treat as no match
-    console.warn(
-      `[Filesystem MCP - replaceContent] Regex compilation failed for literal search pattern "${searchPattern}":`,
-      e,
-    );
+  const searchRegex = createSearchRegex(op);
+  if (!searchRegex) {
+    // Treat invalid regex as no match
     return { newContent: currentContent, replacementsMade: 0 };
   }
 
-  // Count matches before replacing
   const matches = currentContent.match(searchRegex);
-  replacementsInOp = matches ? matches.length : 0;
+  const replacementsInOp = matches ? matches.length : 0;
 
   let newContent = currentContent;
   if (replacementsInOp > 0) {
-    newContent = currentContent.replace(searchRegex, replacementText);
+    newContent = currentContent.replace(searchRegex, op.replace);
   }
 
   return { newContent, replacementsMade: replacementsInOp };
 }
 
 /** Handles errors during file processing for replacement. */
-function handleReplaceError(
-  error: unknown,
-  relativePath: string,
-): string | undefined {
+function handleReplaceError(error: unknown, relativePath: string): string {
+  // Default error message
   let errorMessage = `Failed to process file: ${error instanceof Error ? error.message : String(error)}`;
-  let specificCode: string | null = null;
 
-  if (error && typeof error === 'object' && 'code' in error) {
-    specificCode = String(error.code);
-    if (specificCode === 'ENOENT') {
+  // Handle McpError specifically (likely from resolvePath)
+  if (error instanceof McpError) {
+    errorMessage = error.message; // Use the McpError message directly
+  }
+  // Handle common filesystem errors
+  else if (error && typeof error === 'object' && 'code' in error) {
+    const code = String(error.code);
+    if (code === 'ENOENT') {
       errorMessage = 'File not found';
-    } else if (specificCode === 'EISDIR') {
+    } else if (code === 'EISDIR') {
       errorMessage = 'Path is not a file';
-    } else if (specificCode === 'EACCES' || specificCode === 'EPERM') {
+    } else if (code === 'EACCES' || code === 'EPERM') {
+      // Provide a more specific permission denied message
       errorMessage = `Permission denied processing file: ${relativePath}`;
     }
-  } else if (error instanceof McpError) {
-    errorMessage = error.message; // Use McpError message directly
   }
 
+  // Log the error regardless of type
   console.error(
     `[Filesystem MCP - replaceContent] Error processing file ${relativePath}:`,
     error,
@@ -149,6 +161,7 @@ function handleReplaceError(
 async function processSingleFileReplacement(
   relativePath: string,
   operations: ReplaceOperation[],
+  deps: ReplaceContentDeps,
 ): Promise<ReplaceResult> {
   const pathOutput = relativePath.replace(/\\/g, '/');
   let targetPath = '';
@@ -158,9 +171,10 @@ async function processSingleFileReplacement(
   let modified = false;
 
   try {
-    targetPath = resolvePath(relativePath);
-    const stats = await fs.stat(targetPath);
+    targetPath = deps.resolvePath(relativePath);
+    const stats = await deps.stat(targetPath);
     if (!stats.isFile()) {
+      // Return specific error if path is not a file
       return {
         file: pathOutput,
         replacements: 0,
@@ -169,7 +183,7 @@ async function processSingleFileReplacement(
       };
     }
 
-    originalContent = await fs.readFile(targetPath, 'utf-8');
+    originalContent = await deps.readFile(targetPath, 'utf-8');
     fileContent = originalContent;
 
     for (const op of operations) {
@@ -177,85 +191,78 @@ async function processSingleFileReplacement(
         fileContent,
         op,
       );
-      if (replacementsMade > 0) {
+      // Only update content and count if replacements were actually made
+      if (replacementsMade > 0 && newContent !== fileContent) {
         fileContent = newContent;
-        totalReplacements += replacementsMade;
+        totalReplacements += replacementsMade; // Accumulate replacements across operations
       }
     }
 
+    // Check if content actually changed after all operations
     if (fileContent !== originalContent) {
       modified = true;
-      await fs.writeFile(targetPath, fileContent, 'utf-8');
+      await deps.writeFile(targetPath, fileContent, 'utf-8');
     }
 
     return { file: pathOutput, replacements: totalReplacements, modified };
   } catch (error: unknown) {
+    // Catch any error during the process (resolve, stat, read, write)
     const fileError = handleReplaceError(error, relativePath);
     return {
       file: pathOutput,
-      replacements: 0,
+      replacements: totalReplacements, // Return replacements count even on write error
       modified: false,
-      error: fileError,
+      error: fileError, // Use the formatted error message
     };
   }
 }
 
 /** Processes the results from Promise.allSettled for replace operations. */
-function processSettledReplaceResults(
+// Export for testing
+export function processSettledReplaceResults(
   settledResults: PromiseSettledResult<ReplaceResult>[],
   relativePaths: string[],
 ): ReplaceResult[] {
-  const fileProcessingResults: ReplaceResult[] = [];
-  settledResults.forEach((result, index) => {
+  return settledResults.map((result, index) => {
     const relativePath = relativePaths[index] ?? 'unknown_path';
     const pathOutput = relativePath.replace(/\\/g, '/');
+
     if (result.status === 'fulfilled') {
-      fileProcessingResults.push(result.value);
+      return result.value;
     } else {
+      // Handle unexpected rejections (errors not caught/formatted by processSingleFileReplacement)
       console.error(
         `[Filesystem MCP - replaceContent] Unexpected rejection processing file ${pathOutput}:`,
         result.reason,
       );
-      fileProcessingResults.push({
+      // Format the unexpected error into a standard result structure
+      return {
         file: pathOutput,
         replacements: 0,
         modified: false,
+        // Use the reason from the rejection
         error: `Unexpected error during file processing: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
-      });
+      };
     }
   });
-  return fileProcessingResults;
 }
 
 /** Processes all file replacements and handles results. */
 async function processAllFilesReplacement(
   relativePaths: string[],
   operations: ReplaceOperation[],
+  deps: ReplaceContentDeps,
 ): Promise<ReplaceResult[]> {
-  let fileProcessingResults: ReplaceResult[] = [];
-  try {
-    const settledResults = await Promise.allSettled(
-      relativePaths.map((relativePath) =>
-        processSingleFileReplacement(relativePath, operations),
-      ),
-    );
-    fileProcessingResults = processSettledReplaceResults(
-      settledResults,
-      relativePaths,
-    );
-  } catch (error: unknown) {
-    // Catch errors during the overall process setup (less likely now)
-    if (error instanceof McpError) throw error;
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(
-      `[Filesystem MCP - replaceContent] Error during replace_content execution setup:`,
-      error,
-    );
-    throw new McpError(
-      ErrorCode.InternalError,
-      `Failed during replace_content setup: ${errorMessage}`,
-    );
-  }
+  // No try-catch needed here as processSingleFileReplacement handles its errors
+  const settledResults = await Promise.allSettled(
+    relativePaths.map((relativePath) =>
+      processSingleFileReplacement(relativePath, operations, deps),
+    ),
+  );
+  const fileProcessingResults = processSettledReplaceResults(
+    settledResults,
+    relativePaths,
+  );
 
   // Sort results by original path order for predictability
   const originalIndexMap = new Map(
@@ -270,38 +277,56 @@ async function processAllFilesReplacement(
   return fileProcessingResults;
 }
 
-/** Main handler function */
-const handleReplaceContentFunc = async (
+/** Main handler function (internal, accepts dependencies) */
+// Export for testing
+export const handleReplaceContentInternal = async (
   args: unknown,
-): Promise<McpToolResponse> => {
+  deps: ReplaceContentDeps,
+): Promise<McpResponse<{ results: ReplaceResult[] }>> => {
+  // Specify output type
   const { paths: relativePaths, operations } = parseAndValidateArgs(args);
 
   const finalResults = await processAllFilesReplacement(
     relativePaths,
     operations,
+    deps,
   );
 
+  // Return structured data instead of stringified JSON in text
   return {
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify(
-          {
-            message: `Replace content operations completed on specified paths.`,
-            results: finalResults,
-          },
-          null,
-          2,
-        ),
-      },
-    ],
+    success: true,
+    data: {
+      results: finalResults,
+    },
   };
 };
 
-// Export the complete tool definition
+// Export the complete tool definition using the production handler
 export const replaceContentToolDefinition = {
   name: 'replace_content',
   description: 'Replace content within files across multiple specified paths.',
   schema: ReplaceContentArgsSchema,
-  handler: handleReplaceContentFunc,
+  // Define output schema for better type safety and clarity
+  outputSchema: z.object({
+    results: z.array(
+      z.object({
+        file: z.string(),
+        replacements: z.number().int(),
+        modified: z.boolean(),
+        error: z.string().optional(),
+      }),
+    ),
+  }),
+  handler: (
+    args: unknown,
+  ): Promise<McpResponse<{ results: ReplaceResult[] }>> => {
+    // Production handler provides real dependencies
+    const productionDeps: ReplaceContentDeps = {
+      readFile: fs.readFile,
+      writeFile: fs.writeFile,
+      stat: fs.stat,
+      resolvePath: resolvePath,
+    };
+    return handleReplaceContentInternal(args, productionDeps);
+  },
 };
