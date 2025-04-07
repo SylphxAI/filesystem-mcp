@@ -35,24 +35,22 @@
     "moduleResolution": "NodeNext",
 
     /* Emit */
-    "outDir": "./build",
+    "outDir": "dist",
     "declaration": true,
     "sourceMap": true,
     "removeComments": false,
 
     /* Other */
-    "forceConsistentCasingInFileNames": true,
-    "rootDir": "src"
+    "forceConsistentCasingInFileNames": true
+    // "rootDir": "src" // Removed to strictly follow guideline standard
   },
   "include": ["src/**/*.ts"],
   "exclude": [
     "node_modules",
-    "build",
-    "dist",
-    "coverage",
+    "dist", // Matches the updated outDir
     "**/*.test.ts",
     "**/*.spec.ts",
-    "**/*.bench.ts",
-    "__tests__"
+    "**/*.bench.ts"
+    // Removed "build", "coverage", "__tests__" to match guideline standard
   ]
 }

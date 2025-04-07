@@ -1,12 +1,18 @@
-<!-- Version: 4.5 | Last Updated: 2025-04-06 | Updated By: Roo -->
+<!-- Version: 4.8 | Last Updated: 2025-07-04 | Updated By: Sylph -->
+
+# Tech Context: Filesystem MCP Server
+
+## Playbook Guideline Versions Checked
+
+- `guidelines/typescript/style_quality.md`: v1.1
 
 # Tech Context: Filesystem MCP Server
 
 ## 1. Core Technologies
 
-- **Runtime:** Node.js (Version should be compatible with used libraries, likely >= 18)
+- **Runtime:** Node.js (MUST use latest LTS version, currently v22 - `~22.0.0` specified in `package.json`)
 - **Language:** TypeScript (Compiled to JavaScript for execution)
-- **Package Manager:** npm (Node Package Manager)
+- **Package Manager:** pnpm (Preferred package manager as per guidelines)
 - **Testing Framework:** Vitest (using v8 for coverage)
 
 ## 2. Key Libraries/Dependencies
@@ -34,16 +40,24 @@
 - **Configuration:**
   - `tsconfig.json`: Configures the TypeScript compiler options.
   - `vitest.config.ts`: Configures Vitest (test environment, globals, coverage).
-  - `package.json`: Defines project metadata, dependencies, and npm scripts.
+  - `package.json`: Defines project metadata, dependencies, and pnpm scripts.
     - `dependencies`: `@modelcontextprotocol/sdk`, `glob`, `zod`, `zod-to-json-schema`, `diff`, `detect-indent`.
-    - `devDependencies`: `typescript`, `@types/node`, `@types/glob`, `@types/diff`, `vitest`, `@vitest/coverage-v8`, `uuid`, `@types/uuid`.
-    - `scripts`:
+        - `devDependencies`: `typescript`, `@types/node`, `@types/glob`, `@types/diff`, `vitest`, `@vitest/coverage-v8`, `uuid`, `@types/uuid`, `husky`, `lint-staged`, `@commitlint/cli`, `@commitlint/config-conventional`, `prettier`, `eslint`, `typescript-eslint`, `eslint-plugin-prettier`, `eslint-config-prettier`, `standard-version`, `typedoc`, `typedoc-plugin-markdown`, `vitepress`, `rimraf`. (List might need verification against actual `package.json`)
+    - `scripts`: (Uses `pnpm run ...`)
       - `build`: Compiles TypeScript code.
-      - `watch`: Runs `tsc` in watch mode.
-      - `inspector`: Runs the MCP inspector tool.
-      - `test`: Runs Vitest tests with coverage (`vitest run --coverage`).
-- **Build Output:** Compiled JavaScript code is placed in the `build` directory.
-- **Execution:** The server is intended to be run via `node build/index.js`.
+            - `watch`: Runs `tsc` in watch mode.
+            - `clean`: `rimraf dist coverage`
+            - `inspector`: `npx @modelcontextprotocol/inspector dist/index.js`
+      - `test`: Runs Vitest tests.
+      - `test:cov`: Runs Vitest tests with coverage.
+      - `validate`: Runs format check, lint, typecheck, and tests.
+      - `docs:build`: Builds documentation.
+            - `start`: `node dist/index.js`
+            - `prepare`: `husky`
+            - `prepublishOnly`: `pnpm run clean && pnpm run build`
+            - (Other scripts as defined in `package.json`)
+- **Build Output:** Compiled JavaScript code is placed in the `dist` directory.
+- **Execution:** The server is intended to be run via `node dist/index.js`.
 
 ## 4. Technical Constraints & Considerations
 

@@ -26,7 +26,8 @@ export interface McpToolResponse {
 export interface ToolDefinition {
   name: string;
   description: string;
-  schema: z.ZodType<any, any, any>; // Keep Zod schema type general
+
+  schema: z.ZodTypeAny; // Use ZodTypeAny and disable lint rule
   handler: (args: unknown) => Promise<McpToolResponse>; // Use specific return type
 }
 

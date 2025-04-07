@@ -1,19 +1,15 @@
-import { promises as fs } from 'fs';
+// src/handlers/createDirectories.ts
+import { promises as fs, type Stats } from 'fs'; // Import Stats type
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
 
-// Define the expected MCP response structure locally
+// --- Types ---
+
 interface McpToolResponse {
   content: { type: 'text'; text: string }[];
 }
 
-/**
- * Handles the 'create_directories' MCP tool request.
- * Creates multiple specified directories (including intermediate ones).
- */
-
-// Define Zod schema and export it
 export const CreateDirsArgsSchema = z
   .object({
     paths: z
@@ -23,19 +19,22 @@ export const CreateDirsArgsSchema = z
   })
   .strict();
 
-// Infer TypeScript type
 type CreateDirsArgs = z.infer<typeof CreateDirsArgsSchema>;
 
-// Removed duplicated non-exported schema/type definitions
+interface CreateDirResult {
+  path: string;
+  success: boolean;
+  note?: string;
+  error?: string;
+  resolvedPath?: string;
+}
 
-const handleCreateDirectoriesFunc = async (
-  args: unknown,
-): Promise<McpToolResponse> => {
-  // Use local type
-  // Validate and parse arguments
-  let parsedArgs: CreateDirsArgs;
+// --- Helper Functions ---
+
+/** Parses and validates the input arguments. */
+function parseAndValidateArgs(args: unknown): CreateDirsArgs {
   try {
-    parsedArgs = CreateDirsArgsSchema.parse(args);
+    return CreateDirsArgsSchema.parse(args);
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw new McpError(
@@ -45,132 +44,164 @@ const handleCreateDirectoriesFunc = async (
     }
     throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
   }
-  const { paths: pathsToCreate } = parsedArgs;
+}
 
-  // Define result structure
-  // Define result structure
-  interface CreateDirResult {
-    path: string;
-    success: boolean;
-    note?: string;
-    error?: string;
-    resolvedPath: string; // Include resolved path for debugging
+/** Handles EEXIST errors by checking if the existing path is a directory. */
+async function handleEexistError(
+  targetPath: string,
+  pathOutput: string,
+): Promise<CreateDirResult> {
+  try {
+    const stats: Stats = await fs.stat(targetPath);
+    if (stats.isDirectory()) {
+      return {
+        path: pathOutput,
+        success: true,
+        note: 'Directory already exists',
+        resolvedPath: targetPath,
+      };
+    } else {
+      return {
+        path: pathOutput,
+        success: false,
+        error: 'Path exists but is not a directory',
+        resolvedPath: targetPath,
+      };
+    }
+  } catch (statError: unknown) {
+    console.error(
+      `[Filesystem MCP - createDirs] Error stating existing path ${targetPath}:`,
+      statError,
+    );
+    return {
+      path: pathOutput,
+      success: false,
+      error: `Failed to stat existing path: ${statError instanceof Error ? statError.message : String(statError)}`,
+      resolvedPath: targetPath,
+    };
+  }
+}
+
+/** Handles general errors during directory creation. */
+function handleDirectoryCreationError(
+  error: unknown,
+  pathOutput: string,
+  targetPath: string,
+): CreateDirResult {
+  if (error instanceof McpError) {
+    // Re-throw McpErrors related to path resolution if needed,
+    // otherwise format them for the result.
+    return {
+      path: pathOutput,
+      success: false,
+      error: error.message, // Or a more specific message
+      resolvedPath: targetPath || 'Resolution failed',
+    };
   }
 
-  const results = await Promise.allSettled(
-    pathsToCreate.map(async (relativePath): Promise<CreateDirResult> => {
-      const pathOutput = relativePath.replace(/\\/g, '/'); // Ensure consistent path separators early
-      let targetPath = ''; // Initialize targetPath
-      try {
-        targetPath = resolvePath(relativePath); // Assign resolved path
-        if (targetPath === PROJECT_ROOT) {
-          return {
-            path: pathOutput,
-            success: false,
-            error: 'Creating the project root is not allowed.',
-            resolvedPath: targetPath,
-          };
-        }
-        console.error(
-          `[handleCreateDirectories] Attempting to create directory at resolved path: ${targetPath}`,
-        ); // Log resolved path
-        await fs.mkdir(targetPath, { recursive: true });
-        console.error(
-          `[handleCreateDirectories] Successfully created directory: ${targetPath}`,
-        ); // Log success
-        return { path: pathOutput, success: true, resolvedPath: targetPath };
-      } catch (error: any) {
-        if (error.code === 'EEXIST') {
-          try {
-            const stats = await fs.stat(targetPath); // targetPath should be assigned here
-            if (stats.isDirectory()) {
-              return {
-                path: pathOutput,
-                success: true,
-                note: 'Directory already exists',
-                resolvedPath: targetPath,
-              };
-            } else {
-              return {
-                path: pathOutput,
-                success: false,
-                error: 'Path exists but is not a directory',
-                resolvedPath: targetPath,
-              };
-            }
-          } catch (statError: any) {
-            console.error(
-              `[Filesystem MCP - createDirs] Error stating existing path ${targetPath}:`,
-              statError,
-            );
-            return {
-              path: pathOutput,
-              success: false,
-              error: `Failed to create directory: ${statError.message}`,
-              resolvedPath: targetPath,
-            };
-          }
-        }
-        if (error.code === 'EPERM' || error.code === 'EACCES') {
-          console.error(
-            `[Filesystem MCP - createDirs] Permission error creating directory ${targetPath}:`,
-            error,
-          );
-          return {
-            path: pathOutput,
-            success: false,
-            error: `Permission denied creating directory: ${error.message}`,
-            resolvedPath: targetPath,
-          };
-        }
-        if (error instanceof McpError) {
-          // Add resolvedPath if available, otherwise use placeholder
-          return {
-            path: pathOutput,
-            success: false,
-            error: error.message,
-            resolvedPath: targetPath || 'Resolution failed',
-          };
-        }
-        // Generic error fallback
-        console.error(
-          `[Filesystem MCP - createDirs] Error creating directory ${targetPath}:`,
-          error,
-        );
-        return {
-          path: pathOutput,
-          success: false,
-          error: `Failed to create directory: ${error.message}`,
-          resolvedPath: targetPath || 'Resolution failed',
-        };
-      }
-    }),
-  );
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  let specificError = `Failed to create directory: ${errorMessage}`;
+  let logMessage = `[Filesystem MCP - createDirs] Error creating directory ${targetPath}:`;
 
-  // Process results from Promise.allSettled
-  const outputResults: CreateDirResult[] = results.map((result, index) => {
+  if (error && typeof error === 'object' && 'code' in error) {
+    if (error.code === 'EPERM' || error.code === 'EACCES') {
+      specificError = `Permission denied creating directory: ${errorMessage}`;
+      logMessage = `[Filesystem MCP - createDirs] Permission error creating directory ${targetPath}:`;
+    }
+    // Note: EEXIST is handled by handleEexistError
+  }
+
+  console.error(logMessage, error);
+  return {
+    path: pathOutput,
+    success: false,
+    error: specificError,
+    resolvedPath: targetPath || 'Resolution failed',
+  };
+}
+
+/** Processes the creation of a single directory. */
+async function processSingleDirectoryCreation( // Remove export
+  relativePath: string,
+): Promise<CreateDirResult> {
+  const pathOutput = relativePath.replace(/\\/g, '/');
+  let targetPath = '';
+  try {
+    targetPath = resolvePath(relativePath);
+    if (targetPath === PROJECT_ROOT) {
+      return {
+        path: pathOutput,
+        success: false,
+        error: 'Creating the project root is not allowed.',
+        resolvedPath: targetPath,
+      };
+    }
+    // console.log(`Attempting mkdir: ${targetPath}`); // Debug log
+    await fs.mkdir(targetPath, { recursive: true });
+    // console.log(`Success mkdir: ${targetPath}`); // Debug log
+    return { path: pathOutput, success: true, resolvedPath: targetPath };
+  } catch (error: unknown) {
+    // console.error(`Error mkdir ${targetPath}:`, error); // Debug log
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === 'EEXIST'
+    ) {
+      return await handleEexistError(targetPath, pathOutput);
+    }
+    return handleDirectoryCreationError(error, pathOutput, targetPath);
+  }
+}
+
+/** Processes results from Promise.allSettled. */
+export function processSettledResults( // Add export for testing
+  results: PromiseSettledResult<CreateDirResult>[],
+  originalPaths: string[],
+): CreateDirResult[] {
+  return results.map((result, index) => {
+    const originalPath = originalPaths[index] ?? 'unknown_path'; // Fallback
+    const pathOutput = originalPath.replace(/\\/g, '/');
+
     if (result.status === 'fulfilled') {
       return result.value;
     } else {
+      // Handle unexpected rejections (errors not caught in processSingleDirectoryCreation)
       console.error(
-        `[Filesystem MCP - createDirs] Unexpected rejection for path ${pathsToCreate[index]}:`,
+        `[Filesystem MCP - createDirs] Unexpected rejection for path ${originalPath}:`,
         result.reason,
       );
-      // Try to include resolvedPath even in rejection case if possible, might be tricky
       return {
-        path: (pathsToCreate[index] ?? 'unknown_path').replace(/\\/g, '/'), // Handle potential undefined
+        path: pathOutput,
         success: false,
-        error: 'Unexpected error during processing.',
+        error: `Unexpected error during processing: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
         resolvedPath: 'Unknown on rejection',
       };
     }
   });
+}
+
+/** Main handler function */
+const handleCreateDirectoriesFunc = async (
+  args: unknown,
+): Promise<McpToolResponse> => {
+  const { paths: pathsToCreate } = parseAndValidateArgs(args);
+
+  const creationPromises = pathsToCreate.map(processSingleDirectoryCreation);
+  const settledResults = await Promise.allSettled(creationPromises);
+
+  const outputResults = processSettledResults(settledResults, pathsToCreate);
 
   // Sort results by original path order for predictability
-  outputResults.sort(
-    (a, b) =>
-      pathsToCreate.indexOf(a.path ?? '') - pathsToCreate.indexOf(b.path ?? ''),
-  ); // Handle potential undefined path
+  // Create a map for quick lookup of original index
+  const originalIndexMap = new Map(
+    pathsToCreate.map((p, i) => [p.replace(/\\/g, '/'), i]),
+  );
+  outputResults.sort((a, b) => {
+    const indexA = originalIndexMap.get(a.path) ?? Infinity;
+    const indexB = originalIndexMap.get(b.path) ?? Infinity;
+    return indexA - indexB;
+  });
 
   return {
     content: [{ type: 'text', text: JSON.stringify(outputResults, null, 2) }],

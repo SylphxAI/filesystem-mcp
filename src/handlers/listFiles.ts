@@ -1,5 +1,4 @@
 // src/handlers/listFiles.ts
-// Import PathLike and ensure Dirent, Stats, StatOptions are imported
 import type { Stats, Dirent, StatOptions, PathLike } from 'fs';
 import { promises as fsPromises } from 'fs';
 import path from 'path';
@@ -11,7 +10,7 @@ import {
   resolvePath as resolvePathUtil,
   PROJECT_ROOT as projectRootUtil,
 } from '../utils/pathUtils.js';
-import type { FormattedStats } from '../utils/statsUtils.js'; // Import the interface
+import type { FormattedStats } from '../utils/statsUtils.js';
 import { formatStats as formatStatsUtil } from '../utils/statsUtils.js';
 
 // Define the expected MCP response structure locally
@@ -19,7 +18,7 @@ interface McpToolResponse {
   content: { type: 'text'; text: string }[];
 }
 
-// Define Zod schema (remains the same)
+// Define Zod schema
 export const ListFilesArgsSchema = z
   .object({
     path: z
@@ -42,11 +41,11 @@ export const ListFilesArgsSchema = z
 
 type ListFilesArgs = z.infer<typeof ListFilesArgsSchema>;
 
-// --- Define Dependencies Interface ---
-// Use PathLike and simplify complex function types with 'any' for injection compatibility
+// Define Dependencies Interface
 export interface ListFilesDependencies {
   stat: (p: PathLike, opts?: StatOptions) => Promise<Stats>;
-  readdir: (p: PathLike, options?: any) => Promise<string[] | Dirent[]>; // Simplified options
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  readdir: (p: PathLike, options?: any) => Promise<string[] | Dirent[]>;
   glob: (
     pattern: string | string[],
     options: GlobOptions,
@@ -54,7 +53,6 @@ export interface ListFilesDependencies {
   resolvePath: (userPath: string) => string;
   PROJECT_ROOT: string;
   formatStats: (
-    // Use the imported interface type
     relativePath: string,
     absolutePath: string,
     stats: Stats,
@@ -65,19 +63,60 @@ export interface ListFilesDependencies {
   >;
 }
 
-/**
- * Handles the 'list_files' MCP tool request (with dependency injection).
- * Lists files and directories, optionally recursively and with stats.
- */
-// Export the core function for testing
-export const handleListFilesFunc = async (
-  deps: ListFilesDependencies,
-  args: unknown,
-): Promise<McpToolResponse> => {
-  // Add return type
-  let parsedArgs: ListFilesArgs;
+// --- Helper Function Types ---
+interface ProcessedEntry {
+  path: string;
+  stats?: FormattedStats | { error: string };
+}
+
+// --- Parameter Interfaces for Refactored Functions ---
+interface ProcessGlobEntryParams {
+  deps: ListFilesDependencies;
+  entryPath: string; // Path relative to glob cwd
+  baseAbsolutePath: string;
+  baseRelativePath: string;
+  includeStats: boolean;
+}
+
+interface ListDirectoryWithGlobParams {
+  deps: ListFilesDependencies;
+  absolutePath: string;
+  relativePath: string;
+  recursive: boolean;
+  includeStats: boolean;
+}
+
+interface HandleDirectoryCaseParams {
+  deps: ListFilesDependencies;
+  absolutePath: string;
+  relativePath: string;
+  recursive: boolean;
+  includeStats: boolean;
+}
+
+interface ProcessInitialStatsParams {
+  deps: ListFilesDependencies;
+  initialStats: Stats;
+  relativeInputPath: string;
+  targetAbsolutePath: string;
+  recursive: boolean;
+  includeStats: boolean;
+}
+
+interface FormatStatsResultParams {
+  deps: ListFilesDependencies;
+  stats: Stats | undefined;
+  statsError: string | undefined;
+  relativeToRoot: string;
+  absolutePath: string;
+}
+
+// --- Refactored Helper Functions ---
+
+/** Parses and validates the input arguments. */
+function parseAndValidateArgs(args: unknown): ListFilesArgs {
   try {
-    parsedArgs = ListFilesArgsSchema.parse(args);
+    return ListFilesArgsSchema.parse(args);
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw new McpError(
@@ -87,7 +126,275 @@ export const handleListFilesFunc = async (
     }
     throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
   }
+}
 
+/** Handles the case where the input path is a file. */
+function handleFileCase(
+  deps: ListFilesDependencies,
+  relativePath: string,
+  absolutePath: string,
+  stats: Stats,
+): McpToolResponse {
+  const statsResult = deps.formatStats(relativePath, absolutePath, stats);
+  const outputJson = JSON.stringify(statsResult, null, 2);
+  return { content: [{ type: 'text', text: outputJson }] };
+}
+
+/** Formats the final results into the MCP response. */
+function formatResults(
+  results: ProcessedEntry[],
+  includeStats: boolean,
+): McpToolResponse {
+  const resultData = includeStats ? results : results.map((item) => item.path);
+  const outputJson = JSON.stringify(resultData, null, 2);
+  return { content: [{ type: 'text', text: outputJson }] };
+}
+
+/** Lists directory contents non-recursively without stats. */
+async function listDirectoryNonRecursive(
+  deps: ListFilesDependencies,
+  absolutePath: string,
+  relativePath: string,
+): Promise<ProcessedEntry[]> {
+  const results: ProcessedEntry[] = [];
+  const entries = (await deps.readdir(absolutePath, {
+    withFileTypes: true,
+  })) as Dirent[];
+
+  for (const entry of entries) {
+    const name = entry.name;
+    const itemRelativePath = deps.path.join(relativePath, name);
+    let isDirectory = false;
+    try {
+      // Prioritize dirent type, fallback to stat
+      if (entry.isDirectory()) {
+        isDirectory = true;
+      } else if (entry.isFile()) {
+        isDirectory = false;
+      } else if (entry.isSymbolicLink()) {
+        // Handle symlinks by stating the target
+        const itemFullPath = deps.path.resolve(absolutePath, name);
+        const itemStats = await deps.stat(itemFullPath); // stat follows symlinks by default
+        isDirectory = itemStats.isDirectory();
+      }
+    } catch (statError: unknown) {
+      const errorMessage =
+        statError instanceof Error ? statError.message : String(statError);
+      console.warn(
+        `[Filesystem MCP - listFiles] Could not determine type for item ${itemRelativePath} during readdir: ${errorMessage}`,
+      );
+      // Assume not a directory if stat fails, might be a broken link etc.
+      isDirectory = false;
+    }
+    const displayPath = isDirectory
+      ? `${itemRelativePath.replace(/\\/g, '/')}/`
+      : itemRelativePath.replace(/\\/g, '/');
+    results.push({ path: displayPath });
+  }
+  return results;
+}
+
+/** Gets stats for a glob entry, handling errors. */
+async function getStatsForGlobEntry(
+  deps: ListFilesDependencies,
+  absolutePath: string,
+  relativeToRoot: string,
+): Promise<{ stats?: Stats; error?: string }> {
+  try {
+    const stats = await deps.stat(absolutePath);
+    return { stats };
+  } catch (statError: unknown) {
+    const errorMessage =
+      statError instanceof Error ? statError.message : String(statError);
+    console.warn(
+      `[Filesystem MCP - listFiles] Could not get stats for ${relativeToRoot}: ${errorMessage}`,
+    );
+    return { error: `Could not get stats: ${errorMessage}` };
+  }
+}
+
+/** Formats the stats result for a glob entry. */
+function formatStatsResult(
+  params: FormatStatsResultParams, // Use interface
+): FormattedStats | { error: string } | undefined {
+  const { deps, stats, statsError, relativeToRoot, absolutePath } = params; // Destructure
+  if (stats) {
+    return deps.formatStats(relativeToRoot, absolutePath, stats);
+  } else if (statsError) {
+    return { error: statsError };
+  }
+  return undefined;
+}
+
+/** Processes a single entry returned by glob. */
+async function processGlobEntry(
+  params: ProcessGlobEntryParams,
+): Promise<ProcessedEntry | null> {
+  const { deps, entryPath, baseAbsolutePath, baseRelativePath, includeStats } =
+    params;
+
+  const relativeToRoot = deps.path.join(baseRelativePath, entryPath);
+  const absolutePath = deps.path.resolve(baseAbsolutePath, entryPath);
+
+  // Skip the base directory itself if returned by glob
+  if (entryPath === '.' || entryPath === '') {
+    return null;
+  }
+
+  const { stats, error: statsError } = await getStatsForGlobEntry(
+    deps,
+    absolutePath,
+    relativeToRoot,
+  );
+
+  const isDirectory = stats?.isDirectory() ?? entryPath.endsWith('/'); // Infer if stat failed
+  let statsResult: FormattedStats | { error: string } | undefined = undefined;
+
+  if (includeStats) {
+    statsResult = formatStatsResult({
+      // Pass object
+      deps,
+      stats,
+      statsError,
+      relativeToRoot,
+      absolutePath,
+    });
+  }
+
+  let displayPath = relativeToRoot.replace(/\\/g, '/');
+  if (isDirectory && !displayPath.endsWith('/')) {
+    displayPath += '/';
+  }
+
+  return {
+    path: displayPath,
+    ...(includeStats && statsResult && { stats: statsResult }),
+  };
+}
+
+/** Lists directory contents using glob (for recursive or stats cases). */
+async function listDirectoryWithGlob(
+  params: ListDirectoryWithGlobParams,
+): Promise<ProcessedEntry[]> {
+  const { deps, absolutePath, relativePath, recursive, includeStats } = params;
+  const results: ProcessedEntry[] = [];
+  const globPattern = recursive ? '**/*' : '*';
+  const globOptions: GlobOptions = {
+    cwd: absolutePath,
+    dot: true, // Include dotfiles
+    mark: false, // We add slash manually based on stat
+    nodir: false, // We need dirs to add slash
+    stat: false, // We perform stat manually for better error handling
+    withFileTypes: false, // Not reliable across systems/symlinks
+    absolute: false, // Paths relative to cwd
+    ignore: ['**/node_modules/**'], // Standard ignore
+  };
+
+  try {
+    const pathsFromGlob = await deps.glob(globPattern, globOptions);
+    const processingPromises = pathsFromGlob.map((entry) =>
+      processGlobEntry({
+        deps,
+        entryPath: entry as string,
+        baseAbsolutePath: absolutePath,
+        baseRelativePath: relativePath,
+        includeStats,
+      }),
+    );
+
+    const processedEntries = await Promise.all(processingPromises);
+    processedEntries.forEach((processed) => {
+      if (processed) {
+        results.push(processed);
+      }
+    });
+  } catch (globError: unknown) {
+    const errorMessage =
+      globError instanceof Error ? globError.message : String(globError);
+    console.error(
+      `[Filesystem MCP] Error during glob execution for ${absolutePath}:`,
+      globError,
+    );
+    throw new McpError(
+      ErrorCode.InternalError,
+      `Failed to list files using glob: ${errorMessage}`,
+      { cause: globError as Error },
+    );
+  }
+  return results;
+}
+
+/** Handles the case where the input path is a directory. */
+async function handleDirectoryCase(
+  params: HandleDirectoryCaseParams,
+): Promise<McpToolResponse> {
+  const { deps, absolutePath, relativePath, recursive, includeStats } = params;
+  let results: ProcessedEntry[];
+
+  if (!recursive && !includeStats) {
+    results = await listDirectoryNonRecursive(deps, absolutePath, relativePath);
+  } else {
+    results = await listDirectoryWithGlob({
+      // Pass object
+      deps,
+      absolutePath,
+      relativePath,
+      recursive,
+      includeStats,
+    });
+  }
+
+  return formatResults(results, includeStats);
+}
+
+/** Processes the initial stats to determine if it's a file or directory. */
+async function processInitialStats(
+  params: ProcessInitialStatsParams,
+): Promise<McpToolResponse> {
+  const {
+    deps,
+    initialStats,
+    relativeInputPath,
+    targetAbsolutePath,
+    recursive,
+    includeStats,
+  } = params;
+
+  if (initialStats.isFile()) {
+    return handleFileCase(
+      deps,
+      relativeInputPath,
+      targetAbsolutePath,
+      initialStats,
+    );
+  }
+
+  if (initialStats.isDirectory()) {
+    return await handleDirectoryCase({
+      // Pass object
+      deps,
+      absolutePath: targetAbsolutePath,
+      relativePath: relativeInputPath,
+      recursive,
+      includeStats,
+    });
+  }
+
+  // Should not happen if stat succeeds, but handle defensively
+  throw new McpError(
+    ErrorCode.InternalError,
+    `Path is neither a file nor a directory: ${relativeInputPath}`,
+  );
+}
+
+/**
+ * Main handler function for 'list_files' (Refactored).
+ */
+export const handleListFilesFunc = async (
+  deps: ListFilesDependencies,
+  args: unknown,
+): Promise<McpToolResponse> => {
+  const parsedArgs = parseAndValidateArgs(args);
   const {
     path: relativeInputPath,
     recursive,
@@ -97,187 +404,63 @@ export const handleListFilesFunc = async (
 
   try {
     const initialStats = await deps.stat(targetAbsolutePath);
-
-    if (initialStats.isFile()) {
-      const statsResult = deps.formatStats(
-        relativeInputPath,
-        targetAbsolutePath,
-        initialStats,
-      );
-      const outputJson = JSON.stringify(statsResult, null, 2);
-      return { content: [{ type: 'text', text: outputJson }] };
-    }
-
-    if (initialStats.isDirectory()) {
-      const results: {
-        path: string;
-        stats?: FormattedStats | { error: string }; // Use imported interface type
-      }[] = [];
-
-      // Corrected logical AND: &&
-      if (!recursive && !includeStats) {
-        // Request Dirent objects, the return type should be Dirent[]
-        const entries = (await deps.readdir(targetAbsolutePath, {
-          withFileTypes: true,
-        })) as Dirent[]; // Assert as Dirent[]
-        for (const entry of entries) {
-          // entry is now Dirent, use entry.name
-          const name = entry.name;
-          const itemRelativePath = deps.path.join(relativeInputPath, name);
-          let isDirectory = false;
-          try {
-            // Use Dirent type info directly
-            if (entry.isDirectory()) {
-              isDirectory = true;
-            } else if (entry.isFile()) {
-              // Check isFile() as well
-              isDirectory = false;
-            } else {
-              // Fallback to stat for other types like symlinks if necessary
-              const itemFullPath = deps.path.resolve(targetAbsolutePath, name);
-              const itemStats = await deps.stat(itemFullPath);
-              isDirectory = itemStats.isDirectory();
-            }
-          } catch (statError: any) {
-            console.warn(
-              `[Filesystem MCP - listFiles] Could not determine type for item ${itemRelativePath} during readdir: ${statError.message}`,
-            );
-          }
-          const displayPath = isDirectory
-            ? `${itemRelativePath.replace(/\\/g, '/')}/`
-            : itemRelativePath.replace(/\\/g, '/');
-          results.push({ path: displayPath });
-        }
-      } else {
-        const globPattern = recursive ? '**/*' : '*';
-        try {
-          const globOptions: GlobOptions = {
-            cwd: targetAbsolutePath,
-            dot: true,
-            mark: false,
-            nodir: false,
-            stat: false,
-            withFileTypes: false,
-            absolute: false,
-          };
-          const pathsFromGlob = await deps.glob(globPattern, globOptions);
-
-          for (const entry of pathsFromGlob) {
-            let displayPath: string;
-            let statsResult:
-              | FormattedStats // Use imported interface type
-              | { error: string }
-              | undefined = undefined;
-            const pathRelativeGlob = entry as string;
-            const relativeToRoot = deps.path.join(
-              relativeInputPath,
-              pathRelativeGlob,
-            );
-            const absolutePath = deps.path.resolve(
-              targetAbsolutePath,
-              pathRelativeGlob,
-            );
-
-            if (pathRelativeGlob === '.' || pathRelativeGlob === '') {
-              continue;
-            }
-
-            let isDirectory = false;
-            try {
-              const entryStats = await deps.stat(absolutePath);
-              isDirectory = entryStats.isDirectory();
-              if (includeStats) {
-                statsResult = deps.formatStats(
-                  relativeToRoot,
-                  absolutePath,
-                  entryStats,
-                );
-              }
-            } catch (statError: any) {
-              console.warn(
-                `[Filesystem MCP - listFiles] Could not get stats for ${relativeToRoot}: ${statError.message}`,
-              );
-              if (includeStats) {
-                statsResult = {
-                  error: `Could not get stats: ${statError.message}`,
-                };
-              }
-            }
-            displayPath = relativeToRoot.replace(/\\/g, '/');
-            // Corrected logical AND: &&
-            if (isDirectory && !displayPath.endsWith('/')) {
-              displayPath += '/';
-            }
-            if (includeStats) {
-              results.push({
-                path: displayPath,
-                ...(statsResult && { stats: statsResult }),
-              }); // Use conditional spread
-            } else {
-              results.push({ path: displayPath });
-            }
-          }
-        } catch (globError: any) {
-          console.error(
-            `[Filesystem MCP] Error during glob execution or processing for ${targetAbsolutePath}:`,
-            globError,
-          );
-          // Wrap the glob error in an McpError
-          throw new McpError(
-            ErrorCode.InternalError,
-            `Failed to list files using glob: ${globError.message}`,
-            { cause: globError },
-          );
-        }
-      }
-
-      const resultData = includeStats
-        ? results
-        : results.map((item) => item.path);
-      const outputJson = JSON.stringify(resultData, null, 2);
-      return { content: [{ type: 'text', text: outputJson }] };
-    }
-
-    throw new McpError(
-      ErrorCode.InternalError,
-      `Path is neither a file nor a directory: ${relativeInputPath}`,
-    );
-  } catch (error: any) {
-    if (error.code === 'ENOENT')
+    // Delegate processing based on initial stats
+    return await processInitialStats({
+      deps,
+      initialStats,
+      relativeInputPath,
+      targetAbsolutePath,
+      recursive,
+      includeStats,
+    });
+  } catch (error: unknown) {
+    // Handle common errors like ENOENT
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === 'ENOENT'
+    ) {
       throw new McpError(
         ErrorCode.InvalidRequest,
         `Path not found: ${relativeInputPath}`,
-        { cause: error },
+        { cause: error as Error },
       );
+    }
+    // Re-throw known MCP errors
     if (error instanceof McpError) throw error;
+
+    // Handle unexpected errors
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(
       `[Filesystem MCP] Error in listFiles for ${targetAbsolutePath}:`,
       error,
     );
     throw new McpError(
       ErrorCode.InternalError,
-      `Failed to process path: ${error.message}`,
-      { cause: error },
+      `Failed to process path: ${errorMessage}`,
+      { cause: error as Error },
     );
   }
 };
 
 // --- Tool Definition ---
-const productionHandler = (args: unknown) => {
-  // Assign actual functions, relying on TypeScript's inference or using 'as any' if needed for complex overloads
+const productionHandler = (args: unknown): Promise<McpToolResponse> => {
   const dependencies: ListFilesDependencies = {
-    stat: fsPromises.stat as any, // Use 'as any' to bypass complex overload checks if necessary
-    readdir: fsPromises.readdir as any, // Use 'as any'
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+    stat: fsPromises.stat as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+    readdir: fsPromises.readdir as any,
     glob: globFn,
     resolvePath: resolvePathUtil,
     PROJECT_ROOT: projectRootUtil,
     formatStats: formatStatsUtil,
     path: {
-      join: path.join,
-      dirname: path.dirname,
-      resolve: path.resolve,
-      relative: path.relative,
-      basename: path.basename,
+      join: path.join.bind(path),
+      dirname: path.dirname.bind(path),
+      resolve: path.resolve.bind(path),
+      relative: path.relative.bind(path),
+      basename: path.basename.bind(path),
     },
   };
   return handleListFilesFunc(dependencies, args);

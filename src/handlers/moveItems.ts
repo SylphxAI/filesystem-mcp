@@ -1,21 +1,16 @@
+// src/handlers/moveItems.ts
 import { promises as fs } from 'fs';
 import path from 'path';
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
 
-// Define the expected MCP response structure locally
+// --- Types ---
+
 interface McpToolResponse {
   content: { type: 'text'; text: string }[];
 }
 
-/**
- * Handles the 'move_items' MCP tool request.
- * Moves or renames multiple specified files/directories.
- */
-// Removed extra comment marker
-
-// Define Zod schema for individual operations and export it
 export const MoveOperationSchema = z
   .object({
     source: z.string().describe('Relative path of the source.'),
@@ -23,7 +18,6 @@ export const MoveOperationSchema = z
   })
   .strict();
 
-// Define Zod schema for the main arguments object and export it
 export const MoveItemsArgsSchema = z
   .object({
     operations: z
@@ -33,16 +27,36 @@ export const MoveItemsArgsSchema = z
   })
   .strict();
 
-// Infer TypeScript type
 type MoveItemsArgs = z.infer<typeof MoveItemsArgsSchema>;
-// Removed duplicated non-exported schema/type definitions comment
+type MoveOperation = z.infer<typeof MoveOperationSchema>;
 
-const handleMoveItemsFunc = async (args: unknown): Promise<McpToolResponse> => {
-  // Use local type
-  // Validate and parse arguments
-  let parsedArgs: MoveItemsArgs;
+interface MoveResult {
+  source: string;
+  destination: string;
+  success: boolean;
+  error?: string;
+}
+
+// --- Parameter Interfaces ---
+
+interface HandleMoveErrorParams {
+  error: unknown;
+  sourceRelative: string;
+  destinationRelative: string;
+  sourceOutput: string;
+  destOutput: string;
+}
+
+interface ProcessSingleMoveParams {
+  op: MoveOperation;
+}
+
+// --- Helper Functions ---
+
+/** Parses and validates the input arguments. */
+function parseAndValidateArgs(args: unknown): MoveItemsArgs {
   try {
-    parsedArgs = MoveItemsArgsSchema.parse(args);
+    return MoveItemsArgsSchema.parse(args);
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw new McpError(
@@ -52,113 +66,145 @@ const handleMoveItemsFunc = async (args: unknown): Promise<McpToolResponse> => {
     }
     throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
   }
-  const { operations } = parsedArgs;
+}
 
-  // Define result structure
-  interface MoveResult {
-    source: string;
-    destination: string;
-    success: boolean;
-    error?: string;
+/** Handles errors during the move operation for a single item. */
+function handleMoveError({
+  error,
+  sourceRelative,
+  destinationRelative,
+  sourceOutput,
+  destOutput,
+}: HandleMoveErrorParams): MoveResult {
+  let errorMessage = 'An unknown error occurred during move/rename.';
+  let errorCode: string | null = null;
+
+  if (
+    error &&
+    typeof error === 'object' &&
+    'code' in error &&
+    typeof error.code === 'string'
+  ) {
+    errorCode = error.code;
   }
 
-  const results = await Promise.allSettled(
-    operations.map(async (op): Promise<MoveResult> => {
-      const sourceRelative = op.source;
-      const destinationRelative = op.destination;
-      const sourceOutput = sourceRelative.replace(/\\/g, '/'); // Ensure consistent path separators early
-      const destOutput = destinationRelative.replace(/\\/g, '/');
+  if (error instanceof McpError) {
+    errorMessage = error.message; // Preserve specific MCP errors (e.g., path resolution)
+  } else if (error instanceof Error) {
+    errorMessage = `Failed to move item: ${error.message}`;
+  }
 
-      try {
-        const sourceAbsolute = resolvePath(sourceRelative);
-        const destinationAbsolute = resolvePath(destinationRelative);
+  // Handle specific filesystem error codes
+  if (errorCode === 'ENOENT') {
+    errorMessage = `Source path not found: ${sourceRelative}`;
+  } else if (errorCode === 'EPERM' || errorCode === 'EACCES') {
+    errorMessage = `Permission denied moving '${sourceRelative}' to '${destinationRelative}'.`;
+  }
+  // TODO: Consider handling EXDEV (cross-device link)
 
-        if (sourceAbsolute === PROJECT_ROOT) {
-          return {
-            source: sourceOutput,
-            destination: destOutput,
-            success: false,
-            error: 'Moving the project root is not allowed.',
-          };
-        }
-        // Security Note: resolvePath already prevents destinationAbsolute from being outside PROJECT_ROOT
-
-        // Ensure parent directory of destination exists before moving
-        const destDir = path.dirname(destinationAbsolute);
-        await fs.mkdir(destDir, { recursive: true });
-
-        // Now attempt the move/rename
-        await fs.rename(sourceAbsolute, destinationAbsolute);
-        return { source: sourceOutput, destination: destOutput, success: true };
-      } catch (error: any) {
-        if (error.code === 'ENOENT') {
-          return {
-            source: sourceOutput,
-            destination: destOutput,
-            success: false,
-            error: `Source path not found: ${sourceRelative}`,
-          };
-        }
-        if (error.code === 'EPERM' || error.code === 'EACCES') {
-          return {
-            source: sourceOutput,
-            destination: destOutput,
-            success: false,
-            error: `Permission denied moving '${sourceRelative}' to '${destinationRelative}'.`,
-          };
-        }
-        // TODO: Consider handling EXDEV (cross-device link) by copying and deleting if needed
-        if (error instanceof McpError) {
-          return {
-            source: sourceOutput,
-            destination: destOutput,
-            success: false,
-            error: error.message,
-          };
-        }
-        console.error(
-          `[Filesystem MCP - moveItems] Error moving item from ${sourceRelative} to ${destinationRelative}:`,
-          error,
-        );
-        return {
-          source: sourceOutput,
-          destination: destOutput,
-          success: false,
-          error: `Failed to move item: ${error.message}`,
-        };
-      }
-    }),
+  console.error(
+    `[Filesystem MCP - moveItems] Error moving item from ${sourceRelative} to ${destinationRelative}:`,
+    error,
   );
 
-  // Process results from Promise.allSettled
-  const outputResults: MoveResult[] = results.map((result, index) => {
+  return {
+    source: sourceOutput,
+    destination: destOutput,
+    success: false,
+    error: errorMessage,
+  };
+}
+
+/** Processes a single move/rename operation. */
+async function processSingleMoveOperation(
+  params: ProcessSingleMoveParams,
+): Promise<MoveResult> {
+  const { op } = params;
+  const sourceRelative = op.source;
+  const destinationRelative = op.destination;
+  const sourceOutput = sourceRelative.replace(/\\/g, '/');
+  const destOutput = destinationRelative.replace(/\\/g, '/');
+
+  try {
+    const sourceAbsolute = resolvePath(sourceRelative);
+    const destinationAbsolute = resolvePath(destinationRelative);
+
+    if (sourceAbsolute === PROJECT_ROOT) {
+      return {
+        source: sourceOutput,
+        destination: destOutput,
+        success: false,
+        error: 'Moving the project root is not allowed.',
+      };
+    }
+    // Security Note: resolvePath already prevents destinationAbsolute from being outside PROJECT_ROOT
+
+    // Ensure parent directory of destination exists before moving
+    const destDir = path.dirname(destinationAbsolute);
+    // Avoid creating the root dir itself if dest is in root
+    if (destDir !== PROJECT_ROOT) {
+      await fs.mkdir(destDir, { recursive: true });
+    }
+
+    // Now attempt the move/rename
+    await fs.rename(sourceAbsolute, destinationAbsolute);
+    return { source: sourceOutput, destination: destOutput, success: true };
+  } catch (error: unknown) {
+    return handleMoveError({
+      error,
+      sourceRelative,
+      destinationRelative,
+      sourceOutput,
+      destOutput,
+    });
+  }
+}
+
+/** Processes results from Promise.allSettled. */
+function processSettledResults(
+  results: PromiseSettledResult<MoveResult>[],
+  originalOps: MoveOperation[],
+): MoveResult[] {
+  return results.map((result, index) => {
+    const op = originalOps[index];
+    const sourceOutput = (op?.source ?? 'unknown').replace(/\\/g, '/');
+    const destOutput = (op?.destination ?? 'unknown').replace(/\\/g, '/');
+
     if (result.status === 'fulfilled') {
       return result.value;
     } else {
-      const op = operations[index];
       console.error(
         `[Filesystem MCP - moveItems] Unexpected rejection for operation ${JSON.stringify(op)}:`,
         result.reason,
       );
       return {
-        source: (op?.source ?? 'unknown').replace(/\\/g, '/'), // Handle potential undefined
-        destination: (op?.destination ?? 'unknown').replace(/\\/g, '/'), // Handle potential undefined
+        source: sourceOutput,
+        destination: destOutput,
         success: false,
-        error: 'Unexpected error during processing.',
+        error: `Unexpected error during processing: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
       };
     }
   });
-  // Sort results based on the original order in the input 'operations' array
+}
+
+/** Main handler function */
+const handleMoveItemsFunc = async (args: unknown): Promise<McpToolResponse> => {
+  const { operations } = parseAndValidateArgs(args);
+
+  const movePromises = operations.map((op) =>
+    processSingleMoveOperation({ op }),
+  );
+  const settledResults = await Promise.allSettled(movePromises);
+
+  const outputResults = processSettledResults(settledResults, operations);
+
+  // Sort results based on the original order
+  const originalIndexMap = new Map(
+    operations.map((op, i) => [op.source.replace(/\\/g, '/'), i]),
+  );
   outputResults.sort((a, b) => {
-    const indexA = operations.findIndex(
-      (op) => op.source.replace(/\\/g, '/') === (a.source ?? ''),
-    );
-    const indexB = operations.findIndex(
-      (op) => op.source.replace(/\\/g, '/') === (b.source ?? ''),
-    );
-    // Handle cases where source might be missing in error results (though unlikely)
-    if (indexA === -1) return 1;
-    if (indexB === -1) return -1;
+    const indexA = originalIndexMap.get(a.source) ?? Infinity;
+    const indexB = originalIndexMap.get(b.source) ?? Infinity;
     return indexA - indexB;
   });
 

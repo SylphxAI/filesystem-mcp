@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import * as fsPromises from 'fs/promises';
-import * as actualFsPromises from 'fs/promises'; // Import actual fs for fallback in mocks
+// import * as fsPromises from 'fs/promises'; // Removed unused import
+// import * as actualFsPromises from 'fs/promises'; // Removed unused import
 
 import * as path from 'path';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
@@ -216,7 +216,8 @@ describe('handleReadContent Integration Tests', () => {
     expect(errorResult.error).toBeDefined();
     // Check for the unexpected resolve error message from line 82
     expect(errorResult.error).toMatch(
-      /Unexpected error resolving path: Simulated generic resolve error/,
+      // Corrected regex
+      /Error resolving path: Simulated generic resolve error/,
     );
   });
 });

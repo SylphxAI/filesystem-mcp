@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import * as fsPromises from 'fs/promises';
+// import * as fsPromises from 'fs/promises'; // Removed unused import
 import * as path from 'path';
 // Import the definition object - will be mocked later
 // import { statItemsToolDefinition } from '../../src/handlers/statItems.js';
@@ -68,6 +68,102 @@ describe('handleStatItems Integration Tests', () => {
     vi.clearAllMocks(); // Clear all mocks, including resolvePath
   });
 
+  // Helper function to assert stat results
+  interface ExpectedStatProps {
+    status: 'success' | 'error';
+    isFile?: boolean;
+    isDirectory?: boolean;
+    size?: number;
+    error?: string | RegExp;
+  }
+
+  // --- REFACTORED HELPER FUNCTIONS START ---
+  function assertSuccessStat(
+    resultItem: any,
+    expectedPath: string,
+    expectedProps: ExpectedStatProps,
+  ): void {
+    expect(
+      resultItem.stats,
+      `Expected stats object for successful path '${expectedPath}'`,
+    ).toBeDefined();
+    if (expectedProps.isFile !== undefined) {
+      expect(
+        resultItem.stats?.isFile,
+        `Expected isFile=${String(expectedProps.isFile)} for path '${expectedPath}'`,
+      ).toBe(expectedProps.isFile);
+    }
+    if (expectedProps.isDirectory !== undefined) {
+      expect(
+        resultItem.stats?.isDirectory,
+        `Expected isDirectory=${String(expectedProps.isDirectory)} for path '${expectedPath}'`,
+      ).toBe(expectedProps.isDirectory);
+    }
+    if (expectedProps.size !== undefined) {
+      expect(
+        resultItem.stats?.size,
+        `Expected size=${expectedProps.size} for path '${expectedPath}'`,
+      ).toBe(expectedProps.size);
+    }
+    expect(
+      resultItem.error,
+      `Expected no error for path '${expectedPath}'`,
+    ).toBeUndefined();
+  }
+
+  function assertErrorStat(
+    resultItem: any,
+    expectedPath: string,
+    expectedProps: ExpectedStatProps,
+  ): void {
+    expect(
+      resultItem.stats,
+      `Expected no stats object for error path '${expectedPath}'`,
+    ).toBeUndefined();
+    expect(
+      resultItem.error,
+      `Expected error message for path '${expectedPath}'`,
+    ).toBeDefined();
+    if (expectedProps.error) {
+      if (expectedProps.error instanceof RegExp) {
+        expect(
+          resultItem.error,
+          `Error message for path '${expectedPath}' did not match regex`,
+        ).toMatch(expectedProps.error);
+      } else {
+        expect(
+          resultItem.error,
+          `Error message for path '${expectedPath}' did not match string`,
+        ).toBe(expectedProps.error);
+      }
+    }
+  }
+
+  function assertStatResult(
+    results: any[],
+    expectedPath: string,
+    expectedProps: ExpectedStatProps,
+  ): void {
+    const resultItem = results.find((r: any) => r.path === expectedPath);
+    expect(
+      resultItem,
+      `Result for path '${expectedPath}' not found`,
+    ).toBeDefined();
+    if (!resultItem) return; // Guard for type safety
+
+    expect(
+      resultItem.status,
+      `Expected status '${expectedProps.status}' for path '${expectedPath}'`,
+    ).toBe(expectedProps.status);
+
+    if (expectedProps.status === 'success') {
+      assertSuccessStat(resultItem, expectedPath, expectedProps);
+    } else {
+      assertErrorStat(resultItem, expectedPath, expectedProps);
+    }
+  }
+  // --- REFACTORED HELPER FUNCTIONS END ---
+
   it('should return stats for existing files and directories', async () => {
     const request = {
       paths: ['file1.txt', 'dir1', 'dir1/file2.js', 'emptyDir'],
@@ -79,30 +175,32 @@ describe('handleStatItems Integration Tests', () => {
 
     expect(result).toHaveLength(4);
 
-    // Basic checks - adjust based on actual result structure from handler
-    const file1Stat = result.find((r: any) => r.path === 'file1.txt');
-    expect(file1Stat).toBeDefined(); // Ensure the item was found
-    expect(file1Stat?.status).toBe('success');
-    expect(file1Stat?.stats?.isFile).toBe(true);
-    expect(file1Stat?.stats?.isDirectory).toBe(false);
-    expect(file1Stat?.stats?.size).toBe(Buffer.byteLength('content1'));
+    // *** Uses refactored helper ***
+    assertStatResult(result, 'file1.txt', {
+      status: 'success',
+      isFile: true,
+      isDirectory: false,
+      size: Buffer.byteLength('content1'),
+    });
 
-    const dir1Stat = result.find((r: any) => r.path === 'dir1');
-    expect(dir1Stat).toBeDefined();
-    expect(dir1Stat?.status).toBe('success');
-    expect(dir1Stat?.stats?.isFile).toBe(false);
-    expect(dir1Stat?.stats?.isDirectory).toBe(true);
+    assertStatResult(result, 'dir1', {
+      status: 'success',
+      isFile: false,
+      isDirectory: true,
+    });
 
-    const file2Stat = result.find((r: any) => r.path === 'dir1/file2.js');
-    expect(file2Stat).toBeDefined();
-    expect(file2Stat?.status).toBe('success');
-    expect(file2Stat?.stats?.isFile).toBe(true);
-    expect(file2Stat?.stats?.size).toBe(Buffer.byteLength('content2'));
+    assertStatResult(result, 'dir1/file2.js', {
+      status: 'success',
+      isFile: true,
+      isDirectory: false,
+      size: Buffer.byteLength('content2'),
+    });
 
-    const emptyDirStat = result.find((r: any) => r.path === 'emptyDir');
-    expect(emptyDirStat).toBeDefined();
-    expect(emptyDirStat?.status).toBe('success');
-    expect(emptyDirStat?.stats?.isDirectory).toBe(true);
+    assertStatResult(result, 'emptyDir', {
+      status: 'success',
+      isFile: false,
+      isDirectory: true,
+    });
   });
 
   it('should return errors for non-existent paths', async () => {
@@ -114,26 +212,19 @@ describe('handleStatItems Integration Tests', () => {
 
     expect(result).toHaveLength(3);
 
-    const file1Stat = result.find((r: any) => r.path === 'file1.txt');
-    expect(file1Stat).toBeDefined();
-    expect(file1Stat?.status).toBe('success');
+    // Use helper for success case
+    assertStatResult(result, 'file1.txt', { status: 'success' });
 
-    const nonexistentFile = result.find(
-      (r: any) => r.path === 'nonexistent.file',
-    );
-    expect(nonexistentFile).toBeDefined();
-    expect(nonexistentFile?.status).toBe('error');
-    // The handler currently returns a simple string message, not an McpError object directly in the result array
-    expect(nonexistentFile?.error).toBe('Path not found');
-    // The handler returns a simple string message for ENOENT
-    expect(nonexistentFile?.error).toBe('Path not found');
+    // Use helper for error cases
+    assertStatResult(result, 'nonexistent.file', {
+      status: 'error',
+      error: 'Path not found',
+    });
 
-    const nonexistentJs = result.find(
-      (r: any) => r.path === 'dir1/nonexistent.js',
-    );
-    expect(nonexistentJs).toBeDefined();
-    expect(nonexistentJs?.status).toBe('error');
-    expect(nonexistentJs?.error).toBe('Path not found');
+    assertStatResult(result, 'dir1/nonexistent.js', {
+      status: 'error',
+      error: 'Path not found',
+    });
   });
 
   it('should return error for absolute paths (caught by mock resolvePath)', async () => {
@@ -147,9 +238,13 @@ describe('handleStatItems Integration Tests', () => {
     const rawResult = await statItemsToolDefinition.handler(request);
     const result = JSON.parse(rawResult.content[0].text);
     expect(result).toHaveLength(1);
-    expect(result[0].status).toBe('error');
-    // Check the error message generated by our mock
-    expect(result[0].error).toMatch(/Mocked Absolute paths are not allowed/);
+
+    // Use helper for error case
+    assertStatResult(result, absolutePath.replace(/\\/g, '/'), {
+      // Normalize path for comparison if needed
+      status: 'error',
+      error: /Mocked Absolute paths are not allowed/,
+    });
   });
 
   it('should return error for path traversal (caught by mock resolvePath)', async () => {
@@ -161,8 +256,12 @@ describe('handleStatItems Integration Tests', () => {
     const rawResult = await statItemsToolDefinition.handler(request);
     const result = JSON.parse(rawResult.content[0].text);
     expect(result).toHaveLength(1);
-    expect(result[0].status).toBe('error');
-    expect(result[0].error).toMatch(/Path traversal detected/);
+
+    // Use helper for error case
+    assertStatResult(result, '../outside.txt', {
+      status: 'error',
+      error: /Path traversal detected/,
+    });
   });
 
   it('should handle an empty paths array gracefully', async () => {
@@ -216,13 +315,12 @@ describe('handleStatItems Integration Tests', () => {
     const result = JSON.parse(rawResult.content[0].text);
 
     expect(result).toHaveLength(1);
-    const errorResult = result.find((r: any) => r.path === errorPath);
-    expect(errorResult).toBeDefined();
-    expect(errorResult?.status).toBe('error');
-    // Check that the error message from the generic catch block is present
-    expect(errorResult?.error).toContain(
-      `Failed to get stats: ${genericErrorMessage}`,
-    );
+
+    // Use helper for error case
+    assertStatResult(result, errorPath, {
+      status: 'error',
+      error: new RegExp(`Failed to get stats: ${genericErrorMessage}`), // Use regex to avoid exact match issues
+    });
 
     // No need to restore mockResolvePath as mockImplementationOnce only applies once.
     // The beforeEach block will set the standard implementation for the next test.

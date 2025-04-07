@@ -13,7 +13,7 @@ const targetFile = path.resolve(__dirname, '../build/index.js');
 try {
   if (fs.existsSync(targetFile)) {
     fs.chmodSync(targetFile, '755');
-    console.log(`Successfully set executable permission on ${targetFile}`);
+    console.info(`Successfully set executable permission on ${targetFile}`); // Changed log to info
   } else {
     console.warn(`Warning: ${targetFile} not found. Skipping chmod.`);
   }

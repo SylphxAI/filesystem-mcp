@@ -2,7 +2,7 @@
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import type { z, ZodTypeAny } from 'zod'; // Import ZodTypeAny
+import type { ZodTypeAny } from 'zod'; // Removed unused 'z' import
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { CallToolRequest } from '@modelcontextprotocol/sdk/types.js';
 import {
@@ -12,7 +12,7 @@ import {
   ErrorCode, // Import CallToolRequest
   // ListToolsResponse is not exported, use inline type or define locally
 } from '@modelcontextprotocol/sdk/types.js';
-import type { McpToolResponse } from './handlers/index.js'; // Import shared type
+// Removed unused McpToolResponse import from './handlers/index.js'
 // Import the aggregated tool definitions
 import { allToolDefinitions } from './handlers/index.js';
 // Removed incorrect import left over from partial diff
@@ -36,9 +36,13 @@ const server = new Server(
 
 // Helper function to convert Zod schema to JSON schema for MCP
 // Use ZodTypeAny and a more specific return type or any
+// Specify return type more accurately, disable unsafe argument rule for this specific call
 const generateInputSchema = (schema: ZodTypeAny): Record<string, unknown> => {
-  // Cast to any is still likely needed due to zodToJsonSchema's complex output
-  return zodToJsonSchema(schema, { target: 'openApi3' }) as any;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+  return zodToJsonSchema(schema, { target: 'openApi3' }) as Record<
+    string,
+    unknown
+  >;
 };
 
 // Remove async, add return type using imported ListToolsResponse
@@ -64,11 +68,10 @@ server.setRequestHandler(
 );
 
 // Add types for request and return value
-server.setRequestHandler(CallToolRequestSchema, (async (
+// Define the handler function separately with explicit types
+const handleCallTool = async (
   request: CallToolRequest,
-) => {
-  // Use imported handlers
-  // Find the tool definition by name and call its handler
+): Promise<{ content: { type: string; text: string }[] }> => {
   const toolDefinition = allToolDefinitions.find(
     (def) => def.name === request.params.name,
   );
@@ -79,15 +82,17 @@ server.setRequestHandler(CallToolRequestSchema, (async (
       `Unknown tool: ${request.params.name}`,
     );
   }
-
-  // Call the handler associated with the found definition
-  // The handler itself will perform Zod validation on the arguments
+  // The handler itself returns Promise<McpToolResponse>, which matches the required return type
   return toolDefinition.handler(request.params.arguments);
-}) as any); // Use 'as any' to bypass type checking issue
+};
+
+// Register the typed handler function
+server.setRequestHandler(CallToolRequestSchema, handleCallTool);
 
 // --- Server Start ---
 
-async function main() {
+async function main(): Promise<void> {
+  // Add return type
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('[Filesystem MCP] Server running on stdio');

@@ -1,21 +1,17 @@
-import { promises as fs } from 'fs';
+// src/handlers/statItems.ts
+import { promises as fs, type Stats } from 'fs'; // Import Stats
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { resolvePath } from '../utils/pathUtils.js';
 import type { FormattedStats } from '../utils/statsUtils.js'; // Import type
 import { formatStats } from '../utils/statsUtils.js';
 
-// Define the expected MCP response structure locally
+// --- Types ---
+
 interface McpToolResponse {
   content: { type: 'text'; text: string }[];
 }
 
-/**
- * Handles the 'stat_items' MCP tool request.
- * Gets detailed status information for multiple specified paths.
- */
-
-// Define Zod schema and export it
 export const StatItemsArgsSchema = z
   .object({
     paths: z
@@ -27,17 +23,21 @@ export const StatItemsArgsSchema = z
   })
   .strict();
 
-// Infer TypeScript type
 type StatItemsArgs = z.infer<typeof StatItemsArgsSchema>;
 
-// Removed duplicated non-exported schema/type definitions
+interface StatResult {
+  path: string;
+  status: 'success' | 'error';
+  stats?: FormattedStats;
+  error?: string;
+}
 
-const handleStatItemsFunc = async (args: unknown): Promise<McpToolResponse> => {
-  // Use local type
-  // Validate and parse arguments
-  let parsedArgs: StatItemsArgs;
+// --- Helper Functions ---
+
+/** Parses and validates the input arguments. */
+function parseAndValidateArgs(args: unknown): StatItemsArgs {
   try {
-    parsedArgs = StatItemsArgsSchema.parse(args);
+    return StatItemsArgsSchema.parse(args);
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw new McpError(
@@ -47,63 +47,108 @@ const handleStatItemsFunc = async (args: unknown): Promise<McpToolResponse> => {
     }
     throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
   }
-  const { paths: pathsToStat } = parsedArgs;
+}
 
-  // Define the structure for results more explicitly
-  interface StatResult {
-    path: string;
-    status: 'success' | 'error';
-    stats?: FormattedStats; // Use imported type
-    error?: string;
+/** Handles errors during stat operation. */
+function handleStatError(
+  error: unknown,
+  relativePath: string,
+  pathOutput: string,
+): StatResult {
+  let errorMessage = `Failed to get stats: ${error instanceof Error ? error.message : String(error)}`;
+  let logError = true;
+
+  if (error instanceof McpError) {
+    errorMessage = error.message; // Use McpError message directly
+    logError = false; // Assume McpError was logged at source or is expected
+  } else if (error && typeof error === 'object' && 'code' in error) {
+    if (error.code === 'ENOENT') {
+      errorMessage = 'Path not found';
+      logError = false; // ENOENT is a common, expected error
+    } else if (error.code === 'EACCES' || error.code === 'EPERM') {
+      errorMessage = `Permission denied stating path: ${relativePath}`;
+    }
   }
-  const results: StatResult[] = [];
 
-  await Promise.allSettled(
-    pathsToStat.map(async (relativePath) => {
-      const pathOutput = relativePath.replace(/\\/g, '/'); // Ensure consistent path separators early
-      try {
-        const targetPath = resolvePath(relativePath);
-        const stats = await fs.stat(targetPath);
-        results.push({
-          path: pathOutput,
-          status: 'success',
-          stats: formatStats(relativePath, targetPath, stats),
-        });
-      } catch (error: any) {
-        if (error.code === 'ENOENT') {
-          results.push({
-            path: pathOutput,
-            status: 'error',
-            error: 'Path not found',
-          });
-        } else if (error instanceof McpError) {
-          results.push({
-            path: pathOutput,
-            status: 'error',
-            error: error.message,
-          });
-        } else {
-          console.error(
-            `[Filesystem MCP - statItems] Error stating item ${relativePath}:`,
-            error,
-          );
-          results.push({
-            path: pathOutput,
-            status: 'error',
-            error: `Failed to get stats: ${error.message}`,
-          });
-        }
-      }
-    }),
-  );
-
-  // Sort results by original path order for predictability, although Promise.allSettled usually preserves order
-  results.sort(
-    (a, b) => pathsToStat.indexOf(a.path) - pathsToStat.indexOf(b.path),
-  );
+  if (logError) {
+    console.error(
+      `[Filesystem MCP - statItems] Error stating item ${relativePath}:`,
+      error,
+    );
+  }
 
   return {
-    content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
+    path: pathOutput,
+    status: 'error',
+    error: errorMessage,
+  };
+}
+
+/** Processes the stat operation for a single path. */
+async function processSingleStatOperation(
+  relativePath: string,
+): Promise<StatResult> {
+  const pathOutput = relativePath.replace(/\\/g, '/');
+  try {
+    const targetPath = resolvePath(relativePath);
+    const stats: Stats = await fs.stat(targetPath); // Explicitly type Stats
+    return {
+      path: pathOutput,
+      status: 'success',
+      stats: formatStats(relativePath, targetPath, stats),
+    };
+  } catch (error: unknown) {
+    return handleStatError(error, relativePath, pathOutput);
+  }
+}
+
+/** Processes results from Promise.allSettled. */
+function processSettledResults(
+  results: PromiseSettledResult<StatResult>[],
+  originalPaths: string[],
+): StatResult[] {
+  return results.map((result, index) => {
+    const originalPath = originalPaths[index] ?? 'unknown_path';
+    const pathOutput = originalPath.replace(/\\/g, '/');
+
+    if (result.status === 'fulfilled') {
+      return result.value;
+    } else {
+      // Handle unexpected rejections
+      console.error(
+        `[Filesystem MCP - statItems] Unexpected rejection for path ${originalPath}:`,
+        result.reason,
+      );
+      return {
+        path: pathOutput,
+        status: 'error',
+        error: `Unexpected error during processing: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
+      };
+    }
+  });
+}
+
+/** Main handler function */
+const handleStatItemsFunc = async (args: unknown): Promise<McpToolResponse> => {
+  const { paths: pathsToStat } = parseAndValidateArgs(args);
+
+  const statPromises = pathsToStat.map(processSingleStatOperation);
+  const settledResults = await Promise.allSettled(statPromises);
+
+  const outputResults = processSettledResults(settledResults, pathsToStat);
+
+  // Sort results by original path order for predictability
+  const originalIndexMap = new Map(
+    pathsToStat.map((p, i) => [p.replace(/\\/g, '/'), i]),
+  );
+  outputResults.sort((a, b) => {
+    const indexA = originalIndexMap.get(a.path) ?? Infinity;
+    const indexB = originalIndexMap.get(b.path) ?? Infinity;
+    return indexA - indexB;
+  });
+
+  return {
+    content: [{ type: 'text', text: JSON.stringify(outputResults, null, 2) }],
   };
 };
 

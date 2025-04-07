@@ -1,21 +1,16 @@
+// src/handlers/writeContent.ts
 import { promises as fs } from 'fs';
 import path from 'path';
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js'; // Restore PROJECT_ROOT import
+import { resolvePath, PROJECT_ROOT } from '../utils/pathUtils.js';
 
-// Define the expected MCP response structure locally
+// --- Types ---
+
 interface McpToolResponse {
   content: { type: 'text'; text: string }[];
 }
 
-/**
- * Handles the 'write_content' MCP tool request.
- * Writes or appends content to multiple specified files.
- */
-// Removed extra comment marker
-
-// Define Zod schema for individual items and export it
 export const WriteItemSchema = z
   .object({
     path: z.string().describe('Relative path for the file.'),
@@ -28,7 +23,6 @@ export const WriteItemSchema = z
   })
   .strict();
 
-// Define Zod schema for the main arguments object and export it
 export const WriteContentArgsSchema = z
   .object({
     items: z
@@ -38,121 +32,155 @@ export const WriteContentArgsSchema = z
   })
   .strict();
 
-// Infer TypeScript type
 type WriteContentArgs = z.infer<typeof WriteContentArgsSchema>;
-// Removed duplicated non-exported schema/type definitions comment
+type WriteItem = z.infer<typeof WriteItemSchema>; // Define type for item
 
-// Define Dependencies Interface
+interface WriteResult {
+  path: string;
+  success: boolean;
+  operation?: 'written' | 'appended';
+  error?: string;
+}
+
 export interface WriteContentDependencies {
   writeFile: typeof fs.writeFile;
   mkdir: typeof fs.mkdir;
-  stat: typeof fs.stat;
+  stat: typeof fs.stat; // Keep stat if needed for future checks, though not used now
   appendFile: typeof fs.appendFile;
   resolvePath: typeof resolvePath;
   PROJECT_ROOT: string;
-  path: Pick<typeof path, 'dirname'>; // Only dirname is used
+  pathDirname: (p: string) => string;
 }
 
-export const handleWriteContentFunc = async (
-  deps: WriteContentDependencies,
-  args: unknown,
-): Promise<McpToolResponse> => {
-  // Add return type
-  // Validate and parse arguments
-  let parsedArgs: WriteContentArgs;
+// --- Helper Functions ---
+
+/** Parses and validates the input arguments. */
+function parseAndValidateArgs(args: unknown): WriteContentArgs {
   try {
-    parsedArgs = WriteContentArgsSchema.parse(args);
+    return WriteContentArgsSchema.parse(args);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call
       throw new McpError(
-        ErrorCode.InvalidParams,
+        ErrorCode.InvalidParams, // eslint-disable-line @typescript-eslint/no-unsafe-member-access
         `Invalid arguments: ${error.errors.map((e) => `${e.path.join('.')} (${e.message})`).join(', ')}`,
       );
     }
-    throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call
+    throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed'); // eslint-disable-line @typescript-eslint/no-unsafe-member-access
   }
-  const { items: filesToWrite } = parsedArgs;
+}
 
-  // Define result structure
-  interface WriteResult {
-    path: string;
-    success: boolean;
-    operation?: 'written' | 'appended';
-    error?: string;
+/** Handles errors during file write/append operation. */
+function handleWriteError(
+  error: unknown,
+  relativePath: string,
+  pathOutput: string,
+  append: boolean,
+): WriteResult {
+  if (error instanceof McpError) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    return { path: pathOutput, success: false, error: error.message };
   }
-
-  const results = await Promise.allSettled(
-    filesToWrite.map(async (file): Promise<WriteResult> => {
-      const relativePath = file.path;
-      const content = file.content;
-      const append = file.append ?? false; // Check for append flag
-      const pathOutput = relativePath.replace(/\\/g, '/'); // Ensure consistent path separators early
-
-      try {
-        const targetPath = deps.resolvePath(relativePath);
-        if (targetPath === deps.PROJECT_ROOT) {
-          return {
-            path: pathOutput,
-            success: false,
-            error: 'Writing directly to the project root is not allowed.',
-          };
-        }
-        const targetDir = deps.path.dirname(targetPath);
-        await deps.mkdir(targetDir, { recursive: true });
-
-        if (append) {
-          await deps.appendFile(targetPath, content, 'utf-8');
-          return { path: pathOutput, success: true, operation: 'appended' };
-        } else {
-          await deps.writeFile(targetPath, content, 'utf-8');
-          return { path: pathOutput, success: true, operation: 'written' };
-        }
-      } catch (error: any) {
-        if (error instanceof McpError) {
-          return { path: pathOutput, success: false, error: error.message };
-        }
-        console.error(
-          `[Filesystem MCP - writeContent] Error writing file ${relativePath}:`,
-          error,
-        );
-        return {
-          path: pathOutput,
-          success: false,
-          error: `Failed to ${append ? 'append' : 'write'} file: ${error.message}`,
-        };
-      }
-    }),
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  console.error(
+    `[Filesystem MCP - writeContent] Error ${append ? 'appending to' : 'writing'} file ${relativePath}:`,
+    error,
   );
+  return {
+    path: pathOutput,
+    success: false,
+    error: `Failed to ${append ? 'append' : 'write'} file: ${errorMessage}`,
+  };
+}
 
-  // Process results from Promise.allSettled
-  const outputResults: WriteResult[] = results.map((result, index) => {
+/** Processes a single write/append operation. */
+async function processSingleWriteOperation(
+  file: WriteItem,
+  deps: WriteContentDependencies,
+): Promise<WriteResult> {
+  const relativePath = file.path;
+  const content = file.content;
+  const append = file.append;
+  const pathOutput = relativePath.replace(/\\/g, '/');
+
+  try {
+    const targetPath = deps.resolvePath(relativePath);
+    if (targetPath === deps.PROJECT_ROOT) {
+      return {
+        path: pathOutput,
+        success: false,
+        error: 'Writing directly to the project root is not allowed.',
+      };
+    }
+    const targetDir = deps.pathDirname(targetPath);
+    // Avoid creating the root dir itself
+    if (targetDir !== deps.PROJECT_ROOT) {
+      await deps.mkdir(targetDir, { recursive: true });
+    }
+
+    if (append) {
+      await deps.appendFile(targetPath, content, 'utf-8');
+      return { path: pathOutput, success: true, operation: 'appended' };
+    } else {
+      await deps.writeFile(targetPath, content, 'utf-8');
+      return { path: pathOutput, success: true, operation: 'written' };
+    }
+  } catch (error: unknown) {
+    return handleWriteError(error, relativePath, pathOutput, append);
+  }
+}
+
+/** Processes results from Promise.allSettled. */
+function processSettledResults(
+  results: PromiseSettledResult<WriteResult>[],
+  originalItems: WriteItem[],
+): WriteResult[] {
+  return results.map((result, index) => {
+    const originalItem = originalItems[index];
+    const pathOutput = (originalItem?.path ?? 'unknown_path').replace(
+      /\\/g,
+      '/',
+    );
+
     if (result.status === 'fulfilled') {
       return result.value;
     } else {
       console.error(
-        `[Filesystem MCP - writeContent] Unexpected rejection for path ${filesToWrite[index]?.path}:`,
+        `[Filesystem MCP - writeContent] Unexpected rejection for path ${pathOutput}:`,
         result.reason,
       );
       return {
-        path: (filesToWrite[index]?.path ?? 'unknown_path').replace(/\\/g, '/'), // Handle potential undefined
+        path: pathOutput,
         success: false,
-        error: 'Unexpected error during processing.',
+        error: `Unexpected error during processing: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
       };
     }
   });
+}
 
-  // Sort results by original path order for predictability
-  // Sort results based on the original order in the input 'items' array
+/** Main handler function */
+export const handleWriteContentFunc = async (
+  // Added export
+  deps: WriteContentDependencies,
+  args: unknown,
+): Promise<McpToolResponse> => {
+  const { items: filesToWrite } = parseAndValidateArgs(args);
+
+  const writePromises = filesToWrite.map((file) =>
+    processSingleWriteOperation(file, deps),
+  );
+  const settledResults = await Promise.allSettled(writePromises);
+
+  const outputResults = processSettledResults(settledResults, filesToWrite);
+
+  // Sort results based on the original order
+  const originalIndexMap = new Map(
+    filesToWrite.map((f, i) => [f.path.replace(/\\/g, '/'), i]),
+  );
   outputResults.sort((a, b) => {
-    const indexA = filesToWrite.findIndex(
-      (f) => f.path.replace(/\\/g, '/') === (a.path ?? ''),
-    );
-    const indexB = filesToWrite.findIndex(
-      (f) => f.path.replace(/\\/g, '/') === (b.path ?? ''),
-    );
-    // Handle cases where path might be missing in error results (though unlikely)
-    if (indexA === -1) return 1;
-    if (indexB === -1) return -1;
+    const indexA = originalIndexMap.get(a.path) ?? Infinity;
+    const indexB = originalIndexMap.get(b.path) ?? Infinity;
     return indexA - indexB;
   });
 
@@ -167,8 +195,7 @@ export const writeContentToolDefinition = {
   description:
     "Write or append content to multiple specified files (creating directories if needed). NOTE: For modifying existing files, prefer using 'edit_file' or 'replace_content' for better performance, especially with large files. Use 'write_content' primarily for creating new files or complete overwrites.",
   schema: WriteContentArgsSchema,
-  // The production handler needs to provide the dependencies
-  handler: (args: unknown) => {
+  handler: (args: unknown): Promise<McpToolResponse> => {
     const deps: WriteContentDependencies = {
       writeFile: fs.writeFile,
       mkdir: fs.mkdir,
@@ -176,7 +203,7 @@ export const writeContentToolDefinition = {
       appendFile: fs.appendFile,
       resolvePath: resolvePath,
       PROJECT_ROOT: PROJECT_ROOT,
-      path: { dirname: path.dirname },
+      pathDirname: path.dirname.bind(path),
     };
     return handleWriteContentFunc(deps, args);
   },

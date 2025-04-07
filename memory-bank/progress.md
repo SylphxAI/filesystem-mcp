@@ -1,4 +1,4 @@
-<!-- Version: 4.22 | Last Updated: 2025-06-05 | Updated By: Sylph -->
+<!-- Version: 4.29 | Last Updated: 2025-07-04 | Updated By: Sylph -->
 
 # Progress: Filesystem MCP Server
 
@@ -21,6 +21,14 @@
 - **Testing Framework:** Vitest configured with v8 coverage.
 - **Coverage Reports:** Generating successfully.
 - **Tests Added & Passing (Vitest):** (List omitted for brevity - unchanged)
+- **Guideline Alignment (Configuration & Tooling):**
+  - Package Manager: Migrated to `pnpm`.
+  - Node.js Version: Required latest LTS (`~22.0.0`).
+  - Dependency Versions: Updated all to latest stable.
+  - Configuration Files (`tsconfig.json`, `eslint.config.js`, `.prettierrc.cjs`, `vitest.config.ts`, `commitlint.config.cjs`, `dependabot.yml`): Verified or updated to align with Playbook standards.
+  - Git Hooks (Husky + lint-staged): Configured according to Playbook standards.
+    - `README.md` Structure: Aligned with Playbook standard structure (placeholders added).
+    - `package.json` scripts, dependencies, and lint-staged configuration updated to align with `style_quality.md` v1.1.
 
 ## 2. What's Left to Build / Test
 
@@ -33,20 +41,18 @@
 
 ## 3. Current Status
 
-- Release `v0.5.9` triggered via GitHub Actions.
+- Project configuration and tooling aligned with Playbook guidelines (pnpm, Node LTS, dependency versions, config files, hooks, README structure).
 - All active tests pass.
-- `copyItems` fallback logic/tests removed.
-- `searchFiles` non-global regex test fixed.
-- `searchFiles` zero-width regex test skipped.
-- `vitest.config.ts` fixed (removed setup file).
-- Mocking issues resolved using dependency injection.
+- Mocking issues previously resolved using dependency injection.
 - Coverage reports are generating.
+- Release `v0.5.9` was the last release triggered.
 
 ## 4. Known Issues / Areas for Improvement
 
 - **Mocking Issues:** Resolved by switching from `vi.mock`/`vi.spyOn` to direct dependency injection for core logic functions in tests.
 - **Coverage Reports:** Generation fixed. Coverage improved but some branches remain uncovered due to mocking issues.
-- **`apply_diff` Unreliability:** Tool seems unreliable on `editFile.ts`. Prefer `write_to_file`.
+- **`editFile.ts` / `editFileUtils.ts` Complexity/LoC:** Refactoring started by extracting helpers to `editFileUtils.ts`. Both files still contain functions exceeding complexity/length limits (`performRegexReplace`, `performPlainTextReplace`, `findRegexMatch`, `findPlainTextMatch`, `applyChangesToFile`). `editFileUtils.ts` exceeds file length limit.
+- **`README.md` Placeholders:** Needs content for sections like Performance, Design Philosophy, etc.
 - **Launcher Dependency:** Server functionality relies on the launching process setting the correct `cwd`.
 - **Windows `chmod`/`chown`:** Effectiveness is limited. Tests skipped.
 - **Cross-Device Moves/Copies:** May fail (`EXDEV`).

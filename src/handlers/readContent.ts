@@ -1,19 +1,15 @@
-import { promises as fs } from 'fs';
+// src/handlers/readContent.ts
+import { promises as fs, type Stats } from 'fs'; // Import Stats
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { resolvePath } from '../utils/pathUtils.js'; // Remove unused PROJECT_ROOT import
+import { resolvePath } from '../utils/pathUtils.js';
 
-// Define the expected MCP response structure locally
+// --- Types ---
+
 interface McpToolResponse {
   content: { type: 'text'; text: string }[];
 }
 
-/**
- * Handles the 'read_content' MCP tool request.
- * Reads content from multiple specified files.
- */
-
-// Define Zod schema and export it
 export const ReadContentArgsSchema = z
   .object({
     paths: z
@@ -23,19 +19,20 @@ export const ReadContentArgsSchema = z
   })
   .strict();
 
-// Infer TypeScript type
 type ReadContentArgs = z.infer<typeof ReadContentArgsSchema>;
 
-// Removed duplicated non-exported schema/type definitions
+interface ReadResult {
+  path: string;
+  content?: string;
+  error?: string;
+}
 
-const handleReadContentFunc = async (
-  args: unknown,
-): Promise<McpToolResponse> => {
-  // Use local type
-  // Validate and parse arguments
-  let parsedArgs: ReadContentArgs;
+// --- Helper Functions ---
+
+/** Parses and validates the input arguments. */
+function parseAndValidateArgs(args: unknown): ReadContentArgs {
   try {
-    parsedArgs = ReadContentArgsSchema.parse(args);
+    return ReadContentArgsSchema.parse(args);
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw new McpError(
@@ -45,103 +42,127 @@ const handleReadContentFunc = async (
     }
     throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed');
   }
-  const { paths: relativePaths } = parsedArgs;
+}
 
-  // Define result structure
-  // Define result structure
-  interface ReadResult {
-    path: string;
-    content?: string;
-    error?: string;
+/** Handles filesystem errors during file read or stat. */
+function handleFileReadFsError(
+  fsError: unknown,
+  relativePath: string,
+  targetPath: string,
+  pathOutput: string,
+): ReadResult {
+  let errorMessage = `Filesystem error: ${fsError instanceof Error ? fsError.message : String(fsError)}`;
+  let specificCode: string | null = null;
+
+  if (fsError && typeof fsError === 'object' && 'code' in fsError) {
+    specificCode = String(fsError.code); // Ensure code is string
+    if (specificCode === 'ENOENT') {
+      errorMessage = `File not found at resolved path '${targetPath}' (from relative path '${relativePath}')`;
+    } else if (specificCode === 'EISDIR') {
+      errorMessage = `Path is a directory, not a file: ${relativePath}`;
+    } else if (specificCode === 'EACCES' || specificCode === 'EPERM') {
+      errorMessage = `Permission denied reading file: ${relativePath}`;
+    }
   }
 
-  const results = await Promise.allSettled(
-    relativePaths.map(async (relativePath): Promise<ReadResult> => {
-      const pathOutput = relativePath.replace(/\\/g, '/'); // Ensure consistent path separators early
-      let targetPath: string; // Declare here
+  console.error(
+    `[Filesystem MCP - readContent] Filesystem error for ${relativePath} at ${targetPath}:`,
+    fsError,
+  );
+  return { path: pathOutput, error: errorMessage };
+}
 
-      try {
-        // Resolve path first. This can throw McpError for invalid/absolute/traversal paths.
-        targetPath = resolvePath(relativePath);
+/** Handles errors during path resolution. */
+function handlePathResolveError(
+  resolveError: unknown,
+  relativePath: string,
+  pathOutput: string,
+): ReadResult {
+  const errorMessage =
+    resolveError instanceof Error ? resolveError.message : String(resolveError);
+  console.error(
+    `[Filesystem MCP - readContent] Error resolving path ${relativePath}:`,
+    resolveError,
+  );
+  return { path: pathOutput, error: `Error resolving path: ${errorMessage}` };
+}
 
-        // Now try file operations
-        try {
-          const stats = await fs.stat(targetPath);
-          if (!stats.isFile()) {
-            // Use a more specific error message or code if possible
-            return {
-              path: pathOutput,
-              error: `Path is not a regular file: ${relativePath}`,
-            };
-          }
-          // Read the file
-          const content = await fs.readFile(targetPath, 'utf-8');
-          return { path: pathOutput, content: content };
-        } catch (fsError: any) {
-          // Handle errors from fs.stat or fs.readFile
-          if (fsError.code === 'ENOENT') {
-            // Now targetPath should be correctly defined here
-            return {
-              path: pathOutput,
-              error: `File not found at resolved path '${targetPath}' (from relative path '${relativePath}')`,
-            };
-          }
-          if (fsError.code === 'EISDIR') {
-            return {
-              path: pathOutput,
-              error: `Path is a directory, not a file: ${relativePath}`,
-            };
-          }
-          // Log other filesystem errors
-          console.error(
-            `[Filesystem MCP - readContent] Filesystem error for ${relativePath} at ${targetPath}:`,
-            fsError,
-          );
-          return {
-            path: pathOutput,
-            error: `Filesystem error: ${fsError.message}`,
-          };
-        }
-      } catch (resolveError: any) {
-        // Handle errors from resolvePath (McpError)
-        if (resolveError instanceof McpError) {
-          return { path: pathOutput, error: resolveError.message }; // Return McpError message directly
-        }
-        // Handle unexpected errors during path resolution
-        console.error(
-          `[Filesystem MCP - readContent] Unexpected error resolving path ${relativePath}:`,
-          resolveError,
-        );
+/** Processes the reading of a single file. */
+async function processSingleReadOperation(
+  relativePath: string,
+): Promise<ReadResult> {
+  const pathOutput = relativePath.replace(/\\/g, '/');
+  let targetPath = '';
+  try {
+    targetPath = resolvePath(relativePath);
+
+    try {
+      const stats: Stats = await fs.stat(targetPath); // Explicitly type Stats
+      if (!stats.isFile()) {
         return {
           path: pathOutput,
-          error: `Unexpected error resolving path: ${resolveError.message}`,
+          error: `Path is not a regular file: ${relativePath}`,
         };
       }
-    }),
-  );
+      const content = await fs.readFile(targetPath, 'utf-8');
+      return { path: pathOutput, content: content };
+    } catch (fsError: unknown) {
+      return handleFileReadFsError(
+        fsError,
+        relativePath,
+        targetPath,
+        pathOutput,
+      );
+    }
+  } catch (resolveError: unknown) {
+    return handlePathResolveError(resolveError, relativePath, pathOutput);
+  }
+}
 
-  // Process results from Promise.allSettled
-  const outputContents: ReadResult[] = results.map((result, index) => {
+/** Processes results from Promise.allSettled. */
+function processSettledResults(
+  results: PromiseSettledResult<ReadResult>[],
+  originalPaths: string[],
+): ReadResult[] {
+  return results.map((result, index) => {
+    const originalPath = originalPaths[index] ?? 'unknown_path';
+    const pathOutput = originalPath.replace(/\\/g, '/');
+
     if (result.status === 'fulfilled') {
       return result.value;
     } else {
-      // Handle rejected promises (should ideally not happen with current try/catch)
       console.error(
-        `[Filesystem MCP - readContent] Unexpected rejection for path ${relativePaths[index]}:`,
+        `[Filesystem MCP - readContent] Unexpected rejection for path ${originalPath}:`,
         result.reason,
       );
       return {
-        path: (relativePaths[index] ?? 'unknown_path').replace(/\\/g, '/'), // Handle potential undefined
-        error: 'Unexpected error during processing.',
+        path: pathOutput,
+        error: `Unexpected error during processing: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
       };
     }
   });
+}
+
+/** Main handler function */
+const handleReadContentFunc = async (
+  args: unknown,
+): Promise<McpToolResponse> => {
+  const { paths: relativePaths } = parseAndValidateArgs(args);
+
+  const readPromises = relativePaths.map(processSingleReadOperation);
+  const settledResults = await Promise.allSettled(readPromises);
+
+  const outputContents = processSettledResults(settledResults, relativePaths);
 
   // Sort results by original path order for predictability
-  outputContents.sort(
-    (a, b) =>
-      relativePaths.indexOf(a.path ?? '') - relativePaths.indexOf(b.path ?? ''),
-  ); // Handle potential undefined path in sort
+  const originalIndexMap = new Map(
+    relativePaths.map((p, i) => [p.replace(/\\/g, '/'), i]),
+  );
+  outputContents.sort((a, b) => {
+    const indexA = originalIndexMap.get(a.path) ?? Infinity;
+    const indexB = originalIndexMap.get(b.path) ?? Infinity;
+    return indexA - indexB;
+  });
 
   return {
     content: [{ type: 'text', text: JSON.stringify(outputContents, null, 2) }],

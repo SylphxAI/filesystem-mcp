@@ -10,7 +10,7 @@ import {
 import type { PathLike } from 'fs'; // Import PathLike type
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js'; // Re-add ErrorCode
 import {
   createTemporaryFilesystem,
   cleanupTemporaryFilesystem,
@@ -20,10 +20,8 @@ import {
 
 // Import the core function and types
 import type { WriteContentDependencies } from '../../src/handlers/writeContent.js';
-import {
-  handleWriteContentFunc,
-  WriteContentArgsSchema,
-} from '../../src/handlers/writeContent.js';
+// Import the internal function for testing
+import { handleWriteContentFunc } from '../../src/handlers/writeContent.js';
 
 // Define the initial structure for the temporary filesystem
 const initialTestStructure = {
@@ -34,11 +32,11 @@ const initialTestStructure = {
 let tempRootDir: string;
 
 describe('handleWriteContent Integration Tests', () => {
-  let mockDependencies: WriteContentDependencies;
+  let mockDependencies: WriteContentDependencies; // Restore declaration
   let mockWriteFile: Mock; // Declare mock function variable
-  let mockAppendFile: Mock; // Declare mock function variable for append
-  let mockMkdir: Mock; // Declare mock function variable for mkdir
-  let mockStat: Mock; // Declare mock function variable for stat
+  let mockAppendFile: Mock; // Restore declaration
+  let mockMkdir: Mock; // Restore declaration
+  let mockStat: Mock; // Declare mock function variable for stat - Still used in a test
   beforeEach(async () => {
     tempRootDir = await createTemporaryFilesystem(initialTestStructure);
 
@@ -49,36 +47,35 @@ describe('handleWriteContent Integration Tests', () => {
 
     // Create mock functions for dependencies used by writeContent
     mockWriteFile = vi.fn().mockImplementation(actualFsPromises.writeFile);
-    mockAppendFile = vi.fn().mockImplementation(actualFsPromises.appendFile);
-    mockMkdir = vi.fn().mockImplementation(actualFsPromises.mkdir);
+    mockAppendFile = vi.fn().mockImplementation(actualFsPromises.appendFile); // Restore assignment
+    mockMkdir = vi.fn().mockImplementation(actualFsPromises.mkdir); // Restore assignment
     mockStat = vi.fn().mockImplementation(actualFsPromises.stat);
 
-    // Create mock dependencies object using the defined interface
+    // Restore mock dependencies object assignment
     mockDependencies = {
       writeFile: mockWriteFile,
       mkdir: mockMkdir,
       stat: mockStat,
       appendFile: mockAppendFile,
-      // Define resolvePath implementation directly within dependencies
       resolvePath: vi.fn((relativePath: string): string => {
-        const root = tempRootDir!; // Use tempRootDir for testing context, assert non-null
+        const root = tempRootDir!;
         if (path.isAbsolute(relativePath)) {
           throw new McpError(
-            ErrorCode.InvalidParams,
+            ErrorCode.InvalidParams, // Need ErrorCode import back
             `Mocked Absolute paths are not allowed for ${relativePath}`,
           );
         }
         const absolutePath = path.resolve(root, relativePath);
         if (!absolutePath.startsWith(root)) {
           throw new McpError(
-            ErrorCode.InvalidRequest,
+            ErrorCode.InvalidRequest, // Need ErrorCode import back
             `Mocked Path traversal detected for ${relativePath}`,
           );
         }
         return absolutePath;
       }),
-      PROJECT_ROOT: tempRootDir!, // Use tempRootDir as the project root for tests, assert non-null
-      path: { dirname: path.dirname }, // Provide only the used path function
+      PROJECT_ROOT: tempRootDir!,
+      pathDirname: path.dirname,
     };
   });
 
@@ -94,7 +91,7 @@ describe('handleWriteContent Integration Tests', () => {
         { path: 'dir2/newFile2.log', content: 'Log entry' }, // Should create dir2
       ],
     };
-    const rawResult = await handleWriteContentFunc(mockDependencies, request);
+    const rawResult = await handleWriteContentFunc(mockDependencies, request); // Use internal func + deps
     const result = JSON.parse(rawResult.content[0].text); // Assuming similar return structure
 
     expect(result).toHaveLength(2);
@@ -129,7 +126,7 @@ describe('handleWriteContent Integration Tests', () => {
     const request = {
       items: [{ path: 'existingFile.txt', content: 'Overwritten content.' }],
     };
-    const rawResult = await handleWriteContentFunc(mockDependencies, request);
+    const rawResult = await handleWriteContentFunc(mockDependencies, request); // Use internal func + deps
     const result = JSON.parse(rawResult.content[0].text);
 
     expect(result).toHaveLength(1);
@@ -159,7 +156,7 @@ describe('handleWriteContent Integration Tests', () => {
     };
     // No need to mock appendFile here, beforeEach sets the default
 
-    const rawResult = await handleWriteContentFunc(mockDependencies, request);
+    const rawResult = await handleWriteContentFunc(mockDependencies, request); // Use internal func + deps
     const result = JSON.parse(rawResult.content[0].text);
 
     expect(result).toHaveLength(1);
@@ -212,7 +209,7 @@ describe('handleWriteContent Integration Tests', () => {
       },
     );
 
-    const rawResult = await handleWriteContentFunc(mockDependencies, request);
+    const rawResult = await handleWriteContentFunc(mockDependencies, request); // Use internal func + deps
     const result = JSON.parse(rawResult.content[0].text);
 
     expect(result).toHaveLength(3);
@@ -248,7 +245,7 @@ describe('handleWriteContent Integration Tests', () => {
     const request = {
       items: [{ path: absolutePath, content: 'Absolute fail' }],
     };
-    const rawResult = await handleWriteContentFunc(mockDependencies, request);
+    const rawResult = await handleWriteContentFunc(mockDependencies, request); // Use internal func + deps
     const result = JSON.parse(rawResult.content[0].text);
     expect(result).toHaveLength(1);
     expect(result[0].success).toBe(false); // Check success flag
@@ -260,10 +257,16 @@ describe('handleWriteContent Integration Tests', () => {
     const request = { items: [] };
     await expect(
       handleWriteContentFunc(mockDependencies, request),
-    ).rejects.toThrow(McpError);
+    ).rejects.toThrow(
+      // Use internal func + deps
+      McpError,
+    );
     await expect(
       handleWriteContentFunc(mockDependencies, request),
-    ).rejects.toThrow(/Items array cannot be empty/);
+    ).rejects.toThrow(
+      // Use internal func + deps
+      /Items array cannot be empty/,
+    );
   });
 
   it('should handle fs.writeFile errors (e.g., permission denied)', async () => {
@@ -273,7 +276,8 @@ describe('handleWriteContent Integration Tests', () => {
     ) as NodeJS.ErrnoException;
     permissionError.code = 'EACCES';
     mockWriteFile.mockImplementation(
-      async (p: PathLike, content: string | Buffer, options: any) => {
+      async (_p: PathLike, _content: string | Buffer, _options: any) => {
+        // Prefix unused args with _
         throw permissionError;
       },
     );
@@ -281,7 +285,7 @@ describe('handleWriteContent Integration Tests', () => {
     const request = {
       items: [{ path: 'permissionError.txt', content: 'This should fail' }],
     };
-    const rawResult = await handleWriteContentFunc(mockDependencies, request);
+    const rawResult = await handleWriteContentFunc(mockDependencies, request); // Use internal func + deps
     const result = JSON.parse(rawResult.content[0].text);
 
     expect(result).toHaveLength(1);
@@ -290,4 +294,132 @@ describe('handleWriteContent Integration Tests', () => {
     expect(result[0].error).toMatch(/Failed to write file: Permission denied/);
     expect(mockWriteFile).toHaveBeenCalledTimes(1); // Verify the mock was called
   });
+
+  it('should return error when attempting to write directly to project root', async () => {
+    const request = {
+      items: [{ path: '.', content: 'Attempt to write to root' }],
+    };
+    const rawResult = await handleWriteContentFunc(mockDependencies, request);
+    const result = JSON.parse(rawResult.content[0].text);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].success).toBe(false);
+    expect(result[0].error).toBeDefined();
+    expect(result[0].error).toMatch(
+      /Writing directly to the project root is not allowed/,
+    );
+  });
+
+  it('should handle unexpected errors during processSingleWriteOperation', async () => {
+    const unexpectedError = new Error('Unexpected processing error');
+    // Mock processSingleWriteOperation indirectly by mocking a dependency it uses
+    (mockDependencies.resolvePath as Mock).mockImplementation(
+      (relativePath: string) => {
+        // Assert as Mock
+        if (relativePath === 'fail_unexpectedly.txt') {
+          throw unexpectedError;
+        }
+        // Default mock behavior for other paths
+        const root = tempRootDir!;
+        const absolutePath = path.resolve(root, relativePath);
+        if (!absolutePath.startsWith(root)) {
+          throw new McpError(ErrorCode.InvalidRequest, 'Traversal');
+        }
+        return absolutePath;
+      },
+    );
+
+    const request = {
+      items: [
+        { path: 'success.txt', content: 'Good' },
+        { path: 'fail_unexpectedly.txt', content: 'Bad' },
+      ],
+    };
+
+    const rawResult = await handleWriteContentFunc(mockDependencies, request);
+    const result = JSON.parse(rawResult.content[0].text);
+
+    expect(result).toHaveLength(2);
+
+    const successResult = result.find((r: any) => r.path === 'success.txt');
+    expect(successResult?.success).toBe(true);
+
+    const failureResult = result.find(
+      (r: any) => r.path === 'fail_unexpectedly.txt',
+    );
+    expect(failureResult?.success).toBe(false);
+    expect(failureResult?.error).toBeDefined();
+    // Check if the error message includes the unexpected error's message
+    // The error comes from resolvePath mock, so it should be the direct message
+    expect(failureResult?.error).toMatch(/Unexpected processing error/);
+  });
+
+  it('should throw McpError for invalid top-level arguments (e.g., items not an array)', async () => {
+    const invalidRequest = { items: 'not-an-array' }; // Invalid structure
+    await expect(
+      handleWriteContentFunc(mockDependencies, invalidRequest),
+    ).rejects.toThrow(McpError);
+    await expect(
+      handleWriteContentFunc(mockDependencies, invalidRequest),
+    ).rejects.toThrow(/Invalid arguments: items/); // Check Zod error message
+  });
 });
+
+
+  it('should throw McpError for non-Zod errors during argument parsing', async () => {
+    // Mock the schema parse method to throw a generic error
+    const genericError = new Error('Generic parsing error');
+    const writeContentModule = await import('../../src/handlers/writeContent.js');
+    const parseSpy = vi
+      .spyOn(writeContentModule.WriteContentArgsSchema, 'parse')
+      .mockImplementation(() => {
+        throw genericError;
+      });
+
+    const request = { items: [{ path: 'a', content: 'b' }] }; // Valid structure, but parse will fail
+
+    await expect(
+      handleWriteContentFunc(mockDependencies, request),
+    ).rejects.toThrow(McpError);
+    await expect(
+      handleWriteContentFunc(mockDependencies, request),
+    ).rejects.toThrow(/Argument validation failed/); // Check the generic error message
+
+    parseSpy.mockRestore();
+  });
+
+  it('should handle unexpected rejections in processSettledResults', async () => {
+    // Mock the internal processing function to throw for one path
+    const genericError = new Error('Internal processing failed unexpectedly');
+    const writeContentModule = await import('../../src/handlers/writeContent.js');
+    const processSpy = vi
+      .spyOn(writeContentModule as any, 'processSingleWriteOperation') // Use 'as any' to bypass private access issues if needed
+      .mockImplementation(async (item: any) => {
+        if (item.path === 'fail_processing') {
+          throw genericError;
+        }
+        return { path: item.path.replace(/\\/g, '/'), success: true, operation: 'written' }; // Simplified success
+      });
+
+    const request = {
+      items: [
+        { path: 'goodFile.txt', content: 'Good' },
+        { path: 'fail_processing', content: 'Bad' },
+      ],
+    };
+    const rawResult = await handleWriteContentFunc(mockDependencies, request);
+    const result = JSON.parse(rawResult.content[0].text);
+
+    expect(result).toHaveLength(2);
+    const goodResult = result.find((r: any) => r.path === 'goodFile.txt');
+    const badResult = result.find((r: any) => r.path === 'fail_processing');
+
+    expect(goodResult?.success).toBe(true);
+    expect(badResult?.success).toBe(false);
+    expect(badResult?.error).toMatch(
+      /Unexpected error during processing: Internal processing failed unexpectedly/,
+    );
+
+    processSpy.mockRestore();
+  });
+

@@ -8,6 +8,18 @@ updates:
       interval: 'weekly' # Check for updates weekly
     open-pull-requests-limit: 10 # Limit open PRs
     versioning-strategy: 'auto' # Use default strategy
+    # Allow only non-major updates for production dependencies initially
+    allow:
+      - dependency-type: 'production'
+        update-types:
+          ['version-update:semver-minor', 'version-update:semver-patch']
+      - dependency-type: 'development'
+        update-types:
+          [
+            'version-update:semver-major',
+            'version-update:semver-minor',
+            'version-update:semver-patch',
+          ]
     commit-message:
       prefix: 'chore' # Use 'chore' for dependency updates
       prefix-development: 'chore(dev)' # Use 'chore(dev)' for devDependencies

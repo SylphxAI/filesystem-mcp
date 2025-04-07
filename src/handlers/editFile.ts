@@ -1,16 +1,22 @@
 // src/handlers/editFile.ts
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
+import type { PathLike, WriteFileOptions } from 'fs'; // Added types
+import { createPatch } from 'diff'; // Added import
+import { promises as fs } from 'fs'; // Added import
 import type { ToolDefinition } from './index.js';
-import { resolvePath } from '../utils/pathUtils.js';
-import * as fs from 'fs/promises';
-// path is unused
-// import * as path from 'path';
-// detectIndent is unused
-// import detectIndent from 'detect-indent';
-import { createPatch } from 'diff';
+import {
+  readFileContentForEdit,
+  applyAllChangesToContent,
+  // finalizeFileProcessing, // Removed import
+  type EditFileChange,
+  type EditFileResultItem,
+  type FinalizeState,
+  type FinalizePaths,
+  type FinalizeOptions,
+} from '../utils/editFileUtils.js';
 
-// Define the expected MCP response structure locally
+// Re-define the expected MCP response structure locally
 interface McpToolResponse {
   content: { type: 'text'; text: string }[];
 }
@@ -92,393 +98,252 @@ const EditFileArgsSchema = z.object({
     ),
 });
 
-// Infer the type from the Zod schema
 type EditFileArgs = z.infer<typeof EditFileArgsSchema>;
-type EditFileChange = z.infer<typeof EditFileChangeSchema>; // Keep this if used internally
 
-// --- Result Interfaces ---
+// --- Define Dependencies Interface ---
+import type { FileHandle } from 'fs/promises'; // Import FileHandle
 
-export interface EditFileResultItem {
-  path: string;
-  status: 'success' | 'failed' | 'skipped';
-  message?: string; // Error message if failed/skipped
-  diff?: string; // Unified diff if output_diff is true and changes were made
+// --- Define Dependencies Interface ---
+export interface EditFileDeps {
+  writeFile: (
+    path: PathLike | FileHandle, // Use PathLike | FileHandle
+    data: string | NodeJS.ArrayBufferView,
+    options?: WriteFileOptions | BufferEncoding | null, // Match fs.promises.writeFile options more closely
+  ) => Promise<void>;
 }
 
-export interface EditFileResult {
-  results: EditFileResultItem[];
+// --- Helper Functions ---
+
+/** Handles errors occurring during the applyChangesToFile process. */
+function handleApplyChangesError(
+  errorMessage: string, // Accept pre-processed message
+  relativePath: string,
+  fileResult: EditFileResultItem, // Modify the result object directly
+): void {
+  // Log the processed error message
+  console.error(
+    // Prettier fix applied
+    `[editFile] Error processing ${relativePath}: ${errorMessage}`,
+  );
+  if (fileResult.status !== 'failed') {
+    // Avoid overwriting previous specific errors
+    fileResult.status = 'failed';
+    fileResult.message = errorMessage; // Assign the message directly
+  }
 }
 
-// --- Helper: Get Indentation ---
-function getIndentation(line: string | undefined): string {
-  if (!line) return '';
-  const match = /^\s*/.exec(line);
-  return match ? match[0] : '';
+// --- NEW HELPER FUNCTION for Finalization ---
+// --- HELPER for _finalizeAndWriteChanges: Generate Diff ---
+function _generateDiff(
+  relative: string,
+  original: string,
+  current: string,
+): string {
+  try {
+    return createPatch(
+      relative,
+      original,
+      current,
+      '', // oldHeader
+      '', // newHeader
+      { context: 3 },
+    );
+  } catch (diffError: unknown) {
+    console.warn(
+      `[editFile] Failed to generate diff for ${relative}: ${
+        diffError instanceof Error ? diffError.message : String(diffError)
+      }`,
+    );
+    return 'Error generating diff.';
+  }
 }
 
-// --- Helper: Apply Indentation ---
-function applyIndentation(content: string, indent: string): string[] {
-  return content.split('\n').map((line) => indent + line);
+// --- HELPER for _finalizeAndWriteChanges: Write File ---
+async function _writeFile(
+  absolute: string,
+  current: string,
+  deps: EditFileDeps, // Added deps
+  fileResult: EditFileResultItem, // Modifies fileResult
+): Promise<void> {
+  try {
+    await deps.writeFile(absolute, current, 'utf-8'); // Use deps.writeFile
+  } catch (writeError: unknown) {
+    console.error(`[editFile] Failed to write file ${absolute}:`, writeError);
+    fileResult.status = 'failed';
+    fileResult.message = `Failed to write changes: ${
+      writeError instanceof Error ? writeError.message : String(writeError)
+    }`;
+    fileResult.diff = undefined; // Clear diff on write failure
+  }
 }
 
-// --- Handler Function ---
+// --- REFACTORED Finalization Logic ---
+async function _finalizeAndWriteChanges(
+  state: FinalizeState,
+  paths: FinalizePaths,
+  options: FinalizeOptions,
+  fileResult: EditFileResultItem, // Modifies fileResult directly
+  deps: EditFileDeps, // Added deps
+): Promise<void> {
+  const { original, current, applied } = state;
+  const { relative, absolute } = paths;
+  const { output_diff, dry_run } = options;
 
-async function handleEditFile(rawArgs: unknown): Promise<McpToolResponse> {
-  // Validate input using the Zod schema
+  if (fileResult.status === 'failed') {
+    return; // Don't overwrite failed status
+  }
+
+  if (applied) {
+    fileResult.status = 'success';
+    fileResult.message = dry_run
+      ? 'File changes calculated (dry run).'
+      : 'File modified successfully.';
+
+    if (output_diff && original !== null && current !== null) {
+      fileResult.diff = _generateDiff(relative, original, current);
+    }
+
+    if (!dry_run && current !== null && absolute) {
+      await _writeFile(absolute, current, deps, fileResult); // Pass deps
+    }
+  } else {
+    fileResult.status = 'skipped';
+    fileResult.message = 'No changes applied to the file.';
+  }
+}
+
+// --- Main Processing Logic ---
+
+/** Processes all changes for a single file. */
+async function applyChangesToFile(
+  relativePath: string,
+  fileChanges: EditFileChange[],
+  output_diff: boolean,
+  dry_run: boolean,
+  deps: EditFileDeps, // Added deps
+): Promise<EditFileResultItem> {
+  const fileResult: EditFileResultItem = {
+    path: relativePath.replace(/\\/g, '/'), // Normalize path early
+    status: 'skipped', // Default status
+  };
+  let absolutePath: string | undefined = undefined;
+  let originalContent: string | null = null; // Keep as potentially null initially
+  let currentContent: string | null = null;
+  let changesAppliedToFile = false;
+
+  try {
+    // 1. Read File Content
+    const fileData = await readFileContentForEdit(relativePath);
+    absolutePath = fileData.absolutePath;
+    originalContent = fileData.originalContent; // originalContent is now string
+
+    // 2. Apply Changes (originalContent is guaranteed string here)
+    const { finalContent, changesApplied } = applyAllChangesToContent(
+      originalContent, // Pass directly
+      fileChanges,
+      relativePath,
+    );
+    currentContent = finalContent;
+    changesAppliedToFile = changesApplied;
+
+    // 3. Finalize (Write/Diff)
+    // originalContent is string, currentContent is string
+    const state: FinalizeState = {
+      original: originalContent,
+      current: currentContent,
+      applied: changesAppliedToFile,
+    };
+    const paths: FinalizePaths = {
+      relative: relativePath,
+      absolute: absolutePath,
+    };
+    const options: FinalizeOptions = { output_diff, dry_run };
+    // Call the extracted helper function
+    await _finalizeAndWriteChanges(state, paths, options, fileResult, deps); // Pass deps
+  } catch (error: unknown) {
+    // Process error within the catch block to generate a safe message string
+    let errorMessage: string;
+    if (error instanceof McpError) {
+      errorMessage = error.message;
+    } else if (error && typeof error === 'object' && 'code' in error) {
+      const codeValue = error.code;
+      if (typeof codeValue === 'string') {
+        errorMessage = `Filesystem error (${codeValue}) processing ${relativePath}.`;
+      } else if (typeof codeValue === 'number') {
+        errorMessage = `Filesystem error (${codeValue.toString()}) processing ${relativePath}.`;
+      } else {
+        errorMessage = `Filesystem error (unknown code type) processing ${relativePath}.`;
+      }
+    } else if (error instanceof Error) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      errorMessage = `Unexpected error processing ${relativePath}: ${error.message}`;
+    } else {
+      errorMessage = `Unexpected error processing ${relativePath}: Unknown error occurred`;
+    }
+    // Now call the helper with the safe string message
+    handleApplyChangesError(errorMessage, relativePath, fileResult);
+  }
+  return fileResult;
+}
+
+/** Main handler function */
+// Export for testing
+export async function handleEditFileInternal(
+  rawArgs: unknown,
+  deps: EditFileDeps, // Added deps
+): Promise<McpToolResponse> {
   const validationResult = EditFileArgsSchema.safeParse(rawArgs);
   if (!validationResult.success) {
     const errorDetails = validationResult.error.errors
       .map((e) => `${e.path.join('.')}: ${e.message}`)
       .join('; ');
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call
     throw new McpError(
-      ErrorCode.InvalidParams,
+      ErrorCode.InvalidParams, // eslint-disable-line @typescript-eslint/no-unsafe-member-access
       `Invalid arguments for editFile: ${errorDetails}`,
     );
   }
   const args: EditFileArgs = validationResult.data;
-
-  const results: EditFileResultItem[] = [];
   const { changes, dry_run = false, output_diff = true } = args;
 
-  const changesByFile = changes.reduce<Record<string, EditFileChange[]>>(
-    (acc, change) => {
-      // Ensure the array exists before pushing
-      if (!acc[change.path]) {
-        acc[change.path] = [];
-      }
-      acc[change.path]!.push(change); // Use non-null assertion after check
-      return acc;
-    },
-    {},
-  );
+  // Group changes by file
+  const changesByFile: Record<string, EditFileChange[]> = {};
+  for (const change of changes) {
+    (changesByFile[change.path] ??= []).push(change);
+  }
 
-  for (const relativePath in changesByFile) {
-    let absolutePath: string | undefined = undefined; // Initialize as undefined
-    let originalContent: string | null = null;
-    let currentContent: string | null = null;
-    const fileResult: EditFileResultItem = {
-      path: relativePath,
-      status: 'skipped',
-    };
-    let fileProcessed = false;
-    let changesAppliedToFile = false;
+  const results: EditFileResultItem[] = [];
+  for (const [relativePath, fileChanges] of Object.entries(changesByFile)) {
+    const result = await applyChangesToFile(
+      relativePath,
+      fileChanges,
+      output_diff,
+      dry_run,
+      deps, // Pass deps
+    );
+    results.push(result);
+  }
 
-    try {
-      // <<< START OF MAIN TRY BLOCK
-      absolutePath = resolvePath(relativePath); // Assign resolved path here
+  // Sort results by original path order for predictability
+  const originalPathOrder = changes
+    .map((c) => c.path.replace(/\\/g, '/'))
+    .filter((v, i, a) => a.indexOf(v) === i);
+  results.sort((a, b) => {
+    const indexA = originalPathOrder.indexOf(a.path);
+    const indexB = originalPathOrder.indexOf(b.path);
+    // Handle cases where a path in results might not be in original changes (shouldn't happen)
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
 
-      try {
-        originalContent = await fs.readFile(absolutePath, 'utf-8');
-        currentContent = originalContent;
-      } catch (readError: any) {
-        if (readError.code === 'ENOENT') {
-          throw new McpError(
-            ErrorCode.InvalidRequest,
-            `File not found: ${relativePath}`,
-          );
-        }
-        throw readError; // Re-throw other read errors
-      }
-
-      const fileChanges = changesByFile[relativePath];
-      if (!fileChanges) {
-        console.warn(
-          `[editFile] No changes found for path ${relativePath} in internal map. Skipping.`,
-        );
-        continue; // Skip to next file if no changes registered
-      }
-      // Sort changes by start_line descending
-      fileChanges.sort((a, b) => b.start_line - a.start_line);
-
-      for (const change of fileChanges) {
-        fileProcessed = true;
-        let changeSucceeded = false;
-        // IMPORTANT: Recalculate lines based on potentially modified currentContent
-        const lines: string[] = (currentContent ?? '').split('\n');
-
-        const {
-          search_pattern,
-          start_line,
-          replace_content,
-          use_regex = false,
-          ignore_leading_whitespace = true,
-          preserve_indentation = true,
-          match_occurrence = 1,
-        } = change;
-
-        const targetLineIndex = start_line - 1;
-
-        if (targetLineIndex < 0) {
-          console.warn(
-            `[editFile] Invalid start_line ${start_line} for change in ${relativePath}. Skipping change.`,
-          );
-          continue;
-        }
-
-        // --- Insertion Logic ---
-        if (!search_pattern && replace_content !== undefined) {
-          if (targetLineIndex > lines.length) {
-            console.warn(
-              `[editFile] start_line ${start_line} is beyond the end of file ${relativePath} for insertion. Appending instead.`,
-            );
-          }
-          const effectiveInsertionLine = Math.min(
-            targetLineIndex,
-            lines.length,
-          );
-          let indent = '';
-          if (
-            preserve_indentation &&
-            effectiveInsertionLine > 0 &&
-            effectiveInsertionLine <= lines.length
-          ) {
-            indent = getIndentation(lines[effectiveInsertionLine - 1]);
-          }
-          const replacementLines = applyIndentation(replace_content, indent);
-          lines.splice(effectiveInsertionLine, 0, ...replacementLines);
-          currentContent = lines.join('\n');
-          changeSucceeded = true;
-        }
-        // --- Search/Replace/Delete Logic ---
-        else if (search_pattern) {
-          if (use_regex) {
-            // --- Regex Matching ---
-            let regex: RegExp;
-            try {
-              regex = new RegExp(search_pattern, 'g');
-            } catch (e: any) {
-              fileResult.status = 'failed';
-              fileResult.message = `Invalid regex pattern "${search_pattern}" in ${relativePath}: ${e.message}`;
-              console.error(`[editFile] ${fileResult.message}`);
-              // Continue to the next change for this file, don't skip the whole file
-              continue;
-            }
-            let occurrencesFound = 0;
-            let match: RegExpExecArray | null;
-            let matchStartIndex = -1;
-            let matchEndIndex = -1;
-
-            const contentToSearch = currentContent; // Use currentContent which is guaranteed non-null here
-            if (contentToSearch === null) {
-              // Should not happen if readFile succeeded, but satisfy TS
-              console.error(
-                `[editFile] Internal error: currentContent is null during regex search for ${relativePath}`,
-              );
-              continue;
-            }
-            regex.lastIndex = 0; // Reset before searching
-
-            for (let k = 0; k < match_occurrence; k++) {
-              match = regex.exec(contentToSearch);
-              if (match === null) {
-                matchStartIndex = -1;
-                break;
-              }
-              matchStartIndex = match.index;
-              matchEndIndex = match.index + match[0].length;
-              occurrencesFound++;
-              if (match.index === regex.lastIndex) {
-                regex.lastIndex++;
-              }
-              if (k === match_occurrence - 1) break;
-            }
-            if (occurrencesFound < match_occurrence) {
-              matchStartIndex = -1;
-            }
-
-            if (matchStartIndex !== -1) {
-              // currentContent is non-null here
-              let indent = '';
-              if (preserve_indentation) {
-                const contentUpToMatch = currentContent.substring(
-                  0,
-                  matchStartIndex,
-                );
-                const linesUpToMatch = contentUpToMatch.split('\n');
-                const lineIndexContainingMatch = linesUpToMatch.length - 1;
-                if (
-                  lineIndexContainingMatch >= 0 &&
-                  lineIndexContainingMatch < lines.length // Use lines array here
-                ) {
-                  indent = getIndentation(lines[lineIndexContainingMatch]);
-                }
-              }
-
-              if (replace_content !== undefined) {
-                const replacementLines = applyIndentation(
-                  replace_content,
-                  indent,
-                );
-                const indentedReplacement = replacementLines.join('\n');
-                currentContent =
-                  currentContent.slice(0, matchStartIndex) +
-                  indentedReplacement +
-                  currentContent.slice(matchEndIndex);
-                changeSucceeded = true;
-              } else {
-                // Deletion case
-                currentContent =
-                  currentContent.slice(0, matchStartIndex) +
-                  currentContent.slice(matchEndIndex);
-                changeSucceeded = true;
-              }
-            } else {
-              console.warn(
-                `[editFile] Regex pattern "${search_pattern}" not found (occurrence ${match_occurrence}) starting near line ${start_line} in ${relativePath}. Skipping change.`,
-              );
-              changeSucceeded = false;
-            }
-          }
-          // --- Plain Text Matching ---
-          else {
-            const searchLines = search_pattern.split('\n');
-            let occurrencesFound = 0;
-            let matchStartIndex = -1;
-            let matchEndIndex = -1;
-            const searchStartLine = Math.min(targetLineIndex, lines.length - 1);
-
-            for (
-              let i = searchStartLine;
-              i <= lines.length - searchLines.length;
-              i++
-            ) {
-              if (i < 0) continue;
-              let isMatch = true;
-              for (let j = 0; j < searchLines.length; j++) {
-                let fileLine = lines[i + j];
-                const searchLine = searchLines[j]; // searchLine cannot be undefined here
-
-                // Add checks for undefined lines before trimming/comparing
-                if (fileLine === undefined) {
-                  isMatch = false; // Cannot compare if a line is missing
-                  break;
-                }
-                if (searchLine === undefined) {
-                  // Add explicit check
-                  isMatch = false;
-                  break;
-                }
-                const trimmedSearchLine = searchLine.trimStart();
-                if (ignore_leading_whitespace && trimmedSearchLine.length > 0) {
-                  fileLine = fileLine.trimStart();
-                }
-                if (
-                  fileLine !==
-                  (ignore_leading_whitespace ? trimmedSearchLine : searchLine)
-                ) {
-                  isMatch = false;
-                  break;
-                }
-              }
-              if (isMatch) {
-                occurrencesFound++;
-                if (occurrencesFound === match_occurrence) {
-                  matchStartIndex = i;
-                  matchEndIndex = i + searchLines.length;
-                  break;
-                }
-              }
-            }
-
-            if (matchStartIndex !== -1) {
-              let indent = '';
-              if (preserve_indentation && matchStartIndex < lines.length) {
-                indent = getIndentation(lines[matchStartIndex]);
-              }
-              if (replace_content !== undefined) {
-                const replacementLines = applyIndentation(
-                  replace_content,
-                  indent,
-                );
-                lines.splice(
-                  matchStartIndex,
-                  matchEndIndex - matchStartIndex,
-                  ...replacementLines,
-                );
-                currentContent = lines.join('\n');
-                changeSucceeded = true;
-              } else {
-                // Deletion case
-                lines.splice(matchStartIndex, matchEndIndex - matchStartIndex);
-                currentContent = lines.join('\n');
-                changeSucceeded = true;
-              }
-            } else {
-              console.warn(
-                `[editFile] Search pattern not found (occurrence ${match_occurrence}) starting near line ${start_line} in ${relativePath}. Skipping change.`,
-              );
-              changeSucceeded = false;
-            }
-          } // End Plain Text Matching else block
-        } // End Search/Replace/Delete Logic (else if search_pattern)
-
-        // Update overall flag if this change succeeded
-        if (changeSucceeded) {
-          changesAppliedToFile = true;
-        }
-      } // End loop through changes for this file
-
-      // --- Finalize File Processing ---
-      if (
-        changesAppliedToFile &&
-        currentContent !== null && // Check currentContent is not null
-        originalContent !== null // Check originalContent is not null
-      ) {
-        if (currentContent !== originalContent) {
-          fileResult.status = 'success';
-          if (output_diff) {
-            fileResult.diff = createPatch(
-              relativePath,
-              originalContent,
-              currentContent,
-              '',
-              '',
-              { context: 3 },
-            );
-          }
-          if (!dry_run && absolutePath) {
-            // Ensure absolutePath is defined
-            await fs.writeFile(absolutePath, currentContent, 'utf-8');
-            fileResult.message = `File ${relativePath} modified successfully.`;
-          } else {
-            fileResult.message = `File ${relativePath} changes calculated (dry run).`;
-          }
-        } else {
-          fileResult.status = 'skipped';
-          fileResult.message = `Changes applied to ${relativePath} resulted in no net change to content.`;
-        }
-      } else if (
-        fileProcessed &&
-        !changesAppliedToFile &&
-        fileResult.status !== 'failed'
-      ) {
-        fileResult.status = 'skipped';
-        fileResult.message = `No applicable changes found or made for ${relativePath}.`;
-      }
-    } catch (error: any) {
-      // <<< CATCH BLOCK FOR THE MAIN TRY BLOCK
-      console.error(`[editFile] Error processing ${relativePath}:`, error);
-      if (fileResult.status !== 'failed' || !fileResult.message) {
-        fileResult.status = 'failed';
-        if (error instanceof McpError) {
-          fileResult.message = error.message;
-        } else if (error.code) {
-          fileResult.message = `Filesystem error (${error.code}) processing ${relativePath}.`;
-        } else {
-          fileResult.message = `Unexpected error processing ${relativePath}: ${error.message || String(error)}`; // Use String(error) as fallback
-        }
-      }
-    } finally {
-      // <<< FINALLY BLOCK FOR THE MAIN TRY BLOCK
-      results.push(fileResult);
-    }
-  } // End loop through files
-
-  // Ensure the function always returns the expected structure
   return {
     content: [{ type: 'text', text: JSON.stringify({ results }, null, 2) }],
   };
-} // END OF handleEditFile FUNCTION
+}
 
 // --- Tool Definition Export ---
 
@@ -487,5 +352,11 @@ export const editFileDefinition: ToolDefinition = {
   description:
     'Make selective edits to one or more files using advanced pattern matching and formatting options. Supports insertion, deletion, and replacement with indentation preservation and diff output. Recommended for modifying existing files, especially for complex changes or when precise control is needed.',
   schema: EditFileArgsSchema,
-  handler: handleEditFile,
+  // Production handler provides real dependencies
+  handler: (args: unknown): Promise<McpToolResponse> => {
+    const productionDeps: EditFileDeps = {
+      writeFile: fs.writeFile,
+    };
+    return handleEditFileInternal(args, productionDeps);
+  },
 };

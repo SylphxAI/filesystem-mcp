@@ -9,10 +9,10 @@ import {
   type Mock,
 } from 'vitest'; // Added vi and Mock type
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import type { Stats, Dirent, PathLike, StatOptions } from 'fs'; // Added PathLike, StatOptions
-import { promises as fsPromises } from 'fs'; // Import actual fs promises
+import type { PathLike, StatOptions } from 'fs'; // Removed unused Stats, Dirent
+import { promises as fsPromises } from 'fs';
 import path from 'path';
-import os from 'os'; // Needed for mkdtemp prefix
+// import os from 'os'; // Removed unused import
 
 // --- NO MORE jest.mock() for fs, pathUtils, glob ---
 
@@ -21,7 +21,7 @@ import os from 'os'; // Needed for mkdtemp prefix
 import type { ListFilesDependencies } from '../../src/handlers/listFiles.js';
 import {
   handleListFilesFunc,
-  ListFilesArgsSchema,
+  // ListFilesArgsSchema, // Removed unused import
 } from '../../src/handlers/listFiles.js';
 
 // --- Test Suite ---
