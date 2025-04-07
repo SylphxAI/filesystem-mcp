@@ -105,7 +105,7 @@ describe('handleSearchFiles Integration Tests', () => {
       path.join(tempRootDir, '.hiddenFile'),
     ]);
     const rawResult = await handleSearchFilesFunc(mockDependencies, request);
-    const result = JSON.parse(rawResult.content[0].text);
+    const result = rawResult.data.results;
     expect(result).toHaveLength(3);
     expect(
       result.some(
@@ -150,7 +150,7 @@ describe('handleSearchFiles Integration Tests', () => {
     };
     mockGlob.mockResolvedValue([path.join(tempRootDir, 'fileA.txt')]);
     const rawResult = await handleSearchFilesFunc(mockDependencies, request);
-    const result = JSON.parse(rawResult.content[0].text);
+    const result = rawResult.data.results;
     expect(result).toHaveLength(1);
     expect(result[0].line).toBe(3);
     expect(result[0].match).toBe('Search term');
@@ -174,7 +174,7 @@ describe('handleSearchFiles Integration Tests', () => {
     };
     mockGlob.mockResolvedValue([path.join(tempRootDir, 'dir1/fileB.js')]);
     const rawResult = await handleSearchFilesFunc(mockDependencies, request);
-    const result = JSON.parse(rawResult.content[0].text);
+    const result = rawResult.data.results;
     expect(result).toHaveLength(1);
     expect(result[0].line).toBe(3);
     expect(result[0].match).toBe('console.log(term)');
@@ -194,7 +194,7 @@ describe('handleSearchFiles Integration Tests', () => {
       path.join(tempRootDir, '.hiddenFile'),
     ]);
     const rawResult = await handleSearchFilesFunc(mockDependencies, request);
-    const result = JSON.parse(rawResult.content[0].text);
+    const result = rawResult.data.results;
     expect(result).toHaveLength(0);
   });
 
@@ -241,7 +241,7 @@ describe('handleSearchFiles Integration Tests', () => {
     };
     mockGlob.mockResolvedValue([path.join(tempRootDir, 'dir1/fileB.js')]);
     const rawResult = await handleSearchFilesFunc(mockDependencies, request);
-    const result = JSON.parse(rawResult.content[0].text);
+    const result = rawResult.data.results;
     expect(result).toHaveLength(1);
     expect(result[0].line).toBe(2);
     expect(result[0].match).toBe('Search term');
@@ -269,7 +269,7 @@ describe('handleSearchFiles Integration Tests', () => {
     };
     mockGlob.mockResolvedValue([emptyFilePath]);
     const rawResult = await handleSearchFilesFunc(mockDependencies, request);
-    const result = JSON.parse(rawResult.content[0].text);
+    const result = rawResult.data.results;
     expect(result).toHaveLength(0);
   });
 
@@ -288,7 +288,7 @@ describe('handleSearchFiles Integration Tests', () => {
     };
     mockGlob.mockResolvedValue([multiLineFilePath]);
     const rawResult = await handleSearchFilesFunc(mockDependencies, request);
-    const result = JSON.parse(rawResult.content[0].text);
+    const result = rawResult.data.results;
     expect(result).toHaveLength(1);
     expect(result[0].line).toBe(2);
     expect(result[0].match).toBe('Content line 1\nContent line 2');
@@ -309,7 +309,7 @@ describe('handleSearchFiles Integration Tests', () => {
     };
     mockGlob.mockResolvedValue([testFilePath]);
     const rawResult = await handleSearchFilesFunc(mockDependencies, request);
-    const result = JSON.parse(rawResult.content[0].text);
+    const result = rawResult.data.results;
     // Expect two matches now because the handler searches the whole content with 'g' flag
     expect(result).toHaveLength(2);
     expect(result[0].match).toBe('Match'); // Expect uppercase 'M' due to case-insensitive search
@@ -365,7 +365,7 @@ describe('handleSearchFiles Integration Tests', () => {
     // Let's adjust the test to verify the handler *does* find all matches due to added 'g' flag.
     mockGlob.mockResolvedValue([testFilePath]);
     const rawResult = await handleSearchFilesFunc(mockDependencies, request);
-    const result = JSON.parse(rawResult.content[0].text);
+    const result = rawResult.data.results;
     // Handler should now respect non-global regex and find only the first match.
     expect(result).toHaveLength(2); // Handler always adds 'g' flag, so expect 2 matches
     expect(result[0].match).toBe('match');
@@ -385,7 +385,7 @@ describe('handleSearchFiles Integration Tests', () => {
     };
     mockGlob.mockResolvedValue([testFilePath]);
     const rawResult = await handleSearchFilesFunc(mockDependencies, request);
-    const result = JSON.parse(rawResult.content[0].text);
+    const result = rawResult.data.results;
     // Expect 4 matches: start of 'word1', end of 'word1', start of 'word2', end of 'word2'
     expect(result).toHaveLength(4);
     expect(result.every((r: any) => r.match === '' && r.line === 1)).toBe(true); // Zero-width match is empty string
@@ -393,6 +393,11 @@ describe('handleSearchFiles Integration Tests', () => {
 
   // Skip due to known fsPromises mocking issues (vi.spyOn unreliable in this ESM setup)
   it('should handle file read errors (e.g., EACCES) gracefully and continue', async () => {
+    // Mock console.warn for this test to suppress expected error logs
+    const consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+    // Mock console.warn for this test to suppress expected error logs
     const readableFile = 'readableForErrorTest.txt';
     const unreadableFile = 'unreadableForErrorTest.txt';
     const readablePath = path.join(tempRootDir, readableFile);
@@ -440,25 +445,47 @@ describe('handleSearchFiles Integration Tests', () => {
 
     // Expect the handler not to throw, as it should catch the EACCES error internally
     const rawResult = await handleSearchFilesFunc(mockDependencies, request);
-    const result = JSON.parse(rawResult.content[0].text);
+    const result = rawResult.data.results;
 
-    // Should still find the match in the readable file
-    expect(result).toHaveLength(1);
+    // Should contain both the match and the error
+    expect(result).toHaveLength(2);
+
+    // Find and verify the successful match
+    const matchResult = result.find((r: any) => r.type === 'match');
+    expect(matchResult).toBeDefined();
     const expectedRelativePath = path
-      .relative(mockDependencies.PROJECT_ROOT, readablePath) // Use the constant again
+      .relative(mockDependencies.PROJECT_ROOT, readablePath)
       .replace(/\\/g, '/');
-    expect(result[0].file).toBe(expectedRelativePath);
-    expect(result[0].match).toBe('Search term');
+    expect(matchResult.file).toBe(expectedRelativePath);
+    expect(matchResult.match).toBe('Search term');
+
+    // Find and verify the error
+    const errorResult = result.find((r: any) => r.type === 'error');
+    expect(errorResult).toBeDefined();
+    expect(errorResult.file).toBe(
+      path
+        .relative(mockDependencies.PROJECT_ROOT, unreadablePath)
+        .replace(/\\/g, '/'),
+    );
+    expect(errorResult.error).toContain(
+      'Read/Process Error: Mocked Permission denied',
+    );
 
     // Verify our mock was called for both files
     expect(mockReadFile).toHaveBeenCalledWith(unreadablePath, 'utf-8');
     expect(mockReadFile).toHaveBeenCalledWith(readablePath, 'utf-8');
 
     // vi.clearAllMocks() in afterEach will reset call counts.
+    consoleWarnSpy.mockRestore(); // Restore console.warn
   });
 
   // Skip due to known glob mocking issues causing "Cannot redefine property"
   it('should handle generic errors during glob execution', async () => {
+    // Mock console.error for this test to suppress expected error logs
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    // Mock console.error for this test to suppress expected error logs
     const request = { path: '.', regex: 'test' };
     // Configure mockGlob to throw an error for this test
     const mockError = new Error('Mocked generic glob error');
@@ -472,11 +499,16 @@ describe('handleSearchFiles Integration Tests', () => {
     await expect(
       handleSearchFilesFunc(mockDependencies, request),
     ).rejects.toThrow(
-      'MCP error -32603: Failed to find files using glob: Mocked generic glob error', // Match exact McpError message
+      `MCP error -32603: Failed to find files using glob in '.': Mocked generic glob error`, // Match exact McpError message including path
     );
+    consoleErrorSpy.mockRestore(); // Restore console.error
   }); // End of 'should handle generic errors during glob execution'
 
   it('should handle non-filesystem errors during file read gracefully', async () => {
+    // Mock console.warn for this test to suppress expected error logs
+    const consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
     const errorFile = 'errorFile.txt';
     const errorFilePath = path.join(tempRootDir, errorFile);
     const normalFile = 'normalFile.txt';
@@ -503,17 +535,26 @@ describe('handleSearchFiles Integration Tests', () => {
     };
     mockGlob.mockResolvedValue([errorFilePath, normalFilePath]);
 
-    // Expect the handler not to throw, but log a warning
-    const consoleWarnSpy = vi
-      .spyOn(console, 'warn')
-      .mockImplementation(() => {});
+    // Expect the handler not to throw, but log a warning (spy already declared at top of test)
     const rawResult = await handleSearchFilesFunc(mockDependencies, request);
-    const result = JSON.parse(rawResult.content[0].text);
+    const result = rawResult.data.results;
 
-    // Should still find the match in the normal file
-    expect(result).toHaveLength(1);
-    expect(result[0].file).toBe(normalFile);
-    expect(result[0].match).toBe('Search term');
+    // Should contain both the match and the error
+    expect(result).toHaveLength(2);
+
+    // Find and verify the successful match
+    const matchResult = result.find((r: any) => r.type === 'match');
+    expect(matchResult).toBeDefined();
+    expect(matchResult.file).toBe(normalFile);
+    expect(matchResult.match).toBe('Search term');
+
+    // Find and verify the error
+    const errorResult = result.find((r: any) => r.type === 'error');
+    expect(errorResult).toBeDefined();
+    expect(errorResult.file).toBe(errorFile);
+    expect(errorResult.error).toContain(
+      'Read/Process Error: Mocked generic read error',
+    );
 
     // Check if the warning for the generic error was logged
     expect(consoleWarnSpy).toHaveBeenCalledWith(

@@ -1,4 +1,4 @@
-<!-- Version: 4.29 | Last Updated: 2025-07-04 | Updated By: Sylph -->
+<!-- Version: 4.31 | Last Updated: 2025-07-04 | Updated By: Sylph -->
 
 # Progress: Filesystem MCP Server
 
@@ -8,7 +8,7 @@
 - **Path Security:** `resolvePath` prevents traversal and absolute paths.
 - **Project Root:** Determined by `process.cwd()`.
 - **Core Tool Functionality:** Most tools (`create_directories`, `write_content`, `stat_items`, `read_content`, `move_items`, `copy_items`, `search_files`, `replace_content`, `delete_items`, `listFiles`) have basic functionality and passing tests (except skipped tests).
-- **`editFile` Tool:** Plain text insertion, replacement, deletion, occurrence matching (plain text & regex), indentation preservation, diff output implemented and tested (passing).
+- **`applyDiff` Tool:** Implemented with multi-file, multi-block, atomic (per file) application logic. Tests added, but currently failing due to mock/assertion issues.
 - **Documentation (`README.md`):** Updated for new owner/package name.
 - **Tool Descriptions:** Updated.
 - **Dockerization:** Multi-stage `Dockerfile` functional.
@@ -51,7 +51,8 @@
 
 - **Mocking Issues:** Resolved by switching from `vi.mock`/`vi.spyOn` to direct dependency injection for core logic functions in tests.
 - **Coverage Reports:** Generation fixed. Coverage improved but some branches remain uncovered due to mocking issues.
-- **`editFile.ts` / `editFileUtils.ts` Complexity/LoC:** Refactoring started by extracting helpers to `editFileUtils.ts`. Both files still contain functions exceeding complexity/length limits (`performRegexReplace`, `performPlainTextReplace`, `findRegexMatch`, `findPlainTextMatch`, `applyChangesToFile`). `editFileUtils.ts` exceeds file length limit.
+- **`applyDiff.test.ts` Failures:** Tests for the new tool are failing, likely due to issues with mocking `fs` methods or incorrect assertions related to paths.
+- **ESLint Errors:** Significant number of `unsafe` and `restrict-template-expressions` errors remain, particularly in `applyDiff.ts` and `applyDiffUtils.ts`.
 - **`README.md` Placeholders:** Needs content for sections like Performance, Design Philosophy, etc.
 - **Launcher Dependency:** Server functionality relies on the launching process setting the correct `cwd`.
 - **Windows `chmod`/`chown`:** Effectiveness is limited. Tests skipped.

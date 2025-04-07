@@ -25,7 +25,7 @@ import { allToolDefinitions } from './handlers/index.js';
 const server = new Server(
   {
     name: 'filesystem-mcp',
-    version: '0.4.0', // Increment version for definition refactor
+    version: '0.6.0', // Version bump for apply_diff tool
     description:
       'MCP Server for filesystem operations relative to the project root.',
   },
@@ -83,7 +83,10 @@ const handleCallTool = async (
     );
   }
   // The handler itself returns Promise<McpToolResponse>, which matches the required return type
-  return toolDefinition.handler(request.params.arguments);
+  // Pass the full request object to the handler
+  // The handler's return type Promise<McpResponse<TOutput>> matches the expected return type
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  return toolDefinition.handler(request);
 };
 
 // Register the typed handler function

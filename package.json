@@ -25,28 +25,29 @@
     "node": "~22.0.0"
   },
   "scripts": {
-    "dev": "tsc --watch",
     "build": "pnpm run clean && tsc && node scripts/postbuild.js",
-        "start": "node dist/index.js",
-    "lint": "eslint . --ext .ts,.js --cache",
-    "lint:fix": "eslint . --ext .ts,.js --fix --cache",
-    "format": "prettier --write . --cache",
-    "check-format": "prettier --check . --cache",
-    "typecheck": "tsc --noEmit",
+    "watch": "tsc --watch",
+    "inspector": "npx @modelcontextprotocol/inspector dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest watch",
-    "test:cov": "vitest run --coverage",
+    "test:cov": "vitest run --coverage --reporter=junit --outputFile=test-report.junit.xml",
+    "lint": "eslint . --ext .ts,.tsx,.js,.cjs --cache",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.cjs --fix --cache",
+    "format": "prettier --write . --cache",
+    "check-format": "prettier --check . --cache",
     "validate": "pnpm run check-format && pnpm run lint && pnpm run typecheck && pnpm run test:cov",
-        "inspector": "npx @modelcontextprotocol/inspector dist/index.js",
-        "clean": "rimraf dist coverage",
-        "prepare": "husky",
-    "release": "standard-version",
     "docs:dev": "vitepress dev docs",
     "docs:build": "pnpm run docs:api && vitepress build docs",
     "docs:preview": "vitepress preview docs",
-    "docs:api": "node scripts/generate-api-docs.mjs",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
     "benchmark": "vitest bench",
-        "prepublishOnly": "pnpm run clean && pnpm run build"
+    "clean": "rimraf dist coverage",
+    "docs:api": "node scripts/generate-api-docs.mjs",
+    "prepublishOnly": "pnpm run clean && pnpm run build",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "prepare": "husky"
   },
   "homepage": "https://github.com/sylphlab/filesystem-mcp#readme",
   "repository": {
@@ -76,19 +77,16 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.8.0",
-    "detect-indent": "^7.0.1",
-    "diff": "^7.0.0",
     "glob": "^11.0.1",
     "zod": "^3.24.2",
     "zod-to-json-schema": "^3.24.5"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.28.1",
     "@commitlint/cli": "^19.8.0",
     "@commitlint/config-conventional": "^19.8.0",
     "@eslint/js": "^9.24.0",
-    "@types/diff": "^7.0.2",
     "@types/glob": "^8.1.0",
-    "rimraf": "^5.0.7",
     "@types/node": "^22.14.0",
     "@types/uuid": "^10.0.0",
     "@vitest/coverage-v8": "^3.1.1",
@@ -98,6 +96,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.5.0",
     "prettier": "^3.5.3",
+    "rimraf": "^5.0.7",
     "standard-version": "^9.5.0",
     "typedoc": "^0.28.2",
     "typedoc-plugin-markdown": "^4.6.1",
@@ -108,7 +107,7 @@
     "vitest": "^3.1.1"
   },
   "lint-staged": {
-        "*.{ts,tsx,js,cjs}": [
+    "*.{ts,tsx,js,cjs}": [
       "eslint --fix --cache",
       "prettier --write --cache"
     ],

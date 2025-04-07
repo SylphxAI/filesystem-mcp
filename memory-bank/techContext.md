@@ -1,4 +1,4 @@
-<!-- Version: 4.8 | Last Updated: 2025-07-04 | Updated By: Sylph -->
+<!-- Version: 4.9 | Last Updated: 2025-07-04 | Updated By: Sylph -->
 
 # Tech Context: Filesystem MCP Server
 
@@ -24,9 +24,7 @@
 - **`@types/glob`:** TypeScript type definitions for the `glob` library.
 - **`zod`:** Library for schema declaration and validation.
 - **`zod-to-json-schema`:** Utility to convert Zod schemas to JSON schemas.
-- **`diff`:** Library for generating text differences (used by `edit_file`).
-- **`detect-indent`:** Library for detecting indentation (used by `edit_file`).
-- **`@types/diff`:** TypeScript type definitions for the `diff` library.
+
 - **`vitest`:** Testing framework.
 - **`@vitest/coverage-v8`:** Coverage provider for Vitest.
 - **`uuid`:** For generating unique IDs (used in testUtils).
@@ -40,22 +38,13 @@
 - **Configuration:**
   - `tsconfig.json`: Configures the TypeScript compiler options.
   - `vitest.config.ts`: Configures Vitest (test environment, globals, coverage).
-  - `package.json`: Defines project metadata, dependencies, and pnpm scripts.
-    - `dependencies`: `@modelcontextprotocol/sdk`, `glob`, `zod`, `zod-to-json-schema`, `diff`, `detect-indent`.
-        - `devDependencies`: `typescript`, `@types/node`, `@types/glob`, `@types/diff`, `vitest`, `@vitest/coverage-v8`, `uuid`, `@types/uuid`, `husky`, `lint-staged`, `@commitlint/cli`, `@commitlint/config-conventional`, `prettier`, `eslint`, `typescript-eslint`, `eslint-plugin-prettier`, `eslint-config-prettier`, `standard-version`, `typedoc`, `typedoc-plugin-markdown`, `vitepress`, `rimraf`. (List might need verification against actual `package.json`)
+  - `package.json`: Defines project metadata, dependencies, and pnpm scripts. - `dependencies`: `@modelcontextprotocol/sdk`, `glob`, `zod`, `zod-to-json-schema`. - `devDependencies`: `typescript`, `@types/node`, `@types/glob`, `vitest`, `@vitest/coverage-v8`, `uuid`, `@types/uuid`, `husky`, `lint-staged`, `@commitlint/cli`, `@commitlint/config-conventional`, `prettier`, `eslint`, `typescript-eslint`, `eslint-plugin-prettier`, `eslint-config-prettier`, `standard-version`, `typedoc`, `typedoc-plugin-markdown`, `vitepress`, `rimraf`, `@changesets/cli`. (List might need verification against actual `package.json`)
     - `scripts`: (Uses `pnpm run ...`)
-      - `build`: Compiles TypeScript code.
-            - `watch`: Runs `tsc` in watch mode.
-            - `clean`: `rimraf dist coverage`
-            - `inspector`: `npx @modelcontextprotocol/inspector dist/index.js`
+      - `build`: Compiles TypeScript code. - `watch`: Runs `tsc` in watch mode. - `clean`: `rimraf dist coverage` - `inspector`: `npx @modelcontextprotocol/inspector dist/index.js`
       - `test`: Runs Vitest tests.
       - `test:cov`: Runs Vitest tests with coverage.
       - `validate`: Runs format check, lint, typecheck, and tests.
-      - `docs:build`: Builds documentation.
-            - `start`: `node dist/index.js`
-            - `prepare`: `husky`
-            - `prepublishOnly`: `pnpm run clean && pnpm run build`
-            - (Other scripts as defined in `package.json`)
+      - `docs:build`: Builds documentation. - `start`: `node dist/index.js` - `prepare`: `husky` - `prepublishOnly`: `pnpm run clean && pnpm run build` - (Other scripts as defined in `package.json`)
 - **Build Output:** Compiled JavaScript code is placed in the `dist` directory.
 - **Execution:** The server is intended to be run via `node dist/index.js`.
 

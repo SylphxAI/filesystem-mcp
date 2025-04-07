@@ -1,4 +1,4 @@
-<!-- Version: 4.5 | Last Updated: 2025-04-06 | Updated By: Roo -->
+<!-- Version: 4.6 | Last Updated: 2025-07-04 | Updated By: Sylph -->
 
 # System Patterns: Filesystem MCP Server
 
@@ -46,15 +46,12 @@ graph LR
 - **Tool Definition Aggregation:** Tool definitions (name, description, Zod
   schema, handler function) are defined in their respective handler files and
   aggregated in `src/handlers/index.ts` for registration in `src/index.ts`.
-  - **Description Updates:** Descriptions (e.g., for `write_content`, `edit_file`) are updated based on user feedback and best practices.
-- **`edit_file` Logic:**
-  - Processes multiple changes per file, applying them sequentially from
-    bottom-to-top to minimize line number conflicts.
-  - Handles insertion, text replacement, and deletion.
-  - Implements basic indentation detection (`detect-indent`) and preservation
-    for insertions/replacements.
-  - Uses `diff` library to generate unified diff output.
-  - **Regex Support (Partial & Buggy):** Logic added to handle `use_regex: true`, but currently has issues (failing tests) related to state management (`currentContent`/`lines`) within the change loop.
+  - **Description Updates:** Descriptions (e.g., for `write_content`, `apply_diff`) are updated based on user feedback and best practices.
+- **`apply_diff` Logic:**
+  - Processes multiple diff blocks per file, applying them sequentially from bottom-to-top based on `start_line` to minimize line number conflicts.
+  - Verifies that the content at the specified `start_line`/`end_line` exactly matches the `search` block before applying the `replace` block.
+  - Ensures atomicity at the file level: if any block fails (e.g., content mismatch, invalid lines), the entire file's changes are discarded.
+  - Returns detailed success/failure status per file, including context on error.
 - **Error Handling:**
   - Uses `try...catch` blocks within each tool handler.
   - Catches specific Node.js filesystem errors (like `ENOENT`, `EPERM`,
@@ -102,7 +99,6 @@ graph LR
   path manipulation.
 - **`glob` Library:** Used for pattern-based file searching and listing.
 - **`zod` Library:** Used for defining and validating tool input schemas.
-- **`diff` Library:** Used by `edit_file` to generate diff output.
-- **`detect-indent` Library:** Used by `edit_file` for indentation handling.
+
 - **`Dockerfile`:** Defines the multi-stage build process for the production Docker image.
 - **`.github/workflows/publish.yml`:** Defines the combined CI check and release process using conditional logic within a single workflow.

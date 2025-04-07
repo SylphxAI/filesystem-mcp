@@ -10,25 +10,22 @@ import { moveItemsToolDefinition } from './moveItems.js';
 import { copyItemsToolDefinition } from './copyItems.js';
 import { searchFilesToolDefinition } from './searchFiles.js';
 import { replaceContentToolDefinition } from './replaceContent.js';
-import { editFileDefinition } from './editFile.js';
+import { applyDiffTool } from './applyDiff.js';
 
 // Define the structure for a tool definition (used internally and for index.ts)
 // We need Zod here to define the schema type correctly
-import type { z } from 'zod';
-
-// Define and export the expected MCP response structure
-export interface McpToolResponse {
-  // Add export keyword
-  content: { type: string; text: string }[];
-}
+import type { ZodType } from 'zod'; // Removed unused 'z' import
+import type { McpRequest, McpResponse } from '@modelcontextprotocol/sdk'; // Use import type
 
 // Define the structure for a tool definition
-export interface ToolDefinition {
+// Matches the structure in individual tool files like applyDiff.ts
+export interface ToolDefinition<TInput = unknown, TOutput = unknown> {
+  // Default to unknown
   name: string;
   description: string;
-
-  schema: z.ZodTypeAny; // Use ZodTypeAny and disable lint rule
-  handler: (args: unknown) => Promise<McpToolResponse>; // Use specific return type
+  inputSchema: ZodType<TInput>;
+  outputSchema?: ZodType<TOutput>; // Output schema is optional
+  handler: (request: McpRequest<TInput>) => Promise<McpResponse<TOutput>>;
 }
 
 // Aggregate all tool definitions into a single array
@@ -45,5 +42,5 @@ export const allToolDefinitions: ToolDefinition[] = [
   copyItemsToolDefinition,
   searchFilesToolDefinition,
   replaceContentToolDefinition,
-  editFileDefinition,
+  applyDiffTool,
 ];

@@ -467,6 +467,10 @@ describe('handleCopyItems Integration Tests', () => {
   });
 
   it('should handle unexpected errors during path resolution within the map', async () => {
+    // Mock console.error for this test to suppress expected error logs
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
     // Mock resolvePath to throw a generic error for a specific path *after* initial validation
     mockResolvePath.mockImplementation((relativePath: string): string => {
       if (relativePath === 'unexpected_resolve_error_dest') {
@@ -517,5 +521,6 @@ describe('handleCopyItems Integration Tests', () => {
     await expect(
       fsPromises.access(path.join(tempRootDir, 'goodDest.txt')),
     ).resolves.toBeUndefined();
+    consoleErrorSpy.mockRestore(); // Restore console.error
   });
 });

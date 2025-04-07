@@ -19,4 +19,4 @@
     - *Obsolete `editFile` Strategy:* Previous attempts used `jest.unstable_mockModule` (likely a typo, meant Vitest equivalent) which was also unreliable.
     - *Obsolete `listFiles` Strategy:* Initial integration tests avoided mocking but couldn't test error paths effectively. Dependency injection proved superior.
     - **Execution Requirement:** Tests still require `NODE_OPTIONS=--experimental-vm-modules` (handled by `cross-env` in `package.json`).
-- **`write_to_file` Tool Limitation:** This tool seems to incorrectly escape `&` characters to `&amp;amp;` within the `<content>` block, causing syntax errors when writing code containing `&`. Use alternative tools like `apply_diff` (carefully, as it has issues with `=======`) or `search_and_replace` for such content, or write the file in multiple steps if possible.
+- **`write_content` Tool Limitation:** This tool might incorrectly escape certain characters within the `<content>` block. Prefer `apply_diff` or `replace_content` for modifications.
