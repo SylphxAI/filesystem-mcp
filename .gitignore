@@ -25,3 +25,8 @@ yarn-error.log*
 # VitePress cache
 .vitepress/cache
 .vitepress/dist
+# Cache files
+.eslintcache
+
+# Test reports
+test-report.junit.xml
