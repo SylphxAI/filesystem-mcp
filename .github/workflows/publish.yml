@@ -6,192 +6,197 @@ on:
       - main # Trigger on push to main branch
     tags:
       - 'v*.*.*' # Trigger on push of version tags (e.g., v0.5.5)
-  pull_request: # Added PR trigger
+  pull_request:
     branches:
-      - main
-
-# Prevent concurrent runs for the same PR or branch
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+      - main # Trigger on PR to main branch
 
 jobs:
-  validate: # New validation job
-    name: Validate Code
+  validate:
+    name: Validate Code Quality
     runs-on: ubuntu-latest
+    permissions: # Added permissions
+      actions: read
+      contents: read
+      security-events: write # Required for CodeQL results
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4.1.7 # Specific version
+        uses: actions/checkout@v4.1.7
+
+      # Initializes the CodeQL tools for scanning. # Added CodeQL init
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: typescript # Specify the language to analyze
+          # Optional: config-file: './.github/codeql/codeql-config.yml'
+          # Optional: queries: '+security-extended'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest # Use the latest pnpm version
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4.0.3 # Specific version
+        uses: actions/setup-node@v4.0.3
         with:
-          node-version: '22' # Use latest LTS
-          cache: 'pnpm' # Use pnpm cache
+          node-version: 'lts/*' # Use latest LTS
+          cache: 'pnpm' # Let pnpm handle caching via pnpm/action-setup
 
-      - name: Install pnpm globally
-        run: npm install -g pnpm
+      - name: Install dependencies # Correct install step
+        run: pnpm install --frozen-lockfile
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile # Use pnpm install
+      - name: Check for vulnerabilities # Added pnpm audit
+        run: pnpm audit --prod # Check only production dependencies
 
-      - name: Check formatting
-        run: pnpm run check-format
+      - name: Check Formatting
+        run: pnpm run check-format # Fails job if check fails
 
-      - name: Lint code
-        run: pnpm run lint
+      - name: Lint Code
+        run: pnpm run lint # Fails job if lint fails
 
-      - name: Perform type checking
-        run: pnpm run typecheck
+      - name: Run Tests and Check Coverage
+        run: pnpm run test:cov # Fails job if tests fail or coverage threshold not met
 
-      - name: Run tests with coverage
-        run: pnpm run test:cov
-
-      - name: Upload coverage to Coveralls
-        uses: coverallsapp/github-action@v2.3.0 # Specific version
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4.5.0 # Use Codecov action with fixed version
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ./coverage/lcov.info # Verify path exists after test:cov
-          flag-name: run-${{ matrix.node-version || 'node-22' }} # Use matrix or default (updated node version)
-          parallel: false # Set to true if using parallel matrix later
+          token: ${{ secrets.CODECOV_TOKEN }} # Use Codecov token
+          files: ./coverage/lcov.info # Specify LCOV file path
+          fail_ci_if_error: true # Optional: fail CI if upload error
 
-  build:
-    needs: validate # Depends on validation passing
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          # No file specified, action defaults to common patterns like test-report.junit.xml
+
+      - name: Perform CodeQL Analysis # Added CodeQL analyze
+        uses: github/codeql-action/analyze@v3
+
+      - name: Upload coverage reports # Kept artifact upload
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: coverage-report
+          path: coverage/ # Upload the whole coverage directory
+
+  build-archive:
+    name: Build and Archive Artifacts
+    needs: validate # Depends on successful validation
     runs-on: ubuntu-latest
-    outputs:
+    if: startsWith(github.ref, 'refs/tags/v') # Only run for tags
+    outputs: # Define outputs for the release job
       version: ${{ steps.get_version.outputs.version }}
-      artifact_name: build-artifacts-archive # Consistent name for upload/download
-      archive_filename: ${{ steps.archive_build.outputs.archive_name }} # Actual .tar.gz filename
+      artifact_path: ${{ steps.archive_build.outputs.artifact_path }}
+    # Removed incorrect permissions block from here
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4.1.7 # Specific version
+        uses: actions/checkout@v4.1.7
+      # Removed incorrect CodeQL init from here
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4.0.3 # Specific version
+        uses: actions/setup-node@v4.0.3
         with:
-          node-version: '22' # Use latest LTS
-          cache: 'pnpm' # Use pnpm cache
-
-      - name: Install pnpm globally
-        run: npm install -g pnpm
+          node-version: 'lts/*' # Use latest LTS
+          registry-url: 'https://registry.npmjs.org/' # For pnpm publish
+          cache: 'pnpm' # Let pnpm handle caching
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile # Use pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build project
         run: pnpm run build
 
-      - name: Get package version
+      - name: Get package version from tag
         id: get_version
         run: |
-          VERSION=""
-          if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref }}" == refs/tags/v* ]]; then
-            VERSION=$(echo "${{ github.ref }}" | sed 's#refs/tags/##')
-          else
-            VERSION=$(node -p "require('./package.json').version")
-          fi
+          VERSION=$(echo "${{ github.ref }}" | sed 's#refs/tags/##')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      # --- Conditional Artifact Archiving and Upload ---
-      - name: Archive build artifacts (only on tag push)
-        if: startsWith(github.ref, 'refs/tags/v') # Condition: Only run for tags
+      - name: Archive build artifacts for release
         id: archive_build
         run: |
-          # Ensure scripts directory is included if postbuild.js is needed
-          tar -czf build-artifacts.tar.gz build package.json pnpm-lock.yaml README.md CHANGELOG.md LICENSE Dockerfile .dockerignore scripts/postbuild.js # Replaced package-lock with pnpm-lock
-          echo "archive_name=build-artifacts.tar.gz" >> $GITHUB_OUTPUT
+          ARTIFACT_NAME="pdf-reader-mcp-${{ steps.get_version.outputs.version }}.tar.gz"
+          tar -czf $ARTIFACT_NAME dist package.json README.md LICENSE CHANGELOG.md
+          echo "artifact_path=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
 
-      - name: Upload build artifacts (only on tag push)
-        if: startsWith(github.ref, 'refs/tags/v') # Condition: Only run for tags
-        uses: actions/upload-artifact@v4.3.4 # Specific version
+      - name: Upload build artifact for release job
+        uses: actions/upload-artifact@v4.4.0
         with:
-          name: build-artifacts-archive # Use consistent name
-          path: ${{ steps.archive_build.outputs.archive_name }}
+          name: release-artifact
+          path: ${{ steps.archive_build.outputs.artifact_path }}
+
+      # Publish steps moved to parallel jobs below
 
   publish-npm:
-    needs: [validate, build] # Depends on validate and build
+    name: Publish to NPM
+    needs: build-archive # Depends on build-archive completion
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v') # Condition: Only run for tags
-    permissions: # Added permissions for trusted publishing (recommended)
-      contents: read
-      id-token: write
+    if: startsWith(github.ref, 'refs/tags/v') # Only run for tags
     steps:
-      - name: Download build artifacts archive
-        uses: actions/download-artifact@v4.1.8 # Specific version
-        with:
-          name: ${{ needs.build.outputs.artifact_name }} # Use consistent artifact name
-          path: .
+      - name: Checkout repository
+        uses: actions/checkout@v4.1.7
 
-      - name: Extract build artifacts
-        run: tar -xzf build-artifacts.tar.gz # Use the correct archive filename
-
-      - name: Set up Node.js for npm publish
-        uses: actions/setup-node@v4.0.3 # Specific version
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
         with:
-          node-version: '22' # Use latest LTS
+          version: latest
+
+      - name: Set up Node.js for NPM
+        uses: actions/setup-node@v4.0.3
+        with:
+          node-version: 'lts/*'
           registry-url: 'https://registry.npmjs.org/'
-          cache: 'pnpm' # Use pnpm cache
+          cache: 'pnpm'
 
-      - name: Install pnpm globally
-        run: npm install -g pnpm
+      # No need to install dependencies again if publish doesn't need them
+      # If pnpm publish needs package.json, it's checked out
+      - name: Install all dependencies for prepublishOnly script
+        run: pnpm install --frozen-lockfile
 
-      # Install only production dependencies before publishing (optional but good practice)
-      # - name: Install production dependencies
-      #   run: npm ci --omit=dev
-
-      - name: Publish to npm with provenance
-        run: npm publish --access public --provenance # Added provenance
+      - name: Publish to npm
+        run: pnpm changeset publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # Still needed for non-provenance or fallback
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-docker:
-    needs: [validate, build] # Depends on validate and build
+    name: Publish to Docker Hub
+    needs: build-archive # Depends on build-archive completion
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v') # Condition: Only run for tags
-    permissions: # Added permissions for docker login
-      contents: read
-      packages: write
+    if: startsWith(github.ref, 'refs/tags/v') # Only run for tags
     steps:
-      - name: Download build artifacts archive
-        uses: actions/download-artifact@v4.1.8 # Specific version
-        with:
-          name: ${{ needs.build.outputs.artifact_name }} # Use consistent artifact name
-          path: .
-
-      - name: List downloaded files (docker)
-        run: ls -la
-
-      - name: Extract build artifacts
-        run: tar -xzf build-artifacts.tar.gz # Use the correct archive filename
-
-      - name: List extracted files (docker)
-        run: ls -la
+      - name: Checkout repository
+        uses: actions/checkout@v4.1.7
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3.2.0 # Specific version
+        uses: docker/setup-qemu-action@v3.2.0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3.5.0 # Specific version
+        uses: docker/setup-buildx-action@v3.5.0
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3.2.0 # Specific version
+        uses: docker/login-action@v3.3.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v5.5.1 # Specific version
+        uses: docker/metadata-action@v5.5.1
         with:
-          images: sylphlab/filesystem-mcp
+          images: sylphlab/pdf-reader-mcp
+          # Use version from the build-archive job output
           tags: |
-            type=semver,pattern={{version}},value=${{ needs.build.outputs.version }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ needs.build.outputs.version }}
-            type=sha,prefix=,suffix=,event=tag
-            type=raw,value=latest,enable=${{ github.ref_type == 'tag' }} # Only tag latest on actual tag pushes
+            type=semver,pattern={{version}},value=${{ needs.build-archive.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.build-archive.outputs.version }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6.5.0 # Specific version
+        uses: docker/build-push-action@v6.7.0
         with:
           context: .
           push: true
@@ -200,28 +205,26 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  create-release:
-    needs: [validate, build, publish-npm, publish-docker] # Depend on validate, build and both publish jobs
+  release:
+    name: Create GitHub Release
+    needs: [publish-npm, publish-docker] # Depends on successful parallel publishes
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v') # Condition: Only run for tags
+    if: startsWith(github.ref, 'refs/tags/v') # Only run for tags
     permissions:
-      contents: write # Keep write permission
+      contents: write # Need permission to create releases and release notes
     steps:
-      - name: Download build artifacts archive
-        uses: actions/download-artifact@v4.1.8 # Specific version
+      - name: Download build artifact
+        uses: actions/download-artifact@v4.1.8
         with:
-          name: ${{ needs.build.outputs.artifact_name }} # Use consistent artifact name
-          path: .
-
-      - name: Extract build artifacts
-        run: tar -xzf build-artifacts.tar.gz # Use the correct archive filename
+          name: release-artifact
+          # No path specified, downloads to current directory
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2.0.6 # Specific version
+        uses: softprops/action-gh-release@v2.0.6
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          body_path: CHANGELOG.md # Assumes CHANGELOG.md is in the artifact
-          # files: ${{ needs.build.outputs.archive_filename }} # Optionally attach the archive
+          generate_release_notes: true # Auto-generate release notes from commits
+          files: ${{ needs.build-archive.outputs.artifact_path }} # Attach the artifact archive from build-archive job
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

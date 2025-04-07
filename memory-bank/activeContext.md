@@ -9,7 +9,7 @@
 
 ## 2. Recent Changes/Decisions
 
-- **GitHub Actions:** Corrected YAML syntax in `.github/workflows/publish.yml` after previous failed edits. Ensured `npm install -g pnpm` step is correctly placed after `setup-node` in `validate`, `build`, and `publish-npm` jobs.
+- **GitHub Actions:** Replaced `.github/workflows/publish.yml` with a new version provided by the user. This version includes significant improvements like CodeQL analysis, Codecov integration, dedicated `pnpm/action-setup`, vulnerability scanning (`pnpm audit`), and restructured jobs for validation, build, publishing, and release.
 
 - Removed `edit_file` tool and related files (`editFile.ts`, `editFileUtils.ts`, `editFile.test.ts`).
 - Added `apply_diff` tool (`applyDiff.ts`, `applyDiffUtils.ts`, `applyDiffSchema.ts`, `applyDiff.test.ts`).
