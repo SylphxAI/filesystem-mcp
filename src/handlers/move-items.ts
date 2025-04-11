@@ -1,10 +1,18 @@
 // src/handlers/moveItems.ts
-import { promises as fs } from 'node:fs';
+import fsPromises from 'node:fs/promises'; // Use default import
 import path from 'node:path';
 import { z } from 'zod';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
-import { resolvePath, PROJECT_ROOT } from '../utils/path-utils.js';
+import * as pathUtils from '../utils/path-utils.js'; // Import namespace
 
+// --- Dependency Injection Interface ---
+interface MoveItemsDependencies {
+  access: typeof fsPromises.access;
+  rename: typeof fsPromises.rename;
+  mkdir: typeof fsPromises.mkdir;
+  resolvePath: typeof pathUtils.resolvePath;
+  PROJECT_ROOT: string;
+}
 // --- Types ---
 import type { McpToolResponse } from '../types/mcp-types.js';
 
@@ -133,24 +141,6 @@ function validateMoveOperation(op: MoveOperation | undefined): MoveResult | unde
   return undefined;
 }
 
-/** Checks if source exists and is accessible. */
-async function checkSourceExists(params: SourceCheckParams): Promise<MoveResult | undefined> {
-  try {
-    await fs.access(params.sourceAbsolute);
-    return undefined;
-  } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-      return {
-        source: params.sourceOutput,
-        destination: params.destOutput,
-        success: false,
-        error: `Source path not found: ${params.sourceRelative}`,
-      };
-    }
-    throw error;
-  }
-}
-
 /** Handles special error cases for move operations. */
 function handleSpecialMoveErrors(
   error: unknown,
@@ -168,22 +158,11 @@ function handleSpecialMoveErrors(
   return undefined;
 }
 
-/** Performs the actual move operation. */
-async function performMoveOperation(params: MoveOperationParams): Promise<MoveResult> {
-  const destDir = path.dirname(params.destinationAbsolute);
-  if (destDir !== PROJECT_ROOT) {
-    await fs.mkdir(destDir, { recursive: true });
-  }
-  await fs.rename(params.sourceAbsolute, params.destinationAbsolute);
-  return {
-    source: params.sourceOutput,
-    destination: params.destOutput,
-    success: true,
-  };
-}
-
 /** Processes a single move/rename operation. */
-async function processSingleMoveOperation(params: ProcessSingleMoveParams): Promise<MoveResult> {
+async function processSingleMoveOperation(
+  params: ProcessSingleMoveParams,
+  dependencies: MoveItemsDependencies, // Inject dependencies
+): Promise<MoveResult> {
   const { op } = params;
 
   // Validate operation parameters
@@ -196,11 +175,11 @@ async function processSingleMoveOperation(params: ProcessSingleMoveParams): Prom
   const destOutput = destinationRelative.replaceAll('\\', '/');
 
   try {
-    // Safely resolve paths
-    const sourceAbsolute = resolvePath(sourceRelative);
-    const destinationAbsolute = resolvePath(destinationRelative);
+    // Safely resolve paths using injected dependency
+    const sourceAbsolute = dependencies.resolvePath(sourceRelative);
+    const destinationAbsolute = dependencies.resolvePath(destinationRelative);
 
-    if (sourceAbsolute === PROJECT_ROOT) {
+    if (sourceAbsolute === dependencies.PROJECT_ROOT) { // Use injected dependency
       return {
         source: sourceOutput,
         destination: destOutput,
@@ -209,22 +188,28 @@ async function processSingleMoveOperation(params: ProcessSingleMoveParams): Prom
       };
     }
 
-    // Check source existence
-    const sourceCheckResult = await checkSourceExists({
-      sourceAbsolute,
-      sourceRelative,
-      sourceOutput,
-      destOutput,
-    });
+    // Check source existence using injected dependency
+    const sourceCheckResult = await checkSourceExists(
+      {
+        sourceAbsolute,
+        sourceRelative,
+        sourceOutput,
+        destOutput,
+      },
+      dependencies, // Pass dependencies
+    );
+    // Ensure we return immediately if source check fails (No change needed here, already correct)
     if (sourceCheckResult) return sourceCheckResult;
-
-    // Perform the move
-    return await performMoveOperation({
-      sourceAbsolute,
-      destinationAbsolute,
-      sourceOutput,
-      destOutput,
-    });
+    // Perform the move using injected dependency
+    return await performMoveOperation(
+      {
+        sourceAbsolute,
+        destinationAbsolute,
+        sourceOutput,
+        destOutput,
+      },
+      dependencies, // Pass dependencies
+    );
   } catch (error) {
     const specialErrorResult = handleSpecialMoveErrors(error, sourceOutput, destOutput);
     if (specialErrorResult) return specialErrorResult;
@@ -260,11 +245,16 @@ function processSettledResults(
   });
 }
 
-/** Main handler function */
-const handleMoveItemsFunc = async (args: unknown): Promise<McpToolResponse> => {
+/** Core logic function with dependency injection */
+export const handleMoveItemsFuncCore = async (
+  args: unknown,
+  dependencies: MoveItemsDependencies,
+): Promise<McpToolResponse> => {
   const { operations } = parseAndValidateArgs(args);
 
-  const movePromises = operations.map((op) => processSingleMoveOperation({ op }));
+  const movePromises = operations.map((op) =>
+    processSingleMoveOperation({ op }, dependencies), // Pass dependencies
+  );
   const settledResults = await Promise.allSettled(movePromises);
 
   const outputResults = processSettledResults(settledResults, operations);
@@ -282,10 +272,90 @@ const handleMoveItemsFunc = async (args: unknown): Promise<McpToolResponse> => {
   };
 };
 
-// Export the complete tool definition
+// --- Exported Handler (Wrapper) ---
+
+/** Main handler function (wraps core logic with actual dependencies) */
+const handleMoveItemsFunc = async (args: unknown): Promise<McpToolResponse> => {
+  const dependencies: MoveItemsDependencies = {
+    access: fsPromises.access,
+    rename: fsPromises.rename,
+    mkdir: fsPromises.mkdir,
+    resolvePath: pathUtils.resolvePath,
+    PROJECT_ROOT: pathUtils.PROJECT_ROOT,
+  };
+  return handleMoveItemsFuncCore(args, dependencies);
+};
+
+// Export the complete tool definition using the wrapper handler
 export const moveItemsToolDefinition = {
   name: 'move_items',
   description: 'Move or rename multiple specified files/directories.',
   inputSchema: MoveItemsArgsSchema,
-  handler: handleMoveItemsFunc,
+  handler: handleMoveItemsFunc, // Use the wrapper
 };
+
+// --- Helper Functions Modified for DI ---
+
+/** Checks if source exists and is accessible. */
+async function checkSourceExists(
+  params: SourceCheckParams,
+  dependencies: MoveItemsDependencies, // Inject dependencies
+): Promise<MoveResult | undefined> {
+  try {
+    await dependencies.access(params.sourceAbsolute); // Use injected dependency
+    return undefined;
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      return {
+        source: params.sourceOutput,
+        destination: params.destOutput,
+        success: false,
+        error: `Source path not found: ${params.sourceRelative}`,
+      };
+    }
+    // Log other access errors for debugging, but rethrow to be caught by main handler
+    console.error(`[Filesystem MCP - checkSourceExists] Unexpected access error for ${params.sourceRelative}:`, error);
+    throw error;
+  }
+}
+
+/** Performs the actual move operation. */
+async function performMoveOperation(
+  params: MoveOperationParams,
+  dependencies: MoveItemsDependencies, // Inject dependencies
+): Promise<MoveResult> {
+  const destDir = path.dirname(params.destinationAbsolute);
+  
+  // Skip mkdir if:
+  // 1. Destination is in root (destDir === PROJECT_ROOT)
+  // 2. Or if destination is the same directory as source (no new dir needed)
+  const sourceDir = path.dirname(params.sourceAbsolute);
+  const needsMkdir = destDir !== dependencies.PROJECT_ROOT && destDir !== sourceDir;
+  
+  if (needsMkdir) {
+      try {
+          await dependencies.mkdir(destDir, { recursive: true });
+      } catch (mkdirError: unknown) {
+          // If mkdir fails for reasons other than EEXIST, it's a critical problem for rename
+          if (!(mkdirError && typeof mkdirError === 'object' && 'code' in mkdirError && mkdirError.code === 'EEXIST')) {
+              console.error(`[Filesystem MCP - performMoveOperation] Critical error creating destination directory ${destDir}:`, mkdirError);
+              // Return the mkdir error directly
+              return handleMoveError({
+                  error: mkdirError,
+                  sourceRelative: params.sourceOutput, // Pass relative path for better error message
+                  destinationRelative: params.destOutput, // Pass relative path for better error message
+                  sourceOutput: params.sourceOutput,
+                  destOutput: params.destOutput,
+              });
+          }
+          // Ignore EEXIST - directory already exists
+      }
+  }
+  
+  await dependencies.rename(params.sourceAbsolute, params.destinationAbsolute); // Use injected dependency
+  return {
+    source: params.sourceOutput,
+    destination: params.destOutput,
+    success: true,
+  };
+}

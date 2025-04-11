@@ -11,7 +11,7 @@ export function escapeRegex(str: string): string {
   // - Outside character sets, escape special characters: * + ? ^ $ { } ( ) | [ ] \
   // - Inside character sets, escape special characters: ^ - ] \
   // This function handles the common cases for use outside character sets.
-  return str.replaceAll(/[$()*+.?[\\\]^{|}]/g, String.raw`\$&`); // $& means the whole matched string
+  return str.replaceAll(/[$()*+.?[\\\]^{|}]/g, '\\$&'); // $& means the whole matched string. Manually escape backslash.
 }
 
 /**
@@ -51,8 +51,8 @@ export function linesMatch(
     return false;
   }
   const trimmedSearchLine = searchLine.trimStart();
-  const effectiveFileLine =
-    ignoreLeadingWhitespace && trimmedSearchLine.length > 0 ? fileLine.trimStart() : fileLine;
+  // Always trim fileLine if ignoring whitespace, compare against trimmed searchLine
+  const effectiveFileLine = ignoreLeadingWhitespace ? fileLine.trimStart() : fileLine;
   const effectiveSearchLine = ignoreLeadingWhitespace ? trimmedSearchLine : searchLine;
   return effectiveFileLine === effectiveSearchLine;
 }
