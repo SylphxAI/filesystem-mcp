@@ -22,7 +22,7 @@ vi.mock('@modelcontextprotocol/sdk', () => {
   const MockMcpError = class extends Error {
     code: number;
     data: any;
-    constructor(message: string, code = -32000, data?: any) {
+    constructor(message: string, code = -32_000, data?: any) {
       super(message);
       this.name = 'McpError';
       this.code = code;
@@ -38,9 +38,7 @@ vi.mock('@modelcontextprotocol/sdk', () => {
 
 // Define mock variable outside the factory
 const mockTransportInstance = {};
-const MockStdioServerTransport = vi
-  .fn()
-  .mockImplementation(() => mockTransportInstance);
+const MockStdioServerTransport = vi.fn().mockImplementation(() => mockTransportInstance);
 
 vi.mock('@modelcontextprotocol/sdk/stdio', () => {
   return {
@@ -136,12 +134,10 @@ describe('Server Initialization (src/index.ts)', () => {
     // Get names from the keys of the refined mockHandlers object
     const expectedToolNames = Object.keys(typedMockHandlers); // Use typedMockHandlers
 
-    expect(serverInstance.registerTool).toHaveBeenCalledTimes(
-      expectedToolNames.length,
-    );
+    expect(serverInstance.registerTool).toHaveBeenCalledTimes(expectedToolNames.length);
 
     // Check if each handler name (which is the key in mockHandlers now) was registered
-    expectedToolNames.forEach((toolName) => {
+    for (const toolName of expectedToolNames) {
       const handlerDefinition = typedMockHandlers[toolName]; // Use typedMockHandlers
       expect(serverInstance.registerTool).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -155,7 +151,7 @@ describe('Server Initialization (src/index.ts)', () => {
       // expect(serverInstance.registerTool).toHaveBeenCalledWith(
       //     expect.objectContaining({ name: handlerDefinition.name, inputSchema: handlerDefinition.jsonSchema })
       // );
-    });
+    }
   });
 
   it('should call server.start()', () => {

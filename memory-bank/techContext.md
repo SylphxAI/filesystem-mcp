@@ -4,7 +4,7 @@
 
 ## Playbook Guideline Versions Checked
 
-- `guidelines/typescript/style_quality.md`: v1.1
+- `guidelines/typescript/style_quality.md`: 9d56a9d6626ecc2fafd0b07033220a1282282236
 
 # Tech Context: Filesystem MCP Server
 

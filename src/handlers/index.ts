@@ -1,59 +1,51 @@
-import { listFilesToolDefinition } from './listFiles.js';
-import { statItemsToolDefinition } from './statItems.js';
-import { readContentToolDefinition } from './readContent.js';
-import { writeContentToolDefinition } from './writeContent.js';
-import { deleteItemsToolDefinition } from './deleteItems.js';
-import { createDirectoriesToolDefinition } from './createDirectories.js';
-import { chmodItemsToolDefinition } from './chmodItems.js';
-import { chownItemsToolDefinition } from './chownItems.js';
-import { moveItemsToolDefinition } from './moveItems.js';
-import { copyItemsToolDefinition } from './copyItems.js';
-import { searchFilesToolDefinition } from './searchFiles.js';
-import { replaceContentToolDefinition } from './replaceContent.js';
-import { applyDiffTool } from './applyDiff.js';
+import { listFilesToolDefinition } from './list-files.js';
+import { statItemsToolDefinition } from './stat-items.js';
+import { readContentToolDefinition } from './read-content.js';
+import { writeContentToolDefinition } from './write-content.js';
+import { deleteItemsToolDefinition } from './delete-items.js';
+import { createDirectoriesToolDefinition } from './create-directories.js';
+import { chmodItemsToolDefinition } from './chmod-items.js';
+import { chownItemsToolDefinition } from './chown-items.js';
+import { moveItemsToolDefinition } from './move-items.js';
+import { copyItemsToolDefinition } from './copy-items.js';
+import { searchFilesToolDefinition } from './search-files.js';
+import { replaceContentToolDefinition } from './replace-content.js';
+import { handleApplyDiff } from './apply-diff.js';
+import { applyDiffInputSchema, ApplyDiffOutput } from '../schemas/apply-diff-schema.js';
+import fs from 'node:fs';
+import path from 'node:path';
 
 // Define the structure for a tool definition (used internally and for index.ts)
-// We need Zod here to define the schema type correctly
 import type { ZodType } from 'zod';
-// Remove SDK imports for McpRequest/Response
-// import type { McpRequest, McpResponse } from '@modelcontextprotocol/sdk/types.js';
-import type { McpError } from '@modelcontextprotocol/sdk/types.js'; // Keep McpError import
+import type { McpToolResponse } from '../types/mcp-types.js';
 
 // Define local interfaces based on usage observed in handlers
-export interface McpRequest<T = unknown> {
-  jsonrpc: '2.0';
-  method: string;
-  params: T;
-  id?: string | number | null;
-}
-
-// Define a base McpResponse and specific ones if needed
-export interface McpResponse<T = unknown> {
-  jsonrpc?: '2.0';
-  id?: string | number | null;
-  success?: boolean; // Common pattern in handlers
-  data?: T; // Common pattern in handlers
-  error?: McpError;
-  // Add other potential fields based on specific handler needs if necessary
-  // For example, listFiles uses 'content'
-  content?: { type: string; text: string }[];
-}
-
 // Define the structure for a tool definition
 // Matches the structure in individual tool files like applyDiff.ts
 export interface ToolDefinition<TInput = unknown, TOutput = unknown> {
-  // Default to unknown
   name: string;
   description: string;
   inputSchema: ZodType<TInput>;
-  outputSchema?: ZodType<TOutput>; // Output schema is optional
-  // Use the locally defined types here
-  handler: (request: McpRequest<TInput>) => Promise<McpResponse<TOutput>>;
+  outputSchema?: ZodType<TOutput>;
+  handler: (args: TInput) => Promise<McpToolResponse>; // Changed _args to args
 }
 
+// Helper type to extract input type from a tool definition
+export type ToolInput<T extends ToolDefinition> =
+  T extends ToolDefinition<infer I, unknown> ? I : never;
+
+// Define a more specific type for our tool definitions to avoid naming conflicts
+type HandlerToolDefinition = {
+  name: string;
+  description: string;
+  inputSchema: ZodType<unknown>;
+  outputSchema?: ZodType<unknown>;
+  handler: (args: unknown) => Promise<{ content: Array<{ type: 'text'; text: string }> }>;
+};
+
 // Aggregate all tool definitions into a single array
-// Let TypeScript infer the type
-export const allToolDefinitions = [
+// Use our more specific type to avoid naming conflicts
+export const allToolDefinitions: HandlerToolDefinition[] = [
   listFilesToolDefinition,
   statItemsToolDefinition,
   readContentToolDefinition,
@@ -66,5 +58,34 @@ export const allToolDefinitions = [
   copyItemsToolDefinition,
   searchFilesToolDefinition,
   replaceContentToolDefinition,
-  applyDiffTool,
+  {
+    name: 'apply_diff',
+    description: 'Apply diffs to files',
+    inputSchema: applyDiffInputSchema,
+    handler: async (args: unknown): Promise<McpToolResponse> => {
+      const validatedArgs = applyDiffInputSchema.parse(args);
+      const result: ApplyDiffOutput = await handleApplyDiff(validatedArgs.changes, {
+        readFile: async (path: string) => fs.promises.readFile(path, 'utf8'),
+        writeFile: async (path: string, content: string) =>
+          fs.promises.writeFile(path, content, 'utf8'),
+        path,
+        projectRoot: process.cwd(),
+      });
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(
+              {
+                success: result.success,
+                results: result.results,
+              },
+              undefined,
+              2,
+            ),
+          },
+        ],
+      };
+    },
+  },
 ];

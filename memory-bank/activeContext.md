@@ -5,27 +5,28 @@
 ## 1. Current Work Focus & Status
 
 **Task:** Implement `apply_diff` tool.
-**Status:** Completed. Implemented `apply_diff` handler, schema, utils, and tests. Removed old `edit_file` code/tests. Updated Memory Bank, `package.json`. Ran `pnpm install`. Most tests pass, except for `applyDiff.test.ts` due to mock/assertion issues.
+**Status:** Completed configuration alignment and file renaming based on `guidelines/typescript/style_quality.md` (SHA: 9d56a9d...). ESLint check reveals 223 errors requiring manual code fixes. `import/no-unresolved` rule temporarily disabled.
 
 ## 2. Recent Changes/Decisions
 
-- **GitHub Actions:** Replaced `.github/workflows/publish.yml` with a new version provided by the user. This version includes significant improvements like CodeQL analysis, Codecov integration, dedicated `pnpm/action-setup`, vulnerability scanning (`pnpm audit`), and restructured jobs for validation, build, publishing, and release.
-
-- Removed `edit_file` tool and related files (`editFile.ts`, `editFileUtils.ts`, `editFile.test.ts`).
-- Added `apply_diff` tool (`applyDiff.ts`, `applyDiffUtils.ts`, `applyDiffSchema.ts`, `applyDiff.test.ts`).
-- Updated tool registration in `index.ts` and `handlers/index.ts`.
-- Removed `diff`, `@types/diff`, `detect-indent` dependencies from `package.json`.
-- Ran `pnpm install` to update lockfile.
-- Fixed TypeScript type errors in `src/index.ts` related to the `handleCallTool` function signature and return type, ensuring correct interaction between SDK's `setRequestHandler` and locally defined `McpRequest`/`McpResponse` types.
-- Attempted multiple rounds of ESLint fixes using `edit_file` and `write_content`.
+- **Configuration Alignment:**
+    - Updated `package.json`: Added ESLint dependencies (`eslint-config-airbnb-typescript`, `eslint-plugin-import`, `eslint-plugin-unicorn`), updated scripts (`lint`, `validate`), updated `lint-staged`.
+    - Created `.eslintrc.js` based on guideline template.
+    - Deleted old `eslint.config.js`.
+    - Updated `.prettierrc.js` (formerly `.cjs`) content and filename based on guideline.
+    - Updated `tsconfig.json`: Set `module` and `moduleResolution` to `NodeNext`.
+- **Guideline Checksum:** Updated `memory-bank/techContext.md` with the latest SHA for `style_quality.md`.
+- (Previous changes remain relevant)
 
 ## 3. Next Steps
 
-1.  **KNOWN ISSUE:** Fix failing tests in `__tests__/handlers/applyDiff.test.ts` related to mock setup or assertions.
-2.  **KNOWN ISSUE:** Manually address remaining ESLint errors (approx. 85) primarily related to type safety (`@typescript-eslint/no-unsafe-*`), complexity, and line limits in `applyDiff.ts` and `applyDiffUtils.ts`.
-3.  Enhance `apply_diff` tests further (edge cases, large files).
-4.  Consider adding performance benchmarks for `apply_diff`.
-5.  Update `README.md` with details about the new `apply_diff` tool and remove mentions of `edit_file`.
+1.  **NEXT:** Rename `__tests__/testUtils.ts` to `__tests__/test-utils.ts`.
+2.  **NEXT:** Begin manually fixing the 223 remaining ESLint errors based on the latest lint report. Prioritize `no-console`, `no-unused-vars`, `unicorn/no-null`, and `max-params`.
+3.  **LATER:** Re-enable and fix `import/no-unresolved` rule.
+4.  **KNOWN ISSUE:** Fix failing tests in `__tests__/handlers/apply-diff.test.ts` related to mock setup or assertions.
+5.  Enhance `apply_diff` tests further (edge cases, large files).
+6.  Consider adding performance benchmarks for `apply_diff`.
+7.  Update `README.md` with details about the new `apply_diff` tool and remove mentions of `edit_file`.
 
 ## 4. Active Decisions
 

@@ -42,15 +42,14 @@
 
     /* Other */
     "forceConsistentCasingInFileNames": true
-    // "rootDir": "src" // Removed to strictly follow guideline standard
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/types/**/*.d.ts"],
   "exclude": [
     "node_modules",
-    "dist", // Matches the updated outDir
+    "build",
+    "dist",
     "**/*.test.ts",
     "**/*.spec.ts",
     "**/*.bench.ts"
-    // Removed "build", "coverage", "__tests__" to match guideline standard
   ]
 }

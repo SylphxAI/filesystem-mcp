@@ -1,3 +1,0 @@
-matched line
-line two
-line 3

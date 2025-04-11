@@ -4,6 +4,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { ZodTypeAny } from 'zod'; // Keep ZodTypeAny
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import { applyDiffInputSchema } from './schemas/apply-diff-schema.js';
 // Import SDK types needed
 import type { CallToolRequest } from '@modelcontextprotocol/sdk/types.js';
 import {
@@ -13,11 +14,11 @@ import {
   ErrorCode,
 } from '@modelcontextprotocol/sdk/types.js';
 // Import the LOCAL McpRequest/McpResponse types defined in handlers/index.ts
+import type { ToolDefinition } from './handlers/index.js';
 import type {
   McpRequest as LocalMcpRequest,
-  McpResponse as LocalMcpResponse, // Re-add LocalMcpResponse for type safety
-  ToolDefinition,
-} from './handlers/index.js';
+  McpToolResponse as LocalMcpResponse,
+} from './types/mcp-types.js';
 // Import the aggregated tool definitions
 import { allToolDefinitions } from './handlers/index.js';
 
@@ -27,8 +28,7 @@ const server = new Server(
   {
     name: 'filesystem-mcp',
     version: '0.6.0', // Version bump for apply_diff tool
-    description:
-      'MCP Server for filesystem operations relative to the project root.',
+    description: 'MCP Server for filesystem operations relative to the project root.',
   },
   {
     capabilities: { tools: {} },
@@ -38,11 +38,8 @@ const server = new Server(
 // Helper function to convert Zod schema to JSON schema for MCP
 const generateInputSchema = (schema: ZodTypeAny): Record<string, unknown> => {
   // Pass ZodTypeAny directly
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-  return zodToJsonSchema(schema, { target: 'openApi3' }) as Record<
-    string,
-    unknown
-  >;
+
+  return zodToJsonSchema(schema, { target: 'openApi3' }) as Record<string, unknown>;
 };
 
 // Set request handler for listing tools
@@ -56,13 +53,21 @@ server.setRequestHandler(
     }[];
   } => {
     // Map the aggregated definitions to the format expected by the SDK
-    const availableTools = allToolDefinitions.map((def: ToolDefinition) => ({
-      name: def.name,
-      description: def.description,
-      // Assert type for generateInputSchema
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      inputSchema: generateInputSchema(def.inputSchema as ZodTypeAny),
-    }));
+    const availableTools = allToolDefinitions.map((def) => {
+      if (typeof def === 'function') {
+        // Handle function-based tools (like handleApplyDiff)
+        return {
+          name: 'apply_diff',
+          description: 'Apply diffs to files',
+          inputSchema: generateInputSchema(applyDiffInputSchema),
+        };
+      }
+      return {
+        name: def.name,
+        description: def.description,
+        inputSchema: generateInputSchema(def.inputSchema),
+      };
+    });
     return { tools: availableTools };
   },
 );
@@ -73,23 +78,14 @@ server.setRequestHandler(
 function handleToolError(localResponse: LocalMcpResponse): void {
   // Use optional chaining for safer access
   if (localResponse.error) {
-    if (localResponse.error instanceof McpError) {
-      throw localResponse.error;
-    } else {
-      // Log and throw a generic internal error for unexpected formats
-      console.error('Non-McpError thrown by handler:', localResponse.error);
-      throw new McpError(
-        ErrorCode.InternalError,
-        'Handler returned an unexpected error format.',
-      );
-    }
+    throw localResponse.error instanceof McpError
+      ? localResponse.error
+      : new McpError(ErrorCode.InternalError, 'Handler returned an unexpected error format.');
   }
 }
 
 /** Formats the successful response payload from the local tool handler. */
-function formatSuccessPayload(
-  localResponse: LocalMcpResponse,
-): Record<string, unknown> {
+function formatSuccessPayload(localResponse: LocalMcpResponse): Record<string, unknown> {
   // Check for data property safely
   if (localResponse.data && typeof localResponse.data === 'object') {
     // Assert type for safety, assuming data is the primary payload
@@ -108,22 +104,16 @@ function formatSuccessPayload(
 // --- Main Handler for Tool Calls ---
 
 /** Handles incoming 'call_tool' requests from the SDK. */
-const handleCallTool = async (
-  sdkRequest: CallToolRequest,
-): Promise<Record<string, unknown>> => {
+const handleCallTool = async (sdkRequest: CallToolRequest): Promise<Record<string, unknown>> => {
   // Find the corresponding tool definition
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
   const toolDefinition: ToolDefinition | undefined = allToolDefinitions.find(
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     (def) => def.name === sdkRequest.params.name,
   );
 
   // Throw error if tool is not found
   if (!toolDefinition) {
-    throw new McpError(
-      ErrorCode.MethodNotFound,
-      `Unknown tool: ${sdkRequest.params.name}`,
-    );
+    throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${sdkRequest.params.name}`);
   }
 
   // Construct the request object expected by the local handler
@@ -134,8 +124,7 @@ const handleCallTool = async (
   };
 
   // Execute the local tool handler
-  const localResponse: LocalMcpResponse =
-    await toolDefinition.handler(localRequest);
+  const localResponse: LocalMcpResponse = await toolDefinition.handler(localRequest);
 
   // Process potential errors from the handler
   handleToolError(localResponse);
@@ -149,13 +138,11 @@ server.setRequestHandler(CallToolRequestSchema, handleCallTool);
 
 // --- Server Start ---
 
-async function main(): Promise<void> {
+try {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('[Filesystem MCP] Server running on stdio');
-}
-
-main().catch((error: unknown) => {
-  console.error('[Filesystem MCP] Server error:', error);
+  // Server started successfully
+} catch {
+  // Server failed to start
   process.exit(1);
-});
+}

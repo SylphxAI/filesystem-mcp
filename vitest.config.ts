@@ -28,7 +28,6 @@ export default defineConfig({
       ],
       clean: true, // Added clean option
     },
-    // Removed setupFiles as './__tests__/setup.ts' does not exist
     deps: {
       optimizer: {
         ssr: {

@@ -1,0 +1,14 @@
+feat: Add apply-diff schema and utility functions for diff operations
+
+- Introduced `apply-diff-schema.ts` to define schemas for diff operations, including validation for line numbers and unique file paths.
+- Created `mcp-types.ts` for core MCP error handling and request/response types.
+- Implemented `apply-diff-utils.ts` with functions to validate and apply diff blocks to file content, including context retrieval and content verification.
+- Removed deprecated `applyDiffUtils.ts` to streamline utility functions.
+- Added `edit-file-specific-utils.ts` for regex matching and indentation handling.
+- Created `error-utils.ts` for standardized error formatting during file processing.
+- Introduced `path-utils.ts` for path resolution with security checks against path traversal.
+- Removed old `pathUtils.ts` to consolidate path handling logic.
+- Added `stats-utils.ts` for formatting file statistics for MCP responses.
+- Created `string-utils.ts` for string manipulation utilities, including regex escaping and line matching.
+- Updated `tsconfig.json` to include type definitions and adjust exclusions.
+- Modified `vitest.config.ts` to add clean option and remove non-existent setup files.

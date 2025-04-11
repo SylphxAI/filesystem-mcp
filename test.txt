@@ -1,3 +1,0 @@
-line 1
-replacement line 2
-line 3

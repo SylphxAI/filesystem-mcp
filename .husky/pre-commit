@@ -1,1 +1,1 @@
-pnpm test
+npm exec pnpm test
