@@ -9,11 +9,10 @@ export default defineConfig({
       reporter: ['text', 'json', 'html', 'lcov'], // Added lcov reporter
       reportsDirectory: './coverage', // Explicitly set the output directory
       thresholds: {
-        // Temporarily lowered thresholds to 85% to pass CI
-        lines: 85,
-        functions: 85,
-        branches: 85,
-        statements: 85,
+        lines: 90,
+        functions: 90,
+        branches: 90,
+        statements: 90,
       },
       include: ['src/**/*.ts'], // Restored include
       exclude: [
