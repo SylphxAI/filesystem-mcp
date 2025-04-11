@@ -2,7 +2,7 @@ import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 import prettierConfig from "eslint-config-prettier";
 // import unicornPlugin from "eslint-plugin-unicorn"; // Keep commented out for now
-// import importPlugin from "eslint-plugin-import"; // Keep commented out for now
+import importPlugin from "eslint-plugin-import";
 import globals from "globals";
 
 export default tseslint.config(
@@ -96,21 +96,19 @@ export default tseslint.config(
   */
 
   // Example: Import plugin (ensure installed and configured)
-  /*
-  {
-    plugins: {
-      import: importPlugin,
-    },
-    settings: {
-      'import/resolver': {
-        typescript: true,
-        node: true,
+    {
+      plugins: {
+        import: importPlugin,
+      },
+      settings: {
+        'import/resolver': {
+          typescript: true,
+          node: true,
+        }
+      },
+      rules: {
+         // Add import rules
+         'import/no-unresolved': 'error',
       }
-    },
-    rules: {
-       // Add import rules
-       'import/no-unresolved': 'error', // Re-enable this later
     }
-  }
-  */
 );

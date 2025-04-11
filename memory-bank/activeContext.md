@@ -5,8 +5,7 @@
 ## 1. Current Work Focus & Status
 
 **Task:** Implement `apply_diff` tool.
-**Status:** Completed configuration alignment and file renaming based on `guidelines/typescript/style_quality.md` (SHA: 9d56a9d...). ESLint check reveals 223 errors requiring manual code fixes. `import/no-unresolved` rule temporarily disabled.
-
+**Status:** Completed configuration alignment and file renaming based on `guidelines/typescript/style_quality.md` (SHA: 9d56a9d...). ESLint check (with `--no-cache`) confirms **no errors**. `import/no-unresolved` rule was temporarily disabled but seems unnecessary now.
 ## 2. Recent Changes/Decisions
 
 - **Configuration Alignment:**
@@ -21,10 +20,10 @@
 ## 3. Next Steps
 
 1.  **NEXT:** Rename `__tests__/testUtils.ts` to `__tests__/test-utils.ts`.
-2.  **NEXT:** Begin manually fixing the 223 remaining ESLint errors based on the latest lint report. Prioritize `no-console`, `no-unused-vars`, `unicorn/no-null`, and `max-params`.
-3.  **LATER:** Re-enable and fix `import/no-unresolved` rule.
-4.  **KNOWN ISSUE:** Fix failing tests in `__tests__/handlers/apply-diff.test.ts` related to mock setup or assertions.
-5.  Enhance `apply_diff` tests further (edge cases, large files).
+2.  **DONE:** ESLint errors fixed (confirmed via `--no-cache`).
+3.  **DONE:** Verified `import/no-unresolved` rule (re-enabled in `eslint.config.ts`, no errors reported).
+4.  **DONE:** Verified tests in `__tests__/handlers/apply-diff.test.ts` are passing.
+5.  **NEXT:** Enhance `apply_diff` tests further (edge cases, large files).
 6.  Consider adding performance benchmarks for `apply_diff`.
 7.  Update `README.md` with details about the new `apply_diff` tool and remove mentions of `edit_file`.
 
