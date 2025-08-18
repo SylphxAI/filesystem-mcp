@@ -20,7 +20,7 @@ jobs:
       security-events: write # Required for CodeQL results
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v5.0.0
 
       # Initializes the CodeQL tools for scanning. # Added CodeQL init
       - name: Initialize CodeQL
@@ -90,7 +90,7 @@ jobs:
     # Removed incorrect permissions block from here
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v5.0.0
       # Removed incorrect CodeQL init from here
 
       - name: Install pnpm
@@ -139,7 +139,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') # Only run for tags
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v5.0.0
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -170,7 +170,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') # Only run for tags
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v5.0.0
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3.2.0
