@@ -107,7 +107,7 @@
     "typedoc": "^0.28.2",
     "typedoc-plugin-markdown": "^4.6.2",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.29.1",
+    "typescript-eslint": "^8.41.0",
     "uuid": "^11.1.0",
     "vitepress": "^1.6.3",
     "vitest": "^3.1.1"
