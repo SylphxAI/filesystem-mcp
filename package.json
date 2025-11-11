@@ -1,5 +1,5 @@
 {
-  "name": "@sylphlab/filesystem-mcp",
+  "name": "@sylphx/filesystem-mcp",
   "version": "0.5.9",
   "description": "An MCP server providing filesystem tools relative to a project root.",
   "type": "module",
@@ -49,10 +49,10 @@
     "version-packages": "changeset version",
     "prepare": "husky"
   },
-  "homepage": "https://github.com/sylphlab/filesystem-mcp#readme",
+  "homepage": "https://github.com/SylphxAI/filesystem-mcp#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sylphlab/filesystem-mcp.git"
+    "url": "git+https://github.com/SylphxAI/filesystem-mcp.git"
   },
   "keywords": [
     "mcp",
@@ -67,10 +67,10 @@
     "agent",
     "tool"
   ],
-  "author": "Sylph Lab <hi@sylphlab.ai> (https://sylphlab.ai)",
+  "author": "Sylphx <hi@sylphx.com> (https://sylphx.com)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/sylphlab/filesystem-mcp/issues"
+    "url": "https://github.com/SylphxAI/filesystem-mcp/issues"
   },
   "publishConfig": {
     "access": "public"
