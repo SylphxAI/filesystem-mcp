@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2025-11-11
+
+### Security
+
+- **CRITICAL FIX**: Prevented path traversal attacks via symbolic links in all filesystem operations
+  - Modified `resolvePath()` to resolve symlinks before security validation using `fs.realpath()`
+  - Added validation of parent directories for non-existent paths
+  - Updated all filesystem handlers to properly await async `resolvePath()` calls
+  - Fixes vulnerability where attackers could access files outside project root via symlinks (Issue #134)
+  - All versions before 0.6.0 are vulnerable to this attack
+
+### Changed
+
+- Made `resolvePath()` function async to support symlink resolution
+- Updated 13 handler files to await `resolvePath()` calls
+
 ## [0.5.9] - 2025-06-04
 
 ### Changed
