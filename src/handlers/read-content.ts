@@ -134,7 +134,7 @@ async function processSingleReadOperation(
   const pathOutput = _relativePath.replaceAll('\\', '/');
   let targetPath = '';
   try {
-    targetPath = resolvePath(_relativePath);
+    targetPath = await resolvePath(_relativePath);
     try {
       const stats: Stats = await fs.stat(targetPath); // Explicitly type Stats
       if (!stats.isFile()) {

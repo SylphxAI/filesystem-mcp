@@ -81,7 +81,7 @@ async function processSingleChownOperation(
 ): Promise<ChownResult> {
   const pathOutput = relativePath.replaceAll('\\', '/');
   try {
-    const targetPath = resolvePath(relativePath);
+    const targetPath = await resolvePath(relativePath);
     if (targetPath === PROJECT_ROOT) {
       return {
         path: pathOutput,

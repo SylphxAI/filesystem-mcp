@@ -196,7 +196,7 @@ async function processSingleFileReplacement(
   let modified = false;
 
   try {
-    targetPath = deps.resolvePath(relativePath);
+    targetPath = await deps.resolvePath(relativePath);
     const stats = await deps.stat(targetPath);
     if (!stats.isFile()) {
       // Return specific error if path is not a file

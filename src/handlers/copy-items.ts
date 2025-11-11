@@ -106,8 +106,8 @@ async function processSingleCopyOperation(params: ProcessSingleCopyParams): Prom
   let sourceAbsolute = ''; // Initialize for potential use in error message
 
   try {
-    sourceAbsolute = resolvePath(sourceRelative);
-    const destinationAbsolute = resolvePath(destinationRelative);
+    sourceAbsolute = await resolvePath(sourceRelative);
+    const destinationAbsolute = await resolvePath(destinationRelative);
 
     if (sourceAbsolute === PROJECT_ROOT) {
       return {

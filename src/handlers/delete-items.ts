@@ -104,7 +104,7 @@ function handleDeleteError(error: unknown, relativePath: string, pathOutput: str
 async function processSingleDeleteOperation(relativePath: string): Promise<DeleteResult> {
   const pathOutput = relativePath.replaceAll('\\', '/');
   try {
-    const targetPath = resolvePath(relativePath);
+    const targetPath = await resolvePath(relativePath);
     if (targetPath === PROJECT_ROOT) {
       throw new McpError(ErrorCode.InvalidRequest, 'Deleting the project root is not allowed.');
     }

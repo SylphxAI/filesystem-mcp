@@ -176,8 +176,8 @@ async function processSingleMoveOperation(
 
   try {
     // Safely resolve paths using injected dependency
-    const sourceAbsolute = dependencies.resolvePath(sourceRelative);
-    const destinationAbsolute = dependencies.resolvePath(destinationRelative);
+    const sourceAbsolute = await dependencies.resolvePath(sourceRelative);
+    const destinationAbsolute = await dependencies.resolvePath(destinationRelative);
 
     if (sourceAbsolute === dependencies.PROJECT_ROOT) { // Use injected dependency
       return {

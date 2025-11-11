@@ -138,7 +138,7 @@ async function processSingleDirectoryCreation(
   const pathOutput = relativePath.replaceAll('\\', '/'); // Normalize for output consistency
   let targetPath = '';
   try {
-    targetPath = deps.resolvePath(relativePath); // Use deps.resolvePath
+    targetPath = await deps.resolvePath(relativePath); // Use deps.resolvePath
     if (targetPath === deps.PROJECT_ROOT) {
       // Use deps.PROJECT_ROOT
       return {

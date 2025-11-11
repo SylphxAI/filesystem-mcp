@@ -76,7 +76,7 @@ function handleStatError(error: unknown, relativePath: string, pathOutput: strin
 async function processSingleStatOperation(relativePath: string): Promise<StatResult> {
   const pathOutput = relativePath.replaceAll('\\', '/');
   try {
-    const targetPath = resolvePath(relativePath);
+    const targetPath = await resolvePath(relativePath);
     const stats: Stats = await fs.stat(targetPath); // Explicitly type Stats
     return {
       path: pathOutput,

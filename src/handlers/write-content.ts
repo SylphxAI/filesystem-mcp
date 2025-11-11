@@ -97,7 +97,7 @@ async function processSingleWriteOperation(
   const pathOutput = relativePath.replaceAll('\\', '/');
 
   try {
-    const targetPath = deps.resolvePath(relativePath);
+    const targetPath = await deps.resolvePath(relativePath);
     if (targetPath === deps.PROJECT_ROOT) {
       return {
         path: pathOutput,

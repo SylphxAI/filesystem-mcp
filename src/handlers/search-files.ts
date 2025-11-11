@@ -118,7 +118,7 @@ async function findFilesToSearch(
   relativePath: string,
   filePattern: string,
 ): Promise<string[]> {
-  const targetPath = deps.resolvePath(relativePath);
+  const targetPath = await deps.resolvePath(relativePath);
   const ignorePattern = deps.pathJoin(targetPath, '**/node_modules/**').replaceAll('\\', '/');
   try {
     const files = await deps.glob(filePattern, {

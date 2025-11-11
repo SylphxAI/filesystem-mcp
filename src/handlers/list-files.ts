@@ -352,7 +352,7 @@ export const handleListFilesFunc = async (
   // Remove unused variables from function scope
   const parsedArgs = parseAndValidateArgs(args);
   const { path: relativeInputPath, recursive, include_stats: includeStats } = parsedArgs;
-  const targetAbsolutePath = deps.resolvePath(relativeInputPath);
+  const targetAbsolutePath = await deps.resolvePath(relativeInputPath);
 
   try {
     const initialStats = await deps.stat(targetAbsolutePath);
