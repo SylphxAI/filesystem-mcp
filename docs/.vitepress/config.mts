@@ -19,7 +19,7 @@ export default defineConfig({
       { text: 'API Reference', link: '/api/' }, // Link to future API docs
       {
         text: 'Changelog',
-        link: 'https://github.com/sylphlab/filesystem-mcp/blob/main/CHANGELOG.md',
+        link: 'https://github.com/SylphxAI/filesystem-mcp/blob/main/CHANGELOG.md',
       },
     ],
 
@@ -41,12 +41,12 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/sylphlab/filesystem-mcp' },
+      { icon: 'github', link: 'https://github.com/SylphxAI/filesystem-mcp' },
     ],
 
     editLink: {
       pattern:
-        'https://github.com/sylphlab/filesystem-mcp/edit/main/docs/:path',
+        'https://github.com/SylphxAI/filesystem-mcp/edit/main/docs/:path',
       text: 'Edit this page on GitHub',
     },
 

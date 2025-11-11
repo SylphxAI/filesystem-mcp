@@ -15,7 +15,7 @@ hero:
       link: /guide/introduction
     - theme: alt
       text: View on GitHub
-      link: https://github.com/sylphlab/filesystem-mcp
+      link: https://github.com/SylphxAI/filesystem-mcp
 
 features:
   - title: 🛡️ Secure by Design
