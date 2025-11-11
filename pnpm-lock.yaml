@@ -37,8 +37,8 @@ importers:
         specifier: ^9.24.0
         version: 9.24.0
       '@sylphlab/eslint-config-sylph':
-        specifier: ^3.2.4
-        version: 3.2.4(@eslint/js@9.24.0)(@typescript-eslint/eslint-plugin@8.29.1(@typescript-eslint/parser@8.29.1(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(@typescript-eslint/parser@8.29.1(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(eslint-config-prettier@10.1.2(eslint@9.24.0(jiti@2.4.2)))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.0)(eslint-plugin-functional@9.0.1(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(eslint-plugin-import-x@4.10.2(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(eslint-plugin-prettier@5.2.6(eslint-config-prettier@10.1.2(eslint@9.24.0(jiti@2.4.2)))(eslint@9.24.0(jiti@2.4.2))(prettier@3.5.3))(eslint-plugin-promise@7.2.1(eslint@9.24.0(jiti@2.4.2)))(eslint-plugin-regexp@2.7.0(eslint@9.24.0(jiti@2.4.2)))(eslint-plugin-security@3.0.1)(eslint-plugin-sonarjs@3.0.2(eslint@9.24.0(jiti@2.4.2)))(eslint-plugin-unicorn@55.0.0(eslint@9.24.0(jiti@2.4.2)))(eslint@9.24.0(jiti@2.4.2))(prettier@3.5.3)(typescript@5.8.3)
+        specifier: ^3.3.0
+        version: 3.4.0(@eslint/js@9.24.0)(@typescript-eslint/eslint-plugin@8.29.1(@typescript-eslint/parser@8.29.1(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(@typescript-eslint/parser@8.29.1(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(eslint-config-prettier@10.1.2(eslint@9.24.0(jiti@2.4.2)))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.0)(eslint-plugin-functional@9.0.1(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(eslint-plugin-import-x@4.10.2(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(eslint-plugin-prettier@5.2.6(eslint-config-prettier@10.1.2(eslint@9.24.0(jiti@2.4.2)))(eslint@9.24.0(jiti@2.4.2))(prettier@3.5.3))(eslint-plugin-promise@7.2.1(eslint@9.24.0(jiti@2.4.2)))(eslint-plugin-regexp@2.7.0(eslint@9.24.0(jiti@2.4.2)))(eslint-plugin-security@3.0.1)(eslint-plugin-sonarjs@3.0.2(eslint@9.24.0(jiti@2.4.2)))(eslint-plugin-unicorn@55.0.0(eslint@9.24.0(jiti@2.4.2)))(eslint@9.24.0(jiti@2.4.2))(prettier@3.5.3)(typescript@5.8.3)
       '@sylphlab/typescript-config':
         specifier: ^0.3.1
         version: 0.3.1
@@ -58,7 +58,7 @@ importers:
         specifier: ^9.24.0
         version: 9.24.0(jiti@2.4.2)
       eslint-config-prettier:
-        specifier: ^10.1.1
+        specifier: ^10.1.2
         version: 10.1.2(eslint@9.24.0(jiti@2.4.2))
       eslint-import-resolver-typescript:
         specifier: ^3.10.0
@@ -937,8 +937,8 @@ packages:
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
 
-  '@sylphlab/eslint-config-sylph@3.2.4':
-    resolution: {integrity: sha512-UpMYdlJEWTUcMJ5+yyZRiH6HsQyLo8PPEgXF2Wj1dtXp6mWX1r06HLOPekhjucWxiV6dVXwYrT+a0UcBM8Qt8A==}
+  '@sylphlab/eslint-config-sylph@3.4.0':
+    resolution: {integrity: sha512-XhbbxUKz2lly7lZ5dnYXR4nEh88qm8MktEruUACiiJf8XNxtXFaWpJVN4vjuxrCrEh4yynt8X8bL88gYaDWcTQ==}
     peerDependencies:
       '@eslint/js': ^9.24.0
       '@typescript-eslint/eslint-plugin': ^8.29.1
@@ -4967,7 +4967,7 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  ? '@sylphlab/eslint-config-sylph@3.2.4(@eslint/js@9.24.0)(@typescript-eslint/eslint-plugin@8.29.1(@typescript-eslint/parser@8.29.1(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(@typescript-eslint/parser@8.29.1(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(eslint-config-prettier@10.1.2(eslint@9.24.0(jiti@2.4.2)))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.0)(eslint-plugin-functional@9.0.1(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(eslint-plugin-import-x@4.10.2(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(eslint-plugin-prettier@5.2.6(eslint-config-prettier@10.1.2(eslint@9.24.0(jiti@2.4.2)))(eslint@9.24.0(jiti@2.4.2))(prettier@3.5.3))(eslint-plugin-promise@7.2.1(eslint@9.24.0(jiti@2.4.2)))(eslint-plugin-regexp@2.7.0(eslint@9.24.0(jiti@2.4.2)))(eslint-plugin-security@3.0.1)(eslint-plugin-sonarjs@3.0.2(eslint@9.24.0(jiti@2.4.2)))(eslint-plugin-unicorn@55.0.0(eslint@9.24.0(jiti@2.4.2)))(eslint@9.24.0(jiti@2.4.2))(prettier@3.5.3)(typescript@5.8.3)'
+  ? '@sylphlab/eslint-config-sylph@3.4.0(@eslint/js@9.24.0)(@typescript-eslint/eslint-plugin@8.29.1(@typescript-eslint/parser@8.29.1(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(@typescript-eslint/parser@8.29.1(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(eslint-config-prettier@10.1.2(eslint@9.24.0(jiti@2.4.2)))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.0)(eslint-plugin-functional@9.0.1(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(eslint-plugin-import-x@4.10.2(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(eslint-plugin-prettier@5.2.6(eslint-config-prettier@10.1.2(eslint@9.24.0(jiti@2.4.2)))(eslint@9.24.0(jiti@2.4.2))(prettier@3.5.3))(eslint-plugin-promise@7.2.1(eslint@9.24.0(jiti@2.4.2)))(eslint-plugin-regexp@2.7.0(eslint@9.24.0(jiti@2.4.2)))(eslint-plugin-security@3.0.1)(eslint-plugin-sonarjs@3.0.2(eslint@9.24.0(jiti@2.4.2)))(eslint-plugin-unicorn@55.0.0(eslint@9.24.0(jiti@2.4.2)))(eslint@9.24.0(jiti@2.4.2))(prettier@3.5.3)(typescript@5.8.3)'
   : dependencies:
       '@eslint/js': 9.24.0
       '@typescript-eslint/eslint-plugin': 8.29.1(@typescript-eslint/parser@8.29.1(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3))(eslint@9.24.0(jiti@2.4.2))(typescript@5.8.3)

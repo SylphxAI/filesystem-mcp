@@ -46,7 +46,8 @@
     "docs:api": "node scripts/generate-api-docs.mjs",
     "prepublishOnly": "bun run clean && bun run build",
     "changeset": "changeset",
-    "version-packages": "changeset version",
+    "changeset:version": "changeset version",
+    "changeset:publish": "changeset publish",
     "prepare": "husky"
   },
   "homepage": "https://github.com/SylphxAI/filesystem-mcp#readme",
