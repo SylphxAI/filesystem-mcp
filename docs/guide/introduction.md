@@ -1,6 +1,6 @@
 # Introduction
 
-Welcome to the documentation for the **Filesystem MCP Server** (`@sylphlab/filesystem-mcp`).
+Welcome to the documentation for the **Filesystem MCP Server** (`@sylphx/filesystem-mcp`).
 
 This server acts as a secure and efficient bridge between AI agents (like Cline/Claude using the Model Context Protocol) and your local project files.
 
@@ -13,6 +13,6 @@ This server acts as a secure and efficient bridge between AI agents (like Cline/
 
 ## Getting Started
 
-The easiest way to use the server is via `npx` or `bunx`, configured within your MCP host environment. Please refer to the [README](https://github.com/sylphlab/filesystem-mcp#readme) for detailed setup instructions.
+The easiest way to use the server is via `npx` or `bunx`, configured within your MCP host environment. Please refer to the [README](https://github.com/SylphxAI/filesystem-mcp#readme) for detailed setup instructions.
 
 This documentation site will provide further details on available tools, configuration options, and development guidelines.
