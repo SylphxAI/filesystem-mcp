@@ -25,7 +25,7 @@
     "node": "22.14"
   },
   "scripts": {
-    "build": "bun run clean && tsup",
+    "build": "bunup",
     "watch": "tsc --watch",
     "inspector": "npx @modelcontextprotocol/inspector dist/index.js",
     "test": "vitest run",
