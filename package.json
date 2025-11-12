@@ -121,5 +121,6 @@
     "*.{json,md,yaml,yml,html,css}": [
       "prettier --write --cache --ignore-unknown"
     ]
-  }
+  },
+  "packageManager": "bun@1.3.1"
 }
