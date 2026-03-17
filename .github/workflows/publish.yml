@@ -13,7 +13,7 @@ on:
 jobs:
   validate:
     name: Validate Code Quality
-    runs-on: [self-hosted, linux, x64]
+    runs-on: sylphx-linux-standard
     permissions: # Added permissions
       actions: read
       contents: read
@@ -82,7 +82,7 @@ jobs:
   build-archive:
     name: Build and Archive Artifacts
     needs: validate # Depends on successful validation
-    runs-on: [self-hosted, linux, x64]
+    runs-on: sylphx-linux-standard
     if: startsWith(github.ref, 'refs/tags/v') # Only run for tags
     outputs: # Define outputs for the release job
       version: ${{ steps.get_version.outputs.version }}
@@ -135,7 +135,7 @@ jobs:
   publish-npm:
     name: Publish to NPM
     needs: build-archive # Depends on build-archive completion
-    runs-on: [self-hosted, linux, x64]
+    runs-on: sylphx-linux-standard
     if: startsWith(github.ref, 'refs/tags/v') # Only run for tags
     steps:
       - name: Checkout repository
@@ -166,7 +166,7 @@ jobs:
   publish-docker:
     name: Publish to Docker Hub
     needs: build-archive # Depends on build-archive completion
-    runs-on: [self-hosted, linux, x64]
+    runs-on: sylphx-linux-standard
     if: startsWith(github.ref, 'refs/tags/v') # Only run for tags
     steps:
       - name: Checkout repository
@@ -208,7 +208,7 @@ jobs:
   release:
     name: Create GitHub Release
     needs: [publish-npm, publish-docker] # Depends on successful parallel publishes
-    runs-on: [self-hosted, linux, x64]
+    runs-on: sylphx-linux-standard
     if: startsWith(github.ref, 'refs/tags/v') # Only run for tags
     permissions:
       contents: write # Need permission to create releases and release notes
