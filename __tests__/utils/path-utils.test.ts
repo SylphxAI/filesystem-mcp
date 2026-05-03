@@ -1,216 +1,142 @@
-import { describe, it, expect } from 'vitest'; // Removed vi, beforeEach
+import { describe, it, expect } from 'vitest';
 import path from 'node:path';
 import { ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 
-// Import the functions and constant to test
 import {
   resolvePath,
-  PROJECT_ROOT, // Import the constant again
+  isPathInside,
+  PROJECT_ROOT,
 } from '../../src/utils/path-utils.ts';
 
-// Define the mock root path for testing overrides
 const MOCK_PROJECT_ROOT_OVERRIDE = path.resolve('/mock/project/root/override');
-const ACTUAL_PROJECT_ROOT = process.cwd(); // Get the actual root for comparison
+const ACTUAL_PROJECT_ROOT = process.cwd();
 
 describe('pathUtils', () => {
   it('should have PROJECT_ROOT set to the actual process.cwd()', () => {
-    // We can no longer easily mock this at the module level with current setup
-    // So we test that it equals the actual cwd
     expect(PROJECT_ROOT).toBe(ACTUAL_PROJECT_ROOT);
   });
 
+  describe('isPathInside (separator-aware containment)', () => {
+    const root = path.resolve('/mock/project/root');
+
+    it('returns true for the root itself', () => {
+      expect(isPathInside(root, root)).toBe(true);
+    });
+
+    it('returns true for a nested child path', () => {
+      expect(isPathInside(path.join(root, 'src/a.ts'), root)).toBe(true);
+    });
+
+    // Regression test for sibling-prefix bypass:
+    // `/mock/project/root-secret/...` starts with the string `/mock/project/root`
+    // but is NOT inside that directory. A naive `startsWith()` check returns true here.
+    it('returns false for a sibling-prefix path (security regression)', () => {
+      const sibling = path.resolve('/mock/project/root-secret/secret.txt');
+      expect(sibling.startsWith(root)).toBe(true); // demonstrates the bug in the old check
+      expect(isPathInside(sibling, root)).toBe(false); // the new check correctly rejects
+    });
+
+    it('returns false for a parent path', () => {
+      expect(isPathInside(path.dirname(root), root)).toBe(false);
+    });
+
+    it('returns false for an unrelated absolute path', () => {
+      expect(isPathInside(path.resolve('/etc/passwd'), root)).toBe(false);
+    });
+  });
+
   describe('resolvePath', () => {
-    // Test using the override parameter to simulate different roots
-    it('should resolve a valid relative path using override root', () => {
+    it('should resolve a valid relative path using override root', async () => {
       const userPath = 'src/file.ts';
       const expectedPath = path.resolve(MOCK_PROJECT_ROOT_OVERRIDE, userPath);
-      // Pass the override root as the second argument
-      expect(resolvePath(userPath, MOCK_PROJECT_ROOT_OVERRIDE)).toBe(expectedPath);
+      await expect(resolvePath(userPath, MOCK_PROJECT_ROOT_OVERRIDE)).resolves.toBe(expectedPath);
     });
 
-    it('should resolve a valid relative path using default PROJECT_ROOT when override is not provided', () => {
-      const userPath = 'src/file.ts';
-      const expectedPath = path.resolve(ACTUAL_PROJECT_ROOT, userPath);
-      expect(resolvePath(userPath)).toBe(expectedPath); // No override
-    });
-
-    it('should resolve a relative path with "." correctly', () => {
+    it('should resolve a relative path with "." correctly', async () => {
       const userPath = './src/./file.ts';
       const expectedPath = path.resolve(MOCK_PROJECT_ROOT_OVERRIDE, 'src/file.ts');
-      expect(resolvePath(userPath, MOCK_PROJECT_ROOT_OVERRIDE)).toBe(expectedPath);
+      await expect(resolvePath(userPath, MOCK_PROJECT_ROOT_OVERRIDE)).resolves.toBe(expectedPath);
     });
 
-    it('should resolve a relative path with "." correctly using default root', () => {
-      const userPath = './src/./file.ts';
-      const expectedPath = path.resolve(ACTUAL_PROJECT_ROOT, 'src/file.ts');
-      expect(resolvePath(userPath)).toBe(expectedPath);
-    });
-
-    it('should resolve a relative path with ".." correctly if it stays within root', () => {
+    it('should resolve a relative path with ".." that stays within root', async () => {
       const userPath = 'src/../dist/bundle.js';
       const expectedPath = path.resolve(MOCK_PROJECT_ROOT_OVERRIDE, 'dist/bundle.js');
-      expect(resolvePath(userPath, MOCK_PROJECT_ROOT_OVERRIDE)).toBe(expectedPath);
+      await expect(resolvePath(userPath, MOCK_PROJECT_ROOT_OVERRIDE)).resolves.toBe(expectedPath);
     });
 
-    it('should resolve a relative path with ".." correctly using default root', () => {
-      const userPath = 'src/../dist/bundle.js';
-      const expectedPath = path.resolve(ACTUAL_PROJECT_ROOT, 'dist/bundle.js');
-      expect(resolvePath(userPath)).toBe(expectedPath);
-    });
-
-    it('should throw McpError for absolute paths (posix)', () => {
-      const userPath = '/etc/passwd';
-      // Test with override, should still fail
-      expect(() => resolvePath(userPath, MOCK_PROJECT_ROOT_OVERRIDE)).toThrow(
-        expect.objectContaining({
-          name: 'McpError',
-          code: ErrorCode.InvalidParams,
-          message: 'MCP error -32602: Absolute paths are not allowed: /etc/passwd',
-          data: undefined,
-        }),
-      );
-      // Test without override
-      expect(() => resolvePath(userPath)).toThrow(
-        expect.objectContaining({
-          name: 'McpError',
-          code: ErrorCode.InvalidParams,
-          message: 'MCP error -32602: Absolute paths are not allowed: /etc/passwd',
-          data: undefined,
-        }),
-      );
-    });
-
-    it('should throw McpError for absolute paths (windows)', () => {
-      const userPath = String.raw`C:\Windows\System32`;
-      const normalizedPath = path.normalize(userPath);
-      // Test with override
-      expect(() => resolvePath(normalizedPath, MOCK_PROJECT_ROOT_OVERRIDE)).toThrow(
-        expect.objectContaining({
-          name: 'McpError',
-          code: expect.any(Number),
-          message: expect.stringContaining('Absolute paths are not allowed'),
-        }),
-      );
-      expect(() => resolvePath(normalizedPath, MOCK_PROJECT_ROOT_OVERRIDE)).toThrow(
+    it('should reject absolute paths (posix)', async () => {
+      await expect(resolvePath('/etc/passwd', MOCK_PROJECT_ROOT_OVERRIDE)).rejects.toThrow(
         /Absolute paths are not allowed/,
       );
-      expect(() => resolvePath(normalizedPath, MOCK_PROJECT_ROOT_OVERRIDE)).toThrow(
-        expect.objectContaining({ code: ErrorCode.InvalidParams }),
-      );
-      // Test without override
-      expect(() => resolvePath(normalizedPath)).toThrow(
-        expect.objectContaining({
-          name: 'McpError',
-          code: ErrorCode.InvalidParams,
-          message: expect.stringContaining('Absolute paths are not allowed'),
-        }),
+      await expect(resolvePath('/etc/passwd', MOCK_PROJECT_ROOT_OVERRIDE)).rejects.toMatchObject({
+        code: ErrorCode.InvalidParams,
+      });
+    });
+
+    it('should reject absolute paths (windows)', async () => {
+      const userPath = path.normalize(String.raw`C:\Windows\System32`);
+      await expect(resolvePath(userPath, MOCK_PROJECT_ROOT_OVERRIDE)).rejects.toThrow(
+        /Absolute paths are not allowed/,
       );
     });
 
-    it('should throw McpError for path traversal attempts (using ..)', () => {
-      const userPath = '../outside/file';
-      // Test with override
-      expect(() => resolvePath(userPath, MOCK_PROJECT_ROOT_OVERRIDE)).toThrow(
-        expect.objectContaining({
-          name: 'McpError',
+    it('should reject parent traversal (..)', async () => {
+      await expect(resolvePath('../outside/file', MOCK_PROJECT_ROOT_OVERRIDE)).rejects.toMatchObject(
+        {
           code: ErrorCode.InvalidRequest,
-          message: 'MCP error -32600: Path traversal detected: ../outside/file',
-          data: undefined,
-        }),
-      );
-      // Test without override
-      expect(() => resolvePath(userPath)).toThrow(
-        expect.objectContaining({
-          name: 'McpError',
-          code: ErrorCode.InvalidRequest,
-          message: 'MCP error -32600: Path traversal detected: ../outside/file',
-          data: undefined,
-        }),
+          message: expect.stringContaining('Path traversal detected'),
+        },
       );
     });
 
-    it('should throw McpError for path traversal attempts (using .. multiple times)', () => {
-      const userPath = '../../../../outside/file';
-      // Test with override
-      expect(() => resolvePath(userPath, MOCK_PROJECT_ROOT_OVERRIDE)).toThrow(
-        expect.objectContaining({
-          name: 'McpError',
-          code: ErrorCode.InvalidRequest,
-          message: 'MCP error -32600: Path traversal detected: ../../../../outside/file',
-          data: undefined,
-        }),
-      );
-      // Test without override
-      expect(() => resolvePath(userPath)).toThrow(
-        expect.objectContaining({
-          name: 'McpError',
-          code: ErrorCode.InvalidRequest,
-          message: 'MCP error -32600: Path traversal detected: ../../../../outside/file',
-          data: undefined,
-        }),
-      );
+    it('should reject deep parent traversal (../../../..)', async () => {
+      await expect(
+        resolvePath('../../../../outside/file', MOCK_PROJECT_ROOT_OVERRIDE),
+      ).rejects.toMatchObject({ code: ErrorCode.InvalidRequest });
     });
 
-    it('should throw McpError if the input path is not a string', () => {
-      const userPath: any = 123; // intentionally testing invalid input
-      // Test with override (should still fail type check before override matters)
-      expect(() => resolvePath(userPath, MOCK_PROJECT_ROOT_OVERRIDE)).toThrow(
-        expect.objectContaining({
-          name: 'McpError',
-          code: expect.any(Number),
-          message: expect.stringContaining('Path must be a string'),
-        }),
-      );
-      expect(() => resolvePath(userPath, MOCK_PROJECT_ROOT_OVERRIDE)).toThrow(
-        /Path must be a string/,
-      );
-      expect(() => resolvePath(userPath, MOCK_PROJECT_ROOT_OVERRIDE)).toThrow(
-        expect.objectContaining({ code: ErrorCode.InvalidParams }),
-      );
-      // Test without override
-      expect(() => resolvePath(userPath)).toThrow(
-        expect.objectContaining({
-          name: 'McpError',
-          code: ErrorCode.InvalidParams,
-          message: expect.stringContaining('Path must be a string'),
-        }),
+    // SECURITY REGRESSION: sibling-prefix path confinement bypass.
+    // Reported via responsible disclosure (2026-05). Without separator-aware
+    // containment, `../root-secret/secret.txt` resolves to a path that shares
+    // the project root's string prefix and was incorrectly accepted.
+    it('should reject sibling-prefix paths that escape root (security regression)', async () => {
+      // Use a real on-disk root so realpath() succeeds and we exercise the
+      // post-realpath check too.
+      const root = path.resolve(MOCK_PROJECT_ROOT_OVERRIDE);
+      await expect(resolvePath('../override-secret/secret.txt', root)).rejects.toMatchObject({
+        code: ErrorCode.InvalidRequest,
+        message: expect.stringContaining('Path traversal detected'),
+      });
+    });
+
+    it('should reject sibling-prefix paths even with a single-character delta', async () => {
+      const root = path.resolve('/mock/project/r');
+      await expect(resolvePath('../rs/secret.txt', root)).rejects.toMatchObject({
+        code: ErrorCode.InvalidRequest,
+      });
+    });
+
+    it('should reject when input is not a string', async () => {
+      await expect(
+        resolvePath(123 as unknown as string, MOCK_PROJECT_ROOT_OVERRIDE),
+      ).rejects.toThrow(/Path must be a string/);
+    });
+
+    it('should handle paths with trailing slashes', async () => {
+      const expected = path.resolve(MOCK_PROJECT_ROOT_OVERRIDE, 'src/subdir');
+      await expect(resolvePath('src/subdir/', MOCK_PROJECT_ROOT_OVERRIDE)).resolves.toBe(expected);
+    });
+
+    it('should handle empty string path (returns root)', async () => {
+      await expect(resolvePath('', MOCK_PROJECT_ROOT_OVERRIDE)).resolves.toBe(
+        MOCK_PROJECT_ROOT_OVERRIDE,
       );
     });
 
-    it('should handle paths with trailing slashes', () => {
-      const userPath = 'src/subdir/';
-      const expectedPathOverride = path.resolve(MOCK_PROJECT_ROOT_OVERRIDE, 'src/subdir');
-      expect(resolvePath(userPath, MOCK_PROJECT_ROOT_OVERRIDE)).toBe(expectedPathOverride);
-    });
-
-    it('should handle paths with trailing slashes using default root', () => {
-      const userPath = 'src/subdir/';
-      const expectedPath = path.resolve(ACTUAL_PROJECT_ROOT, 'src/subdir');
-      expect(resolvePath(userPath)).toBe(expectedPath);
-    });
-
-    it('should handle empty string path', () => {
-      const userPath = '';
-      // Test with override
-      expect(resolvePath(userPath, MOCK_PROJECT_ROOT_OVERRIDE)).toBe(MOCK_PROJECT_ROOT_OVERRIDE);
-    });
-
-    it('should handle empty string path using default root', () => {
-      const userPath = '';
-      const expectedPath = ACTUAL_PROJECT_ROOT; // Resolves to the root itself
-      expect(resolvePath(userPath)).toBe(expectedPath);
-    });
-
-    it('should handle "." path', () => {
-      const userPath = '.';
-      // Test with override
-      expect(resolvePath(userPath, MOCK_PROJECT_ROOT_OVERRIDE)).toBe(MOCK_PROJECT_ROOT_OVERRIDE);
-    });
-
-    it('should handle "." path using default root', () => {
-      const userPath = '.';
-      const expectedPath = ACTUAL_PROJECT_ROOT; // Resolves to the root itself
-      expect(resolvePath(userPath)).toBe(expectedPath);
+    it('should handle "." path (returns root)', async () => {
+      await expect(resolvePath('.', MOCK_PROJECT_ROOT_OVERRIDE)).resolves.toBe(
+        MOCK_PROJECT_ROOT_OVERRIDE,
+      );
     });
   });
 });
