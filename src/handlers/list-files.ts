@@ -38,7 +38,7 @@ export interface ListFilesDependencies {
     options?: { withFileTypes?: true }, // Specify options type
   ) => Promise<string[] | Dirent[]>;
   glob: (pattern: string | string[], options: GlobOptions) => Promise<string[] | GlobPath[]>;
-  resolvePath: (userPath: string) => string;
+  resolvePath: (userPath: string, rootPath?: string) => Promise<string>;
   PROJECT_ROOT: string;
   formatStats: (relativePath: string, absolutePath: string, stats: Stats) => FormattedStats;
   path: Pick<typeof path, 'join' | 'dirname' | 'resolve' | 'relative' | 'basename'>;
