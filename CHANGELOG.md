@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-05-03
+
+### Security
+
+- **Path confinement bypass (sibling-prefix)**: Hardened `resolvePath()` to use a separator-aware containment check (`path.relative()`) instead of `String.prototype.startsWith()`. The previous prefix-based check accepted sibling paths whose absolute form shared the project root's string prefix (e.g. `../root-secret/file.txt` against root `/mock/project/root` resolved to `/mock/project/root-secret/file.txt`, which started with the root string and was incorrectly admitted). Affected every handler that flowed paths through `resolvePath()`: read, write, edit, delete, copy, move, search, list, stat, replace, chmod, chown. Disclosed by external researcher; tracked alongside Issue #151. Added regression tests covering sibling-prefix paths, single-character delta cases, and post-`realpath` re-validation.
+
+### Fixed
+
+- Documentation alignment: README, badges, and install instructions now reference the actual published name `@sylphx/filesystem-mcp` (not `@sylphlab/filesystem-mcp`). Docker image references updated to `sylphx/filesystem-mcp` and the publish workflow's image name corrected (was erroneously pointing at `sylphlab/pdf-reader-mcp`). Closes #151.
+
 ## [0.6.0] - 2025-11-11
 
 ### Security

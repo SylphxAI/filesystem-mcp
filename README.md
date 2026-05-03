@@ -4,16 +4,16 @@
 
 **Secure filesystem operations for AI agents - Token-optimized with batch processing**
 
-[![npm version](https://img.shields.io/npm/v/@sylphlab/filesystem-mcp?style=flat-square)](https://www.npmjs.com/package/@sylphlab/filesystem-mcp)
-[![Docker Pulls](https://img.shields.io/docker/pulls/sylphlab/filesystem-mcp?style=flat-square)](https://hub.docker.com/r/sylphlab/filesystem-mcp)
+[![npm version](https://img.shields.io/npm/v/@sylphx/filesystem-mcp?style=flat-square)](https://www.npmjs.com/package/@sylphx/filesystem-mcp)
+[![Docker Pulls](https://img.shields.io/docker/pulls/sylphx/filesystem-mcp?style=flat-square)](https://hub.docker.com/r/sylphx/filesystem-mcp)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](https://github.com/SylphxAI/filesystem-mcp/blob/main/LICENSE)
 
 **Batch operations** • **Project root safety** • **Token optimized** • **Zod validation**
 
 [Quick Start](#-quick-start) • [Installation](#-installation) • [Tools](#-features)
 
-<a href="https://glama.ai/mcp/servers/@sylphlab/filesystem-mcp">
-  <img width="380" height="200" src="https://glama.ai/mcp/servers/@sylphlab/filesystem-mcp/badge" alt="Filesystem MCP Server" />
+<a href="https://glama.ai/mcp/servers/@sylphx/filesystem-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@sylphx/filesystem-mcp/badge" alt="Filesystem MCP Server" />
 </a>
 
 </div>
@@ -104,7 +104,7 @@ The simplest way - always uses latest version from npm.
   "mcpServers": {
     "filesystem-mcp": {
       "command": "npx",
-      "args": ["@sylphlab/filesystem-mcp"],
+      "args": ["@sylphx/filesystem-mcp"],
       "name": "Filesystem (npx)"
     }
   }
@@ -117,7 +117,7 @@ The simplest way - always uses latest version from npm.
   "mcpServers": {
     "filesystem-mcp": {
       "command": "bunx",
-      "args": ["@sylphlab/filesystem-mcp"],
+      "args": ["@sylphx/filesystem-mcp"],
       "name": "Filesystem (bunx)"
     }
   }
@@ -141,7 +141,7 @@ Use the official Docker image for containerized environments.
         "--rm",
         "-v",
         "/path/to/your/project:/app",
-        "sylphlab/filesystem-mcp:latest"
+        "sylphx/filesystem-mcp:latest"
       ],
       "name": "Filesystem (Docker)"
     }
@@ -384,7 +384,7 @@ pnpm run dev
 
 ## 🤝 Support
 
-[![npm](https://img.shields.io/npm/v/@sylphlab/filesystem-mcp?style=flat-square)](https://www.npmjs.com/package/@sylphlab/filesystem-mcp)
+[![npm](https://img.shields.io/npm/v/@sylphx/filesystem-mcp?style=flat-square)](https://www.npmjs.com/package/@sylphx/filesystem-mcp)
 [![GitHub Issues](https://img.shields.io/github/issues/SylphxAI/filesystem-mcp?style=flat-square)](https://github.com/SylphxAI/filesystem-mcp/issues)
 
 - 🐛 [Bug Reports](https://github.com/SylphxAI/filesystem-mcp/issues)
@@ -417,8 +417,8 @@ Special thanks to the MCP community ❤️
 ## 📚 Publishing
 
 This repository uses GitHub Actions to automatically publish to:
-- **npm**: [@sylphlab/filesystem-mcp](https://www.npmjs.com/package/@sylphlab/filesystem-mcp)
-- **Docker Hub**: [sylphlab/filesystem-mcp](https://hub.docker.com/r/sylphlab/filesystem-mcp)
+- **npm**: [@sylphx/filesystem-mcp](https://www.npmjs.com/package/@sylphx/filesystem-mcp)
+- **Docker Hub**: [sylphx/filesystem-mcp](https://hub.docker.com/r/sylphx/filesystem-mcp)
 
 Triggered on version tags (`v*.*.*`) pushed to `main` branch.
 
