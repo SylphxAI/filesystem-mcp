@@ -24,7 +24,7 @@ export async function handleApplyDiffInternal(
   } catch (error) {
     const errorMessage =
       error instanceof Error
-        ? formatFileProcessingError(error, resolvedPath, filePath, deps.projectRoot)
+        ? formatFileProcessingError(error, resolvedPath, filePath)
         : `Unknown error occurred while processing ${filePath}`;
 
     return {
@@ -49,9 +49,9 @@ async function applyDiffsToContent(
     start_line: number;
     end_line: number;
   }[],
-  filePath: string,
+  _filePath: string,
 ): Promise<string> {
-  const result = applyDiffsToFileContent(originalContent, diffs, filePath);
+  const result = applyDiffsToFileContent(originalContent, diffs);
   if (!result.success) {
     throw new Error(result.error || 'Failed to apply diffs');
   }
