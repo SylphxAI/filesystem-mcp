@@ -57,7 +57,7 @@ jobs:
         run: pnpm run test:cov # Fails job if tests fail or coverage threshold not met
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4.5.0 # Use Codecov action with fixed version
+        uses: codecov/codecov-action@v6.0.0 # Use Codecov action with fixed version
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # Use Codecov token
           files: ./coverage/lcov.info # Specify LCOV file path
