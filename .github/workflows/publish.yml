@@ -9,6 +9,8 @@ on:
   pull_request:
     branches:
       - main # Trigger on PR to main branch
+  merge_group:
+    types: [checks_requested]
 
 jobs:
   validate:
