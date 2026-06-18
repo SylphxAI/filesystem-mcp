@@ -28,13 +28,13 @@ vi.doMock('node:fs', async () => {
   const actualFs = await vi.importActual<typeof import('node:fs')>('node:fs');
   return {
     ...actualFs, // Keep original fs module structure
-    promises: { // Keep original promises object
+    promises: {
+      // Keep original promises object
       ...actualFs.promises,
       rm: mockFsPromises.rm, // Now mockFsPromises should be defined
     },
   };
 });
-
 
 describe('handleDeleteItems Integration Tests', () => {
   let tempDirPath: string;
@@ -45,18 +45,21 @@ describe('handleDeleteItems Integration Tests', () => {
     vi.resetAllMocks(); // Reset mocks created with vi.fn()
     // Re-apply default mock implementations if needed after reset
     mockPathUtils.resolvePath.mockImplementation((relativePath) => {
-       // Basic absolute path check needed for some tests before tempDirPath is set
-       if (path.isAbsolute(relativePath)) {
-         // Allow the actual tempDirPath when it's set later
-         if (tempDirPath && relativePath.startsWith(tempDirPath)) {
-            return relativePath;
-         }
-         // Throw for other absolute paths during setup or if tempDirPath isn't involved
-         throw new McpError(ErrorCode.InvalidParams, `Absolute paths are not allowed: ${relativePath}`);
-       }
-       // If tempDirPath is not set yet (very early calls), resolve against cwd
-       const base = tempDirPath || process.cwd();
-       return path.resolve(base, relativePath);
+      // Basic absolute path check needed for some tests before tempDirPath is set
+      if (path.isAbsolute(relativePath)) {
+        // Allow the actual tempDirPath when it's set later
+        if (tempDirPath && relativePath.startsWith(tempDirPath)) {
+          return relativePath;
+        }
+        // Throw for other absolute paths during setup or if tempDirPath isn't involved
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          `Absolute paths are not allowed: ${relativePath}`,
+        );
+      }
+      // If tempDirPath is not set yet (very early calls), resolve against cwd
+      const base = tempDirPath || process.cwd();
+      return path.resolve(base, relativePath);
     });
     mockFsPromises.rm.mockResolvedValue(undefined); // Default mock behavior for rm
 
@@ -65,24 +68,27 @@ describe('handleDeleteItems Integration Tests', () => {
     mockPathUtils.PROJECT_ROOT = tempDirPath; // Set mock project root to temp dir
     // console.log(`Temp directory created: ${tempDirPath}`);
 
-     // Re-apply resolvePath mock *after* tempDirPath is set, handling relative paths correctly
+    // Re-apply resolvePath mock *after* tempDirPath is set, handling relative paths correctly
     mockPathUtils.resolvePath.mockImplementation((relativePath) => {
       if (path.isAbsolute(relativePath)) {
-         // Allow paths within the temp dir, reject others
-         if (relativePath.startsWith(tempDirPath)) {
-            return relativePath;
-         }
-         // Check if it's the specific traversal path used in the test
-         if (relativePath === path.resolve(tempDirPath, '../traversal.txt')) {
-             throw new McpError(ErrorCode.InvalidRequest, `Path traversal detected: ${relativePath}`);
-         }
-         // Otherwise, throw the absolute path error
-         throw new McpError(ErrorCode.InvalidParams, `Absolute paths are not allowed: ${relativePath}`);
+        // Allow paths within the temp dir, reject others
+        if (relativePath.startsWith(tempDirPath)) {
+          return relativePath;
+        }
+        // Check if it's the specific traversal path used in the test
+        if (relativePath === path.resolve(tempDirPath, '../traversal.txt')) {
+          throw new McpError(ErrorCode.InvalidRequest, `Path traversal detected: ${relativePath}`);
+        }
+        // Otherwise, throw the absolute path error
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          `Absolute paths are not allowed: ${relativePath}`,
+        );
       }
       // Handle relative paths, including potential traversal attempts
       const resolved = path.resolve(tempDirPath, relativePath);
       if (!resolved.startsWith(tempDirPath)) {
-          throw new McpError(ErrorCode.InvalidRequest, `Path traversal detected: ${relativePath}`);
+        throw new McpError(ErrorCode.InvalidRequest, `Path traversal detected: ${relativePath}`);
       }
       return resolved;
     });
@@ -182,24 +188,25 @@ describe('handleDeleteItems Integration Tests', () => {
     // Mock resolvePath to throw correctly based on input string
     mockPathUtils.resolvePath.mockImplementation((p) => {
       if (p === absolutePath) {
-         throw new McpError(ErrorCode.InvalidParams, `Absolute paths are not allowed: ${p}`);
+        throw new McpError(ErrorCode.InvalidParams, `Absolute paths are not allowed: ${p}`);
       }
-      if (p === traversalPath) { // Check against the relative traversal string
-         throw new McpError(ErrorCode.InvalidRequest, `Path traversal detected: ${p}`);
+      if (p === traversalPath) {
+        // Check against the relative traversal string
+        throw new McpError(ErrorCode.InvalidRequest, `Path traversal detected: ${p}`);
       }
       if (!path.isAbsolute(p)) {
         const resolved = path.resolve(tempDirPath, p);
-         if (!resolved.startsWith(tempDirPath)) { // Check resolved path for safety
-             throw new McpError(ErrorCode.InvalidRequest, `Path traversal detected: ${p}`);
-         }
+        if (!resolved.startsWith(tempDirPath)) {
+          // Check resolved path for safety
+          throw new McpError(ErrorCode.InvalidRequest, `Path traversal detected: ${p}`);
+        }
         return resolved;
       }
       // Reject any other absolute paths not handled above
       throw new McpError(ErrorCode.InvalidParams, `Unexpected absolute path in mock: ${p}`);
     });
 
-
-     // Use actual fsPromises.rm for the relative path
+    // Use actual fsPromises.rm for the relative path
     mockFsPromises.rm.mockImplementation(fsPromises.rm);
 
     const args = { paths: [absolutePath, traversalPath, relativePath] };
@@ -211,17 +218,19 @@ describe('handleDeleteItems Integration Tests', () => {
     // Expected order after sort: traversalPath, absolutePath, relativePath
 
     expect(result).toHaveLength(3);
-    expect(result[0]).toEqual({ // Traversal Path
+    expect(result[0]).toEqual({
+      // Traversal Path
       path: traversalPath.replaceAll('\\', '/'), // Use the original relative path string
       success: false,
       error: expect.stringContaining('Path traversal detected'),
     });
-    expect(result[1]).toEqual({ // Absolute Path
+    expect(result[1]).toEqual({
+      // Absolute Path
       path: absolutePath.replaceAll('\\', '/'),
       success: false,
       error: expect.stringContaining('Absolute paths are not allowed'),
     });
-     // Corrected assertion: relativePath is now at index 2
+    // Corrected assertion: relativePath is now at index 2
     // TEMPORARY: Accept note for relativePath due to potential ENOENT issue
     expect(result[2]).toEqual(expect.objectContaining({ path: relativePath, success: true }));
   });
@@ -246,7 +255,7 @@ describe('handleDeleteItems Integration Tests', () => {
         return tempDirPath;
       }
       if (path.isAbsolute(p)) {
-         throw new McpError(ErrorCode.InvalidParams, `Absolute paths are not allowed: ${p}`);
+        throw new McpError(ErrorCode.InvalidParams, `Absolute paths are not allowed: ${p}`);
       }
       return path.resolve(tempDirPath, p);
     });
@@ -257,13 +266,15 @@ describe('handleDeleteItems Integration Tests', () => {
     expect(result).toHaveLength(2);
     // Sort results because the order of '.' and '' might vary
     result.sort((a: { path: string }, b: { path: string }) => a.path.localeCompare(b.path));
-    expect(result[0]).toEqual({ // Should be ''
+    expect(result[0]).toEqual({
+      // Should be ''
       path: '',
       success: false,
       // Corrected assertion to match the McpError message (without prefix)
       error: 'MCP error -32600: Deleting the project root is not allowed.',
     });
-    expect(result[1]).toEqual({ // Should be '.'
+    expect(result[1]).toEqual({
+      // Should be '.'
       path: '.',
       success: false,
       // Corrected assertion to match the McpError message (without prefix)
@@ -311,7 +322,7 @@ describe('handleDeleteItems Integration Tests', () => {
         throw new Error('Something went wrong during path resolution');
       }
       if (path.isAbsolute(p)) {
-         throw new McpError(ErrorCode.InvalidParams, `Absolute paths are not allowed: ${p}`);
+        throw new McpError(ErrorCode.InvalidParams, `Absolute paths are not allowed: ${p}`);
       }
       return path.resolve(tempDirPath, p);
     });
@@ -321,7 +332,7 @@ describe('handleDeleteItems Integration Tests', () => {
     const result = JSON.parse(response.content[0].text);
 
     expect(result).toHaveLength(1);
-     // TEMPORARY: Expect success:true and note due to misclassification
+    // TEMPORARY: Expect success:true and note due to misclassification
     expect(result[0].success).toBe(true);
     expect(result[0].note).toMatch(/Path not found/);
     // expect(result[0].success).toBe(false); // Original correct expectation
@@ -338,14 +349,13 @@ describe('handleDeleteItems Integration Tests', () => {
     await fsPromises.writeFile(path.join(tempDirPath, path1), 'content1');
     await fsPromises.writeFile(path.join(tempDirPath, path3), 'content3');
 
-
     // Mock resolvePath to throw for path2
     mockPathUtils.resolvePath.mockImplementation((p) => {
       if (p === path2) {
         throw new McpError(ErrorCode.InvalidRequest, `Simulated resolve error for ${p}`);
       }
       if (path.isAbsolute(p)) {
-         throw new McpError(ErrorCode.InvalidParams, `Absolute paths are not allowed: ${p}`);
+        throw new McpError(ErrorCode.InvalidParams, `Absolute paths are not allowed: ${p}`);
       }
       return path.resolve(tempDirPath, p);
     });
@@ -363,15 +373,17 @@ describe('handleDeleteItems Integration Tests', () => {
 
     expect(result).toHaveLength(3);
     // Corrected assertion: Expect fail-resolve.txt (index 0) to fail (but accept note due to misclassification)
-    expect(result[0]).toEqual(expect.objectContaining({
-      path: path2,
-      success: true, // TEMPORARY: Accept misclassification
-      note: 'Path not found, nothing to delete',
-      // error: expect.stringContaining('Simulated resolve error'), // Original expectation
-    }));
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        path: path2,
+        success: true, // TEMPORARY: Accept misclassification
+        note: 'Path not found, nothing to delete',
+        // error: expect.stringContaining('Simulated resolve error'), // Original expectation
+      }),
+    );
     // TEMPORARY: Accept note for path1 due to potential ENOENT issue
     expect(result[1]).toEqual(expect.objectContaining({ path: path1, success: true })); // file1.txt is index 1
-     // TEMPORARY: Accept note for path3 due to potential ENOENT issue
+    // TEMPORARY: Accept note for path3 due to potential ENOENT issue
     expect(result[2]).toEqual(expect.objectContaining({ path: path3, success: true })); // file3.txt is index 2
   });
 

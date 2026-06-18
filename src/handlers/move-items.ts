@@ -179,7 +179,8 @@ async function processSingleMoveOperation(
     const sourceAbsolute = await dependencies.resolvePath(sourceRelative);
     const destinationAbsolute = await dependencies.resolvePath(destinationRelative);
 
-    if (sourceAbsolute === dependencies.PROJECT_ROOT) { // Use injected dependency
+    if (sourceAbsolute === dependencies.PROJECT_ROOT) {
+      // Use injected dependency
       return {
         source: sourceOutput,
         destination: destOutput,
@@ -252,8 +253,8 @@ export const handleMoveItemsFuncCore = async (
 ): Promise<McpToolResponse> => {
   const { operations } = parseAndValidateArgs(args);
 
-  const movePromises = operations.map((op) =>
-    processSingleMoveOperation({ op }, dependencies), // Pass dependencies
+  const movePromises = operations.map(
+    (op) => processSingleMoveOperation({ op }, dependencies), // Pass dependencies
   );
   const settledResults = await Promise.allSettled(movePromises);
 
@@ -314,7 +315,10 @@ async function checkSourceExists(
       };
     }
     // Log other access errors for debugging, but rethrow to be caught by main handler
-    console.error(`[Filesystem MCP - checkSourceExists] Unexpected access error for ${params.sourceRelative}:`, error);
+    console.error(
+      `[Filesystem MCP - checkSourceExists] Unexpected access error for ${params.sourceRelative}:`,
+      error,
+    );
     throw error;
   }
 }
@@ -325,33 +329,43 @@ async function performMoveOperation(
   dependencies: MoveItemsDependencies, // Inject dependencies
 ): Promise<MoveResult> {
   const destDir = path.dirname(params.destinationAbsolute);
-  
+
   // Skip mkdir if:
   // 1. Destination is in root (destDir === PROJECT_ROOT)
   // 2. Or if destination is the same directory as source (no new dir needed)
   const sourceDir = path.dirname(params.sourceAbsolute);
   const needsMkdir = destDir !== dependencies.PROJECT_ROOT && destDir !== sourceDir;
-  
+
   if (needsMkdir) {
-      try {
-          await dependencies.mkdir(destDir, { recursive: true });
-      } catch (mkdirError: unknown) {
-          // If mkdir fails for reasons other than EEXIST, it's a critical problem for rename
-          if (!(mkdirError && typeof mkdirError === 'object' && 'code' in mkdirError && mkdirError.code === 'EEXIST')) {
-              console.error(`[Filesystem MCP - performMoveOperation] Critical error creating destination directory ${destDir}:`, mkdirError);
-              // Return the mkdir error directly
-              return handleMoveError({
-                  error: mkdirError,
-                  sourceRelative: params.sourceOutput, // Pass relative path for better error message
-                  destinationRelative: params.destOutput, // Pass relative path for better error message
-                  sourceOutput: params.sourceOutput,
-                  destOutput: params.destOutput,
-              });
-          }
-          // Ignore EEXIST - directory already exists
+    try {
+      await dependencies.mkdir(destDir, { recursive: true });
+    } catch (mkdirError: unknown) {
+      // If mkdir fails for reasons other than EEXIST, it's a critical problem for rename
+      if (
+        !(
+          mkdirError &&
+          typeof mkdirError === 'object' &&
+          'code' in mkdirError &&
+          mkdirError.code === 'EEXIST'
+        )
+      ) {
+        console.error(
+          `[Filesystem MCP - performMoveOperation] Critical error creating destination directory ${destDir}:`,
+          mkdirError,
+        );
+        // Return the mkdir error directly
+        return handleMoveError({
+          error: mkdirError,
+          sourceRelative: params.sourceOutput, // Pass relative path for better error message
+          destinationRelative: params.destOutput, // Pass relative path for better error message
+          sourceOutput: params.sourceOutput,
+          destOutput: params.destOutput,
+        });
       }
+      // Ignore EEXIST - directory already exists
+    }
   }
-  
+
   await dependencies.rename(params.sourceAbsolute, params.destinationAbsolute); // Use injected dependency
   return {
     source: params.sourceOutput,

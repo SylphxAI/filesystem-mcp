@@ -6,14 +6,15 @@
 
 **Task:** Implement `apply_diff` tool.
 **Status:** Completed configuration alignment and file renaming based on `guidelines/typescript/style_quality.md` (SHA: 9d56a9d...). ESLint check (with `--no-cache`) confirms **no errors**. `import/no-unresolved` rule was temporarily disabled but seems unnecessary now.
+
 ## 2. Recent Changes/Decisions
 
 - **Configuration Alignment:**
-    - Updated `package.json`: Added ESLint dependencies (`eslint-config-airbnb-typescript`, `eslint-plugin-import`, `eslint-plugin-unicorn`), updated scripts (`lint`, `validate`), updated `lint-staged`.
-    - Created `.eslintrc.js` based on guideline template.
-    - Deleted old `eslint.config.js`.
-    - Updated `.prettierrc.js` (formerly `.cjs`) content and filename based on guideline.
-    - Updated `tsconfig.json`: Set `module` and `moduleResolution` to `NodeNext`.
+  - Updated `package.json`: Added ESLint dependencies (`eslint-config-airbnb-typescript`, `eslint-plugin-import`, `eslint-plugin-unicorn`), updated scripts (`lint`, `validate`), updated `lint-staged`.
+  - Created `.eslintrc.js` based on guideline template.
+  - Deleted old `eslint.config.js`.
+  - Updated `.prettierrc.js` (formerly `.cjs`) content and filename based on guideline.
+  - Updated `tsconfig.json`: Set `module` and `moduleResolution` to `NodeNext`.
 - **Guideline Checksum:** Updated `memory-bank/techContext.md` with the latest SHA for `style_quality.md`.
 - (Previous changes remain relevant)
 

@@ -54,7 +54,9 @@
 - Release `v0.5.9` was the last release triggered.
 
 ## 4. Compliance Tasks
+
 - **DONE:** ESLint errors fixed (confirmed via `--no-cache`).
+
 ## 5. Known Issues / Areas for Improvement
 
 - **ESLint Import Resolver:** Verified `import/no-unresolved` rule (re-enabled, no errors).

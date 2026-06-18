@@ -20,7 +20,12 @@ function makeMockStats(partial: Partial<Record<keyof FormattedStats, any>> = {})
 
 describe('formatStats', () => {
   it('formats a regular file', () => {
-    const stats = makeMockStats({ isFile: true, isDirectory: false, isSymbolicLink: false, mode: 0o644 });
+    const stats = makeMockStats({
+      isFile: true,
+      isDirectory: false,
+      isSymbolicLink: false,
+      mode: 0o644,
+    });
     const result = formatStats('foo\\bar.txt', '/abs/foo/bar.txt', stats as any);
     expect(result).toEqual({
       path: 'foo/bar.txt',
@@ -39,7 +44,12 @@ describe('formatStats', () => {
   });
 
   it('formats a directory', () => {
-    const stats = makeMockStats({ isFile: false, isDirectory: true, isSymbolicLink: false, mode: 0o755 });
+    const stats = makeMockStats({
+      isFile: false,
+      isDirectory: true,
+      isSymbolicLink: false,
+      mode: 0o755,
+    });
     const result = formatStats('dir\\', '/abs/dir', stats as any);
     expect(result.isDirectory).toBe(true);
     expect(result.isFile).toBe(false);
@@ -47,7 +57,12 @@ describe('formatStats', () => {
   });
 
   it('formats a symbolic link', () => {
-    const stats = makeMockStats({ isFile: false, isDirectory: false, isSymbolicLink: true, mode: 0o777 });
+    const stats = makeMockStats({
+      isFile: false,
+      isDirectory: false,
+      isSymbolicLink: true,
+      mode: 0o777,
+    });
     const result = formatStats('link', '/abs/link', stats as any);
     expect(result.isSymbolicLink).toBe(true);
     expect(result.mode).toBe('777');

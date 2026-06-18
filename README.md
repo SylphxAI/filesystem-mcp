@@ -25,6 +25,7 @@
 Empower your AI agents (like Claude/Cline) with secure, efficient, and token-saving access to your project files. This Node.js server implements the [Model Context Protocol (MCP)](https://docs.modelcontextprotocol.com/) to provide a robust set of filesystem tools.
 
 **The Problem:**
+
 ```
 Traditional AI filesystem access:
 - Shell commands for each operation ❌
@@ -34,6 +35,7 @@ Traditional AI filesystem access:
 ```
 
 **The Solution:**
+
 ```
 Filesystem MCP Server:
 - Batch operations (10+ files at once) ✅
@@ -50,13 +52,13 @@ Filesystem MCP Server:
 
 ### Token & Latency Optimization
 
-| Metric | Individual Shell Commands | Filesystem MCP | Improvement |
-|--------|---------------------------|----------------|-------------|
-| **Operations/Request** | 1 file | 10+ files | **10x reduction** |
-| **Round Trips** | N operations | 1 request | **N× fewer** |
-| **Latency** | Shell spawn per op | Direct API | **5-10× faster** |
-| **Token Usage** | High overhead | Batched context | **50-70% less** |
-| **Error Reporting** | stderr parsing | Per-item status | Detailed |
+| Metric                 | Individual Shell Commands | Filesystem MCP  | Improvement       |
+| ---------------------- | ------------------------- | --------------- | ----------------- |
+| **Operations/Request** | 1 file                    | 10+ files       | **10x reduction** |
+| **Round Trips**        | N operations              | 1 request       | **N× fewer**      |
+| **Latency**            | Shell spawn per op        | Direct API      | **5-10× faster**  |
+| **Token Usage**        | High overhead             | Batched context | **50-70% less**   |
+| **Error Reporting**    | stderr parsing            | Per-item status | Detailed          |
 
 ### Real-World Benefits
 
@@ -99,6 +101,7 @@ Filesystem MCP Server:
 The simplest way - always uses latest version from npm.
 
 **Using npx:**
+
 ```json
 {
   "mcpServers": {
@@ -112,6 +115,7 @@ The simplest way - always uses latest version from npm.
 ```
 
 **Using bunx:**
+
 ```json
 {
   "mcpServers": {
@@ -169,6 +173,7 @@ pnpm run dev
 ```
 
 **MCP Host Configuration:**
+
 ```json
 {
   "mcpServers": {
@@ -198,6 +203,7 @@ Once configured in your MCP host (see Installation), your AI agent can immediate
 ```
 
 **Server Response:**
+
 ```json
 {
   "results": [
@@ -221,36 +227,36 @@ Once configured in your MCP host (see Installation), your AI agent can immediate
 
 ### File Operations
 
-| Tool | Description | Batch Support |
-|------|-------------|---------------|
-| **read_content** | Read file contents | ✅ Multiple files |
-| **write_content** | Write/append to files | ✅ Multiple files |
-| **edit_file** | Surgical edits with diff output | ✅ Multiple files |
-| **search_files** | Regex search with context | ✅ Multiple files |
-| **replace_content** | Multi-file search & replace | ✅ Multiple files |
+| Tool                | Description                     | Batch Support     |
+| ------------------- | ------------------------------- | ----------------- |
+| **read_content**    | Read file contents              | ✅ Multiple files |
+| **write_content**   | Write/append to files           | ✅ Multiple files |
+| **edit_file**       | Surgical edits with diff output | ✅ Multiple files |
+| **search_files**    | Regex search with context       | ✅ Multiple files |
+| **replace_content** | Multi-file search & replace     | ✅ Multiple files |
 
 ### Directory Operations
 
-| Tool | Description | Batch Support |
-|------|-------------|---------------|
-| **list_files** | List files/directories recursively | Single path |
-| **stat_items** | Get detailed file/directory status | ✅ Multiple items |
-| **create_directories** | Create directories with parents | ✅ Multiple paths |
+| Tool                   | Description                        | Batch Support     |
+| ---------------------- | ---------------------------------- | ----------------- |
+| **list_files**         | List files/directories recursively | Single path       |
+| **stat_items**         | Get detailed file/directory status | ✅ Multiple items |
+| **create_directories** | Create directories with parents    | ✅ Multiple paths |
 
 ### Management Operations
 
-| Tool | Description | Batch Support |
-|------|-------------|---------------|
-| **delete_items** | Remove files/directories | ✅ Multiple items |
-| **move_items** | Move/rename files/directories | ✅ Multiple items |
-| **copy_items** | Copy files/directories | ✅ Multiple items |
+| Tool             | Description                   | Batch Support     |
+| ---------------- | ----------------------------- | ----------------- |
+| **delete_items** | Remove files/directories      | ✅ Multiple items |
+| **move_items**   | Move/rename files/directories | ✅ Multiple items |
+| **copy_items**   | Copy files/directories        | ✅ Multiple items |
 
 ### Permission Operations
 
-| Tool | Description | Batch Support |
-|------|-------------|---------------|
+| Tool            | Description              | Batch Support     |
+| --------------- | ------------------------ | ----------------- |
 | **chmod_items** | Change POSIX permissions | ✅ Multiple items |
-| **chown_items** | Change ownership | ✅ Multiple items |
+| **chown_items** | Change ownership         | ✅ Multiple items |
 
 **Key Benefit:** Tools supporting batch operations process each item individually and return detailed per-item status reports.
 
@@ -261,16 +267,19 @@ Once configured in your MCP host (see Installation), your AI agent can immediate
 ### Core Principles
 
 1. **Security First**
+
    - All operations confined to project root
    - Path traversal prevention
    - Permission controls built-in
 
 2. **Efficiency Focused**
+
    - Batch processing reduces token usage
    - Direct API calls (no shell overhead)
    - Minimal communication round trips
 
 3. **Robustness**
+
    - Per-item success/failure reporting
    - Detailed error messages
    - Zod schema validation
@@ -284,49 +293,55 @@ Once configured in your MCP host (see Installation), your AI agent can immediate
 
 ## 📊 Comparison with Alternatives
 
-| Feature | Filesystem MCP | Shell Commands | Other Scripts |
-|---------|----------------|----------------|---------------|
-| **Security** | ✅ Root confined | ❌ Full shell access | ⚠️ Variable |
-| **Token Efficiency** | ✅ Batching | ❌ One op/command | ⚠️ Variable |
-| **Latency** | ✅ Direct API | ❌ Shell spawn | ⚠️ Variable |
-| **Batch Operations** | ✅ Most tools | ❌ No | ⚠️ Maybe |
-| **Error Reporting** | ✅ Per-item detail | ❌ stderr parsing | ⚠️ Variable |
-| **Setup** | ✅ Easy (npx/Docker) | ⚠️ Secure shell setup | ⚠️ Custom |
-| **MCP Standard** | ✅ Full compliance | ❌ No | ⚠️ Variable |
+| Feature              | Filesystem MCP       | Shell Commands        | Other Scripts |
+| -------------------- | -------------------- | --------------------- | ------------- |
+| **Security**         | ✅ Root confined     | ❌ Full shell access  | ⚠️ Variable   |
+| **Token Efficiency** | ✅ Batching          | ❌ One op/command     | ⚠️ Variable   |
+| **Latency**          | ✅ Direct API        | ❌ Shell spawn        | ⚠️ Variable   |
+| **Batch Operations** | ✅ Most tools        | ❌ No                 | ⚠️ Maybe      |
+| **Error Reporting**  | ✅ Per-item detail   | ❌ stderr parsing     | ⚠️ Variable   |
+| **Setup**            | ✅ Easy (npx/Docker) | ⚠️ Secure shell setup | ⚠️ Custom     |
+| **MCP Standard**     | ✅ Full compliance   | ❌ No                 | ⚠️ Variable   |
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| **Language** | TypeScript (strict mode) |
-| **Runtime** | Node.js / Bun |
-| **Protocol** | Model Context Protocol (MCP) |
-| **Validation** | Zod schemas |
-| **Package Manager** | pnpm |
-| **Distribution** | npm + Docker Hub |
+| Component           | Technology                   |
+| ------------------- | ---------------------------- |
+| **Language**        | TypeScript (strict mode)     |
+| **Runtime**         | Node.js / Bun                |
+| **Protocol**        | Model Context Protocol (MCP) |
+| **Validation**      | Zod schemas                  |
+| **Package Manager** | pnpm                         |
+| **Distribution**    | npm + Docker Hub             |
 
 ---
 
 ## 🎯 Use Cases
 
 ### AI Agent Development
+
 Enable AI agents to:
+
 - **Read project files** - Access code, configs, docs
 - **Edit multiple files** - Refactor across codebase
 - **Search codebases** - Find patterns and definitions
 - **Manage project structure** - Create, move, organize files
 
 ### Code Assistants
+
 Build powerful coding tools:
+
 - **Cline/Claude integration** - Direct filesystem access
 - **Batch refactoring** - Edit multiple files at once
 - **Safe operations** - Confined to project directory
 - **Efficient operations** - Reduce token costs
 
 ### Automation & Scripting
+
 Automate development tasks:
+
 - **File generation** - Create boilerplate files
 - **Project setup** - Initialize directory structures
 - **Batch processing** - Handle multiple files efficiently
@@ -337,6 +352,7 @@ Automate development tasks:
 ## 🗺️ Roadmap
 
 **✅ Completed**
+
 - [x] Core filesystem operations (read, write, edit, etc.)
 - [x] Batch processing for most tools
 - [x] Project root security
@@ -345,6 +361,7 @@ Automate development tasks:
 - [x] Zod validation
 
 **🚀 Planned**
+
 - [ ] File watching capabilities
 - [ ] Streaming support for large files
 - [ ] Advanced filtering for `list_files`
@@ -405,6 +422,7 @@ MIT © [Sylphx](https://sylphx.com)
 ## 🙏 Credits
 
 Built with:
+
 - [Model Context Protocol](https://docs.modelcontextprotocol.com/) - MCP standard
 - [Zod](https://zod.dev) - Schema validation
 - [TypeScript](https://typescriptlang.org) - Type safety
@@ -417,6 +435,7 @@ Special thanks to the MCP community ❤️
 ## 📚 Publishing
 
 This repository uses GitHub Actions to automatically publish to:
+
 - **npm**: [@sylphx/filesystem-mcp](https://www.npmjs.com/package/@sylphx/filesystem-mcp)
 - **Docker Hub**: [sylphx/filesystem-mcp](https://hub.docker.com/r/sylphx/filesystem-mcp)
 

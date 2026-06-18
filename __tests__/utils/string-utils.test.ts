@@ -106,7 +106,7 @@ describe('String Utilities', () => {
       expect(linesMatch('  line ', ' line ', true)).toBe(true);
     });
 
-     it('should handle empty search line correctly when ignoring whitespace', () => {
+    it('should handle empty search line correctly when ignoring whitespace', () => {
       expect(linesMatch('  ', '', true)).toBe(true); // fileLine becomes '', searchLine is ''
       expect(linesMatch('  content', '', true)).toBe(false); // fileLine becomes 'content', searchLine is ''
       expect(linesMatch('', '', true)).toBe(true);
@@ -133,7 +133,7 @@ describe('String Utilities', () => {
       expect(linesMatch(undefined, undefined, true)).toBe(false);
     });
 
-     it('should handle lines with only whitespace correctly when ignoring', () => {
+    it('should handle lines with only whitespace correctly when ignoring', () => {
       expect(linesMatch('   ', '\t', true)).toBe(true); // Both trimStart to ''
       expect(linesMatch('   ', '  a', true)).toBe(false); // fileLine '', searchLine 'a'
       expect(linesMatch('  a', '   ', true)).toBe(false); // fileLine 'a', searchLine ''

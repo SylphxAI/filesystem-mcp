@@ -64,17 +64,21 @@ function getErrorMessage(error: unknown, relativePath: string): string {
   return `Failed to delete ${relativePath}: ${String(error)}`;
 }
 
-
 /** Handles errors during delete operation. Revised logic again. */
 function handleDeleteError(error: unknown, relativePath: string, pathOutput: string): DeleteResult {
-  console.error(`[handleDeleteError] Received error for path "${relativePath}":`, JSON.stringify(error));
+  console.error(
+    `[handleDeleteError] Received error for path "${relativePath}":`,
+    JSON.stringify(error),
+  );
 
   // Check for McpError FIRST
   if (error instanceof McpError) {
-      const errorMessage = getErrorMessage(error, relativePath);
-      console.error(`[Filesystem MCP] McpError deleting ${relativePath}: ${errorMessage}`);
-      console.error(`[handleDeleteError] Returning failure for "${relativePath}" (McpError): ${errorMessage}`);
-      return { path: pathOutput, success: false, error: errorMessage };
+    const errorMessage = getErrorMessage(error, relativePath);
+    console.error(`[Filesystem MCP] McpError deleting ${relativePath}: ${errorMessage}`);
+    console.error(
+      `[handleDeleteError] Returning failure for "${relativePath}" (McpError): ${errorMessage}`,
+    );
+    return { path: pathOutput, success: false, error: errorMessage };
   }
 
   // THEN check specifically for ENOENT
@@ -85,7 +89,9 @@ function handleDeleteError(error: unknown, relativePath: string, pathOutput: str
     (error as { code?: string }).code === 'ENOENT';
 
   if (isENOENT) {
-    console.error(`[handleDeleteError] Detected ENOENT for "${relativePath}", returning success with note.`);
+    console.error(
+      `[handleDeleteError] Detected ENOENT for "${relativePath}", returning success with note.`,
+    );
     return {
       path: pathOutput,
       success: true,
@@ -96,7 +102,9 @@ function handleDeleteError(error: unknown, relativePath: string, pathOutput: str
   // For ALL OTHER errors (including permission, generic), return failure
   const errorMessage = getErrorMessage(error, relativePath);
   console.error(`[Filesystem MCP] Other error deleting ${relativePath}: ${errorMessage}`);
-  console.error(`[handleDeleteError] Returning failure for "${relativePath}" (Other Error): ${errorMessage}`);
+  console.error(
+    `[handleDeleteError] Returning failure for "${relativePath}" (Other Error): ${errorMessage}`,
+  );
   return { path: pathOutput, success: false, error: errorMessage };
 }
 
@@ -129,7 +137,10 @@ export function processSettledResults( // Add export
       return result.value;
     } else {
       // This case should ideally be less frequent now as errors are handled within safeProcessSingleDeleteOperation
-      console.error(`[processSettledResults] Unexpected rejection for ${originalPath}:`, result.reason);
+      console.error(
+        `[processSettledResults] Unexpected rejection for ${originalPath}:`,
+        result.reason,
+      );
       // Pass rejection reason to the error handler
       return handleDeleteError(result.reason, originalPath, pathOutput);
     }
@@ -141,15 +152,15 @@ const handleDeleteItemsFunc = async (args: unknown): Promise<McpToolResponse> =>
   const { paths: pathsToDelete } = parseAndValidateArgs(args);
 
   const safeProcessSingleDeleteOperation = async (relativePath: string): Promise<DeleteResult> => {
-     const pathOutput = relativePath.replaceAll('\\', '/');
-     try {
-       // Call the core logic which might return a DeleteResult or throw
-       return await processSingleDeleteOperation(relativePath);
-     } catch (error) {
-       // Catch errors thrown *before* the try block in processSingleDeleteOperation (like resolvePath)
-       // or unexpected errors within it not returning a DeleteResult.
-       return handleDeleteError(error, relativePath, pathOutput);
-     }
+    const pathOutput = relativePath.replaceAll('\\', '/');
+    try {
+      // Call the core logic which might return a DeleteResult or throw
+      return await processSingleDeleteOperation(relativePath);
+    } catch (error) {
+      // Catch errors thrown *before* the try block in processSingleDeleteOperation (like resolvePath)
+      // or unexpected errors within it not returning a DeleteResult.
+      return handleDeleteError(error, relativePath, pathOutput);
+    }
   };
 
   const deletePromises = pathsToDelete.map(safeProcessSingleDeleteOperation);

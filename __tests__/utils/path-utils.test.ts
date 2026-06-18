@@ -2,11 +2,7 @@ import { describe, it, expect } from 'vitest';
 import path from 'node:path';
 import { ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 
-import {
-  resolvePath,
-  isPathInside,
-  PROJECT_ROOT,
-} from '../../src/utils/path-utils.ts';
+import { resolvePath, isPathInside, PROJECT_ROOT } from '../../src/utils/path-utils.ts';
 
 const MOCK_PROJECT_ROOT_OVERRIDE = path.resolve('/mock/project/root/override');
 const ACTUAL_PROJECT_ROOT = process.cwd();
@@ -81,12 +77,12 @@ describe('pathUtils', () => {
     });
 
     it('should reject parent traversal (..)', async () => {
-      await expect(resolvePath('../outside/file', MOCK_PROJECT_ROOT_OVERRIDE)).rejects.toMatchObject(
-        {
-          code: ErrorCode.InvalidRequest,
-          message: expect.stringContaining('Path traversal detected'),
-        },
-      );
+      await expect(
+        resolvePath('../outside/file', MOCK_PROJECT_ROOT_OVERRIDE),
+      ).rejects.toMatchObject({
+        code: ErrorCode.InvalidRequest,
+        message: expect.stringContaining('Path traversal detected'),
+      });
     });
 
     it('should reject deep parent traversal (../../../..)', async () => {

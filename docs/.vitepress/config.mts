@@ -40,13 +40,10 @@ export default defineConfig({
       ],
     },
 
-    socialLinks: [
-      { icon: 'github', link: 'https://github.com/SylphxAI/filesystem-mcp' },
-    ],
+    socialLinks: [{ icon: 'github', link: 'https://github.com/SylphxAI/filesystem-mcp' }],
 
     editLink: {
-      pattern:
-        'https://github.com/SylphxAI/filesystem-mcp/edit/main/docs/:path',
+      pattern: 'https://github.com/SylphxAI/filesystem-mcp/edit/main/docs/:path',
       text: 'Edit this page on GitHub',
     },
 

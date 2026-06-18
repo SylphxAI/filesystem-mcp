@@ -11,8 +11,7 @@ updates:
     # Allow only non-major updates for production dependencies initially
     allow:
       - dependency-type: 'production'
-        update-types:
-          ['version-update:semver-minor', 'version-update:semver-patch']
+        update-types: ['version-update:semver-minor', 'version-update:semver-patch']
       - dependency-type: 'development'
         update-types:
           [
