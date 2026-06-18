@@ -19,6 +19,7 @@ export default defineConfig({
         // Restored and adjusted exclude
         'src/index.ts', // Often just exports
         'src/types/**', // Assuming types might be added later
+        'src/handlers/common.ts', // Type-only module (FileSystemDependencies); no runtime code to cover
         '**/*.d.ts',
         '**/*.config.ts',
         '**/constants.ts', // Assuming constants might be added later
