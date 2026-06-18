@@ -22,8 +22,8 @@ export default defineConfig({
         '**/*.d.ts',
         '**/*.config.ts',
         '**/constants.ts', // Assuming constants might be added later
-        'src/handlers/chmodItems.ts', // Exclude due to Windows limitations
-        'src/handlers/chownItems.ts', // Exclude due to Windows limitations
+        'src/handlers/chmod-items.ts', // Exclude due to Windows limitations
+        'src/handlers/chown-items.ts', // Exclude due to Windows limitations
       ],
       clean: true, // Added clean option
     },
