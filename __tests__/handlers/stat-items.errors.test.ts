@@ -62,7 +62,10 @@ describe('stat-items error branches', () => {
     const { McpError, ErrorCode } = await import('@modelcontextprotocol/sdk/types.js');
     resolvePath.mockRejectedValueOnce(new McpError(ErrorCode.InvalidParams, 'bad path'));
     const r = await firstResult({ paths: ['../escape'] });
-    expect(r.error).toBe('bad path');
+    // handleStatError returns the McpError's .message verbatim; the SDK prefixes
+    // it with "MCP error <code>: ", so the original text is preserved within it.
+    expect(r.error).toMatch(/bad path/);
+    expect(r.error).not.toMatch(/Failed to get stats/);
   });
 
   it('stringifies a non-Error rejection in the generic branch', async () => {
