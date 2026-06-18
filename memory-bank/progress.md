@@ -31,7 +31,7 @@
     - `.prettierrc.cjs`: Updated content based on `style_quality.md`.
     - `tsconfig.json`: Updated `module` and `moduleResolution` to `NodeNext`.
     - (Other configs like `vitest.config.ts`, `commitlint.config.cjs`, `dependabot.yml` assumed aligned from previous checks).
-  - Git Hooks (Husky + lint-staged): Configured.
+  - Git Hooks (lefthook): Configured — `commit-msg` runs commitlint, `pre-commit` runs the test suite.
   - `README.md` Structure: Aligned (placeholders remain).
   - **File Naming:** Most `.ts` files in `src` and `__tests__` renamed to kebab-case.
   - **Import Paths:** Updated to use kebab-case and `.js` extension.

@@ -48,7 +48,7 @@
     "changeset": "changeset",
     "changeset:version": "changeset version",
     "changeset:publish": "changeset publish",
-    "prepare": "husky"
+    "prepare": "git config --unset core.hooksPath >/dev/null 2>&1; lefthook install || true"
   },
   "homepage": "https://github.com/SylphxAI/filesystem-mcp#readme",
   "repository": {
@@ -100,7 +100,7 @@
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-prettier": "^5.2.6",
     "eslint-plugin-unicorn": "^59.0.1",
-    "husky": "^9.1.7",
+    "lefthook": "^2.1.9",
     "lint-staged": "^16.2.6",
     "prettier": "^3.5.3",
     "rimraf": "^6.0.1",

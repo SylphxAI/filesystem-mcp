@@ -1,0 +1,16 @@
+# Git hooks managed by lefthook (https://lefthook.dev)
+# Migrated faithfully from the previous husky setup:
+#   .husky/pre-commit  -> ran the vitest suite
+#   .husky/commit-msg  -> ran commitlint against the commit message
+
+pre-commit:
+  parallel: false
+  commands:
+    test:
+      run: bun run test
+
+commit-msg:
+  parallel: false
+  commands:
+    commitlint:
+      run: bunx commitlint --edit {1}

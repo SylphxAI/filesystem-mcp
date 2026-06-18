@@ -44,7 +44,7 @@
       - `test`: Runs Vitest tests.
       - `test:cov`: Runs Vitest tests with coverage.
       - `validate`: Runs format check, lint, typecheck, and tests.
-      - `docs:build`: Builds documentation. - `start`: `node dist/index.js` - `prepare`: `husky` - `prepublishOnly`: `pnpm run clean && pnpm run build` - (Other scripts as defined in `package.json`)
+      - `docs:build`: Builds documentation. - `start`: `node dist/index.js` - `prepare`: installs git hooks via `lefthook install` - `prepublishOnly`: `pnpm run clean && pnpm run build` - (Other scripts as defined in `package.json`)
 - **Build Output:** Compiled JavaScript code is placed in the `dist` directory.
 - **Execution:** The server is intended to be run via `node dist/index.js`.
 
