@@ -1,20 +1,20 @@
-import eslint from "@eslint/js";
-import tseslint from "typescript-eslint";
-import prettierConfig from "eslint-config-prettier";
+import eslint from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import prettierConfig from 'eslint-config-prettier';
 // import unicornPlugin from "eslint-plugin-unicorn"; // Keep commented out for now
-import importPlugin from "eslint-plugin-import";
-import globals from "globals";
+import importPlugin from 'eslint-plugin-import';
+import globals from 'globals';
 
 export default tseslint.config(
   // Global ignores
   {
     ignores: [
-      "node_modules/",
-      "dist/",
-      "build/",
-      "coverage/",
-      "docs/.vitepress/dist/",
-      "docs/.vitepress/cache/",
+      'node_modules/',
+      'dist/',
+      'build/',
+      'coverage/',
+      'docs/.vitepress/dist/',
+      'docs/.vitepress/cache/',
     ],
   },
 
@@ -25,7 +25,7 @@ export default tseslint.config(
 
   // Configuration for SOURCE TypeScript files (requiring type info)
   {
-    files: ["src/**/*.ts"], // Apply project-specific parsing only to src files
+    files: ['src/**/*.ts'], // Apply project-specific parsing only to src files
     languageOptions: {
       parserOptions: {
         project: true, // Enable project-based parsing ONLY for src files
@@ -36,13 +36,22 @@ export default tseslint.config(
       },
     },
     rules: {
-      // Add specific rules for source TS if needed
+      // Honour the leading-underscore convention for intentionally unused
+      // bindings (e.g. parameters kept to preserve a function signature).
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
     },
   },
 
   // Configuration for OTHER TypeScript files (tests, configs - NO type info needed)
   {
-    files: ["__tests__/**/*.ts", "*.config.ts", "*.config.js"], // Include JS configs here too
+    files: ['__tests__/**/*.ts', '*.config.ts', '*.config.js'], // Include JS configs here too
     languageOptions: {
       parserOptions: {
         project: null, // Explicitly disable project-based parsing for these files
@@ -54,8 +63,8 @@ export default tseslint.config(
     },
     rules: {
       // Relax rules if needed for tests/configs, e.g., allow console in tests
-      "no-console": "off", // Allow console.log in tests and configs
-      "@typescript-eslint/no-explicit-any": "off", // Allow 'any' in test files
+      'no-console': 'off', // Allow console.log in tests and configs
+      '@typescript-eslint/no-explicit-any': 'off', // Allow 'any' in test files
       // Potentially disable rules that rely on type info if they cause issues
       // "@typescript-eslint/no-unsafe-assignment": "off",
       // "@typescript-eslint/no-unsafe-call": "off",
@@ -66,8 +75,8 @@ export default tseslint.config(
   // Configuration for OTHER JavaScript files (if any)
   // Note: *.config.js is handled above now. Keep this for other potential JS files.
   {
-    files: ["**/*.js", "**/*.cjs"],
-    ignores: ["*.config.js"], // Ignore config files already handled
+    files: ['**/*.js', '**/*.cjs'],
+    ignores: ['*.config.js'], // Ignore config files already handled
     languageOptions: {
       globals: {
         ...globals.node,
@@ -96,19 +105,26 @@ export default tseslint.config(
   */
 
   // Example: Import plugin (ensure installed and configured)
-    {
-      plugins: {
-        import: importPlugin,
+  {
+    plugins: {
+      import: importPlugin,
+    },
+    settings: {
+      'import/resolver': {
+        typescript: true,
+        node: true,
       },
-      settings: {
-        'import/resolver': {
-          typescript: true,
-          node: true,
-        }
-      },
-      rules: {
-         // Add import rules
-         'import/no-unresolved': 'error',
-      }
-    }
+    },
+    rules: {
+      // Add import rules
+      //
+      // `@modelcontextprotocol/sdk` ships its public surface exclusively through
+      // `exports` subpath wildcards (`./*`) with no root `index` entry, which
+      // `eslint-import-resolver-typescript` cannot follow even though TypeScript
+      // (NodeNext) resolves them correctly — `bun run typecheck` is the real
+      // gate for these imports. Ignore only this package to avoid masking other
+      // genuinely unresolved imports.
+      'import/no-unresolved': ['error', { ignore: ['^@modelcontextprotocol/sdk/'] }],
+    },
+  },
 );
