@@ -30,7 +30,7 @@
     "inspector": "npx @modelcontextprotocol/inspector dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest watch",
-    "test:cov": "vitest run --coverage --reporter=default --reporter=junit --outputFile=test-report.junit.xml",
+    "test:cov": "vitest run --coverage --reporter=junit --outputFile=test-report.junit.xml",
     "lint": "eslint . --ext .ts,.tsx,.vue,.js,.cjs --cache --max-warnings=0",
     "lint:fix": "eslint . --ext .ts,.tsx,.vue,.js,.cjs --fix --cache",
     "format": "prettier --write . --cache --ignore-unknown",
