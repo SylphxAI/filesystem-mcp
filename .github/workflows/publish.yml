@@ -49,7 +49,14 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Check for vulnerabilities
-        run: bun audit --prod # Check only production dependencies
+        # GHSA-2g4f-4pwh-qvx6: ajv $data-option ReDoS (moderate). The prod $data
+        # code path is unreachable here -- the MCP SDK validates dev-defined
+        # schemas with $data disabled, so no attacker-controlled schema reaches
+        # the vulnerable matcher. The transitive dev ajv@6 is pinned by
+        # eslint/@eslint/eslintrc and bun flat `overrides` can't scope a bump to
+        # that subtree without breaking eslint. TODO: drop --ignore once the SDK
+        # and eslint chains move to ajv>=6.14.0.
+        run: bun audit --prod --ignore GHSA-2g4f-4pwh-qvx6 # Check only production dependencies
 
       - name: Check Formatting
         run: bun run check-format # Fails job if check fails
