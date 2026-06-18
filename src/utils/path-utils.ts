@@ -7,6 +7,19 @@ const McpError = OriginalMcpError;
 const PROJECT_ROOT = path.resolve(import.meta.dirname, '../../');
 
 /**
+ * Detects Windows-style absolute paths regardless of the host OS.
+ *
+ * Node's POSIX `path.isAbsolute()` returns `false` for drive-letter paths
+ * (`C:\Windows`, `C:/Windows`) and UNC paths (`\\server\share`), which would
+ * let a Windows-shaped absolute path slip through the relative-path guard when
+ * the server runs on Linux/macOS. Matching them here keeps validation
+ * platform-independent.
+ */
+function isWindowsAbsolute(p: string): boolean {
+  return /^[a-zA-Z]:[\\/]/.test(p) || /^\\\\/.test(p);
+}
+
+/**
  * Separator-aware containment check.
  *
  * `startsWith()` is unsafe for path containment because it confuses
@@ -21,7 +34,10 @@ const PROJECT_ROOT = path.resolve(import.meta.dirname, '../../');
  */
 export function isPathInside(candidate: string, root: string): boolean {
   const relative = path.relative(root, candidate);
-  return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative));
+  return (
+    relative === '' ||
+    (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative))
+  );
 }
 
 export async function resolvePath(relativePath: string, rootPath?: string): Promise<string> {
@@ -33,8 +49,12 @@ export async function resolvePath(relativePath: string, rootPath?: string): Prom
     throw new McpError(ErrorCode.InvalidParams, 'Root path must be a string');
   }
 
-  // Validate path format
-  if (path.isAbsolute(relativePath)) {
+  // Validate path format. Reject absolute paths on every OS, not just the one
+  // the server happens to run on: on POSIX runtimes `path.isAbsolute()` does
+  // not recognise Windows drive-letter (`C:\…`, `C:/…`) or UNC (`\\host\share`)
+  // paths, so check those explicitly to keep the security boundary identical
+  // across platforms.
+  if (path.isAbsolute(relativePath) || isWindowsAbsolute(relativePath)) {
     throw new McpError(ErrorCode.InvalidParams, `Absolute paths are not allowed: ${relativePath}`);
   }
 
