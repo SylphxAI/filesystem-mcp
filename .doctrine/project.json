@@ -109,18 +109,11 @@
     "recoveryClass": "forward-fix-only",
     "packageRelease": {
       "publishesPackages": true,
-      "ecosystems": [
-        "npm",
-        "docker-hub",
-        "github-release",
-        "changesets"
-      ],
+      "ecosystems": ["npm", "docker-hub", "github-release", "changesets"],
       "releaseIntent": "Changesets and version tags capture package/image release intent.",
       "versionPr": "Changesets version changes and release workflow evidence must precede publish.",
       "publisher": "GitHub Actions publish workflow with NPM_TOKEN and Docker Hub credentials.",
-      "requiredContexts": [
-        "Validate Code Quality"
-      ],
+      "requiredContexts": ["Validate Code Quality"],
       "publishProof": "npm package readback, Docker Hub image tags, GitHub Release, and attached build artifact."
     }
   },
