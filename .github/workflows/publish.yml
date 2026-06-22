@@ -23,42 +23,95 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5.0.0
+        with:
+          fetch-depth: 0
+
+      - id: classify
+        name: Classify affected surface
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          BASE_REF: ${{ github.base_ref }}
+          MERGE_GROUP_BASE_REF: ${{ github.event.merge_group.base_ref }}
+        run: |
+          set -euo pipefail
+
+          changed_files="$(mktemp)"
+          zero_sha="0000000000000000000000000000000000000000"
+          base_ref="${BASE_REF:-${MERGE_GROUP_BASE_REF:-main}}"
+          base_ref="${base_ref#refs/heads/}"
+
+          if [ "${EVENT_NAME}" = "push" ] && [ -n "${BEFORE_SHA:-}" ] && [ "${BEFORE_SHA}" != "${zero_sha}" ] && git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            git diff --name-only --diff-filter=ACMR "${BEFORE_SHA}" HEAD >"${changed_files}"
+          else
+            git fetch --no-tags origin "${base_ref}:refs/remotes/origin/${base_ref}" || true
+            if git rev-parse --verify "origin/${base_ref}" >/dev/null 2>&1; then
+              git diff --name-only --diff-filter=ACMR "origin/${base_ref}" HEAD >"${changed_files}"
+            else
+              git diff-tree --no-commit-id --name-only -r HEAD >"${changed_files}"
+            fi
+          fi
+
+          echo "Changed files:"
+          cat "${changed_files}"
+
+          product_changed=false
+          while IFS= read -r path; do
+            case "${path}" in
+              .doctrine/*|AGENTS.md|PROJECT.md|README.md|docs/*|.github/workflows/*)
+                ;;
+              *)
+                product_changed=true
+                ;;
+            esac
+          done <"${changed_files}"
+
+          echo "product_changed=${product_changed}" >>"${GITHUB_OUTPUT}"
 
       # Initializes the CodeQL tools for scanning. # Added CodeQL init
       - name: Initialize CodeQL
+        if: steps.classify.outputs.product_changed == 'true'
         uses: github/codeql-action/init@v3
         with:
           languages: typescript # Specify the language to analyze
           # Optional: config-file: './.github/codeql/codeql-config.yml'
           # Optional: queries: '+security-extended'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      - name: Setup Bun
+        if: steps.classify.outputs.product_changed == 'true'
+        uses: oven-sh/setup-bun@v2
         with:
-          version: latest # Use the latest pnpm version
+          bun-version: '1.3.1'
 
       - name: Set up Node.js
+        if: steps.classify.outputs.product_changed == 'true'
         uses: actions/setup-node@v4.0.3
         with:
-          node-version: 'lts/*' # Use latest LTS
-          cache: 'pnpm' # Let pnpm handle caching via pnpm/action-setup
+          node-version: '22.14'
 
       - name: Install dependencies # Correct install step
-        run: pnpm install --frozen-lockfile
+        if: steps.classify.outputs.product_changed == 'true'
+        run: bun install --frozen-lockfile
 
-      - name: Check for vulnerabilities # Added pnpm audit
-        run: pnpm audit --prod # Check only production dependencies
+      - name: Check for vulnerabilities
+        if: steps.classify.outputs.product_changed == 'true'
+        run: bun audit
 
       - name: Check Formatting
-        run: pnpm run check-format # Fails job if check fails
+        if: steps.classify.outputs.product_changed == 'true'
+        run: bun run check-format # Fails job if check fails
 
       - name: Lint Code
-        run: pnpm run lint # Fails job if lint fails
+        if: steps.classify.outputs.product_changed == 'true'
+        run: bun run lint # Fails job if lint fails
 
       - name: Run Tests and Check Coverage
-        run: pnpm run test:cov # Fails job if tests fail or coverage threshold not met
+        if: steps.classify.outputs.product_changed == 'true'
+        run: bun run test:cov # Fails job if tests fail or coverage threshold not met
 
       - name: Upload coverage to Codecov
+        if: steps.classify.outputs.product_changed == 'true'
         uses: codecov/codecov-action@v4.5.0 # Use Codecov action with fixed version
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # Use Codecov token
@@ -66,20 +119,28 @@ jobs:
           fail_ci_if_error: true # Optional: fail CI if upload error
 
       - name: Upload test results to Codecov
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.classify.outputs.product_changed == 'true' }}
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           # No file specified, action defaults to common patterns like test-report.junit.xml
 
       - name: Perform CodeQL Analysis # Added CodeQL analyze
+        if: steps.classify.outputs.product_changed == 'true'
         uses: github/codeql-action/analyze@v3
 
       - name: Upload coverage reports # Kept artifact upload
+        if: steps.classify.outputs.product_changed == 'true'
         uses: actions/upload-artifact@v5.0.0
         with:
           name: coverage-report
           path: coverage/ # Upload the whole coverage directory
+      - name: Validate control-plane metadata
+        if: steps.classify.outputs.product_changed != 'true'
+        run: |
+          python3 -m json.tool .doctrine/project.json >/dev/null
+          test -f AGENTS.md
+          test -f PROJECT.md
 
   build-archive:
     name: Build and Archive Artifacts
@@ -95,23 +156,22 @@ jobs:
         uses: actions/checkout@v5.0.0
       # Removed incorrect CodeQL init from here
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          version: latest
+          bun-version: '1.3.1'
 
       - name: Set up Node.js
         uses: actions/setup-node@v4.0.3
         with:
-          node-version: 'lts/*' # Use latest LTS
-          registry-url: 'https://registry.npmjs.org/' # For pnpm publish
-          cache: 'pnpm' # Let pnpm handle caching
+          node-version: '22.14'
+          registry-url: 'https://registry.npmjs.org/' # For npm publish
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Build project
-        run: pnpm run build
+        run: bun run build
 
       - name: Get package version from tag
         id: get_version
@@ -143,25 +203,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5.0.0
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          version: latest
+          bun-version: '1.3.1'
 
       - name: Set up Node.js for NPM
         uses: actions/setup-node@v4.0.3
         with:
-          node-version: 'lts/*'
+          node-version: '22.14'
           registry-url: 'https://registry.npmjs.org/'
-          cache: 'pnpm'
 
       # No need to install dependencies again if publish doesn't need them
-      # If pnpm publish needs package.json, it's checked out
+      # If package publish needs package.json, it's checked out
       - name: Install all dependencies for prepublishOnly script
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Publish to npm
-        run: pnpm changeset publish
+        run: bun run changeset:publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
