@@ -1,0 +1,14 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.3/schema.json",
+	"extends": ["@sylphx/biome-config"],
+	"files": {
+		"includes": [
+			"!**/dist",
+			"!**/node_modules",
+			"!**/build",
+			"!**/coverage",
+			"!**/docs/.vitepress/dist",
+			"!**/docs/.vitepress/cache"
+		]
+	}
+}
