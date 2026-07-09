@@ -5,6 +5,7 @@ import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 // --- Types ---
 import type { McpToolResponse } from '../types/mcp-types.js'
+import { hashUtf8Content } from '../utils/content-hash.js'
 import { PROJECT_ROOT, resolvePath } from '../utils/path-utils.js'
 
 export const WriteItemSchema = z
@@ -16,6 +17,12 @@ export const WriteItemSchema = z
 			.optional()
 			.default(false)
 			.describe('Append content instead of overwriting.'),
+		expectedContentHash: z
+			.string()
+			.optional()
+			.describe(
+				'Optional SHA-256 of the current file content. When set for a non-append overwrite, a mismatch returns CONFLICT instead of silently clobbering stale content.',
+			),
 	})
 	.strict()
 
@@ -36,12 +43,16 @@ interface WriteResult {
 	success: boolean
 	operation?: 'written' | 'appended'
 	error?: string
+	code?: 'CONFLICT'
+	expectedContentHash?: string
+	actualContentHash?: string
 }
 
 export interface WriteContentDependencies {
 	writeFile: typeof fs.writeFile
+	readFile: typeof fs.readFile
 	mkdir: typeof fs.mkdir
-	stat: typeof fs.stat // Keep stat if needed for future checks, though not used now
+	stat: typeof fs.stat
 	appendFile: typeof fs.appendFile
 	resolvePath: typeof resolvePath
 	PROJECT_ROOT: string
@@ -110,13 +121,35 @@ async function processSingleWriteOperation(
 			await deps.mkdir(targetDir, { recursive: true })
 		}
 
+		if (!append && file.expectedContentHash) {
+			try {
+				const current = await deps.readFile(targetPath, 'utf-8')
+				const actualContentHash = hashUtf8Content(current)
+				if (actualContentHash !== file.expectedContentHash) {
+					return {
+						path: pathOutput,
+						success: false,
+						code: 'CONFLICT',
+						error: 'File content hash does not match expectedContentHash.',
+						expectedContentHash: file.expectedContentHash,
+						actualContentHash,
+					}
+				}
+			} catch (error: unknown) {
+				const code = (error as NodeJS.ErrnoException | undefined)?.code
+				if (code !== 'ENOENT') {
+					return handleWriteError(error, relativePath, pathOutput, append)
+				}
+			}
+		}
+
 		if (append) {
 			await deps.appendFile(targetPath, content, 'utf-8')
 			return { path: pathOutput, success: true, operation: 'appended' }
-		} else {
-			await deps.writeFile(targetPath, content, 'utf-8')
-			return { path: pathOutput, success: true, operation: 'written' }
 		}
+
+		await deps.writeFile(targetPath, content, 'utf-8')
+		return { path: pathOutput, success: true, operation: 'written' }
 	} catch (error: unknown) {
 		return handleWriteError(error, relativePath, pathOutput, append)
 	}
@@ -179,6 +212,7 @@ export const writeContentToolDefinition = {
 	handler: (args: unknown): Promise<McpToolResponse> => {
 		const deps: WriteContentDependencies = {
 			writeFile: fs.writeFile,
+			readFile: fs.readFile,
 			mkdir: fs.mkdir,
 			stat: fs.stat,
 			appendFile: fs.appendFile,

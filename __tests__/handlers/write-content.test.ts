@@ -23,6 +23,7 @@ let tempRootDir: string
 describe('handleWriteContent Integration Tests', () => {
 	let mockDependencies: WriteContentDependencies
 	let mockWriteFile: Mock
+	let mockReadFile: Mock
 	let mockAppendFile: Mock
 	let mockMkdir: Mock
 	let mockStat: Mock
@@ -33,12 +34,14 @@ describe('handleWriteContent Integration Tests', () => {
 		const actualFsPromises = fsModule.promises
 
 		mockWriteFile = vi.fn().mockImplementation(actualFsPromises.writeFile)
+		mockReadFile = vi.fn().mockImplementation(actualFsPromises.readFile)
 		mockAppendFile = vi.fn().mockImplementation(actualFsPromises.appendFile)
 		mockMkdir = vi.fn().mockImplementation(actualFsPromises.mkdir)
 		mockStat = vi.fn().mockImplementation(actualFsPromises.stat)
 
 		mockDependencies = {
 			writeFile: mockWriteFile,
+			readFile: mockReadFile,
 			mkdir: mockMkdir,
 			stat: mockStat,
 			appendFile: mockAppendFile,
@@ -302,5 +305,28 @@ describe('handleWriteContent Integration Tests', () => {
 		expect(badResult?.error).toMatch(/Failed to write file: Internal processing failed unexpectedly/) // Include prefix
 
 		mockWriteFile.mockRestore() // Restore the mock
+	})
+
+	it('returns CONFLICT when expectedContentHash does not match the current file', async () => {
+		const request = {
+			items: [
+				{
+					path: 'existingFile.txt',
+					content: 'Replacement content',
+					expectedContentHash: '0000000000000000000000000000000000000000000000000000000000000000',
+				},
+			],
+		}
+		const rawResult = await handleWriteContentFunc(mockDependencies, request)
+		const result = JSON.parse(rawResult.content[0].text)
+
+		expect(result).toHaveLength(1)
+		expect(result[0]).toMatchObject({
+			path: 'existingFile.txt',
+			success: false,
+			code: 'CONFLICT',
+		})
+		expect(result[0].actualContentHash).toHaveLength(64)
+		expect(mockWriteFile).not.toHaveBeenCalled()
 	})
 }) // End of describe block

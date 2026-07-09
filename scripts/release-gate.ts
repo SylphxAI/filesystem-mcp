@@ -91,6 +91,15 @@ export function buildReleaseGateReport(artifactDir: string): ReleaseGateReport {
 		{ caseCount: manifest.cases.length },
 	)
 
+	addCheck(
+		checks,
+		'fixtures:safety_tree',
+		fileExists('test/fixtures/safety/root/hidden/.secret') &&
+			fileExists('test/fixtures/safety/root/binary/tiny.bin') &&
+			fileExists('test/fixtures/safety/root/oversized/large.bin'),
+		'Checked-in safety fixture tree includes hidden, binary, and oversized files',
+	)
+
 	for (const caseId of [
 		'root-traversal',
 		'sibling-prefix',
