@@ -16,6 +16,7 @@ export default defineConfig({
 
 		nav: [
 			{ text: 'Guide', link: '/guide/introduction' },
+			{ text: 'Benchmarks', link: '/benchmark' },
 			{ text: 'API Reference', link: '/api/' }, // Link to future API docs
 			{
 				text: 'Changelog',
@@ -29,7 +30,7 @@ export default defineConfig({
 					text: 'Guide',
 					items: [
 						{ text: 'Introduction', link: '/guide/introduction' },
-						// Add more guide pages later (e.g., installation, usage)
+						{ text: 'Benchmarks', link: '/benchmark' },
 					],
 				},
 			],
