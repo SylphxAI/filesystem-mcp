@@ -95,7 +95,15 @@ export function buildReleaseGateReport(artifactDir: string): ReleaseGateReport {
 		checks,
 		'rust:mcp_server',
 		fileExists('crates/filesystem-mcp-server/src/lib.rs'),
-		'Rust-native MCP transport (rmcp) is present instead of a TypeScript MCP adapter',
+		'Opt-in Rust MCP transport preview (rmcp) is present for Phase 4 evaluation',
+	)
+
+	const binWrapper = readFileSync(path.join(repoRoot, 'bin/filesystem-mcp'), 'utf8')
+	addCheck(
+		checks,
+		'mcp:ts_adapter_default',
+		binWrapper.includes('dist/index.js') && binWrapper.includes('exec node'),
+		'Default npm bin launches the TypeScript MCP adapter; Rust rmcp is opt-in only',
 	)
 
 	const rustCli = path.join(repoRoot, 'target/release/filesystem-cli')
