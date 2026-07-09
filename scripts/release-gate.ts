@@ -99,7 +99,7 @@ export function buildReleaseGateReport(artifactDir: string): ReleaseGateReport {
 	)
 
 	const binWrapper = readFileSync(path.join(repoRoot, 'bin/filesystem-mcp'), 'utf8')
-	const cliBridge = readFileSync(
+	const _cliBridge = readFileSync(
 		path.join(repoRoot, 'crates/filesystem-mcp-server/src/cli_bridge.rs'),
 		'utf8',
 	)

@@ -1,8 +1,8 @@
 import { execSync } from 'node:child_process'
+import { promises as fsPromises } from 'node:fs'
 import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { handleListFilesFunc } from '../../src/handlers/list-files.js'
-import { promises as fsPromises } from 'node:fs'
 
 const repoRoot = path.resolve(import.meta.dirname, '../..')
 

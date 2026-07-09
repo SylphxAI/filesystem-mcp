@@ -9,11 +9,11 @@ const repoRoot = path.resolve(import.meta.dirname, '../..')
 describe('rust policy engine boundary', () => {
 	beforeAll(() => {
 		execSync('cargo build --release -q', { cwd: repoRoot, stdio: 'pipe' })
-		process.env['FILESYSTEM_USE_RUST_POLICY'] = '1'
+		process.env.FILESYSTEM_USE_RUST_POLICY = '1'
 	})
 
 	afterAll(() => {
-		delete process.env['FILESYSTEM_USE_RUST_POLICY']
+		delete process.env.FILESYSTEM_USE_RUST_POLICY
 	})
 
 	it('resolves an existing file through the Rust CLI policy engine', async () => {

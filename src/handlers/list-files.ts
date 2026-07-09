@@ -6,8 +6,8 @@ import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js'
 import type { GlobOptions, Path as GlobPath } from 'glob'
 import { glob as globFn } from 'glob'
 import { z } from 'zod'
-import type { McpToolResponse } from '../types/mcp-types.js'
 import { listFilesViaRustEngine, shouldUseRustWalkEngine } from '../engine/rust-walk.js'
+import type { McpToolResponse } from '../types/mcp-types.js'
 import {
 	PROJECT_ROOT as projectRootUtil,
 	resolvePath as resolvePathUtil,

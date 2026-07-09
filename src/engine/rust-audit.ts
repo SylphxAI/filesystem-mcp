@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { resolveRustCliBinary } from './rust-policy.js'
 
 export type RollbackMetadata = {

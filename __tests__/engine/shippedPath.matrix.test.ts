@@ -45,10 +45,7 @@ describe('shipped path matrix (Rust core, no legacy flags)', () => {
 		const probeDir = mkdtempSync(path.join(os.tmpdir(), 'filesystem-matrix-probe-'))
 		nodeInvokeLog = path.join(probeDir, 'node-invoke.log')
 		const fakeNode = path.join(probeDir, 'node')
-		writeFileSync(
-			fakeNode,
-			`#!/usr/bin/env bash\nprintf '%s\\n' "$@" >> "${nodeInvokeLog}"\nexit 99\n`,
-		)
+		writeFileSync(fakeNode, `#!/usr/bin/env bash\nprintf '%s\\n' "$@" >> "${nodeInvokeLog}"\nexit 99\n`)
 		chmodSync(fakeNode, 0o755)
 
 		matrixDir = mkdtempSync(path.join(repoRoot, 'temp-shipped-matrix-'))
@@ -81,11 +78,7 @@ describe('shipped path matrix (Rust core, no legacy flags)', () => {
 
 	it('search_files routes through filesystem-core without legacy runtime', () => {
 		const relative = path.relative(repoRoot, matrixDir)
-		const envelope = invokeCli(
-			'search_files',
-			{ root: repoRoot, path: relative, regex: 'matrix-probe' },
-			fakeNodeEnv,
-		)
+		const envelope = invokeCli('search_files', { root: repoRoot, path: relative, regex: 'matrix-probe' }, fakeNodeEnv)
 		expect(envelope.status).toBe('ok')
 		expect(envelope.engine).toBe('filesystem-core')
 		expect((envelope.results ?? []).length).toBeGreaterThan(0)
@@ -100,11 +93,7 @@ describe('shipped path matrix (Rust core, no legacy flags)', () => {
 	})
 
 	it('resolve_path returns root-scoped absolute path', () => {
-		const envelope = invokeCli(
-			'resolve_path',
-			{ root: repoRoot, relative_path: 'package.json' },
-			fakeNodeEnv,
-		)
+		const envelope = invokeCli('resolve_path', { root: repoRoot, relative_path: 'package.json' }, fakeNodeEnv)
 		expect(envelope.status).toBe('ok')
 		expect(envelope.resolved_path).toContain('package.json')
 		expect(existsSync(nodeInvokeLog)).toBe(false)
@@ -112,11 +101,7 @@ describe('shipped path matrix (Rust core, no legacy flags)', () => {
 
 	it('default MCP list_files shape works without explicit root (cwd default)', () => {
 		const relative = path.relative(repoRoot, matrixDir)
-		const envelope = invokeCli(
-			'list_files',
-			{ path: relative, recursive: false },
-			fakeNodeEnv,
-		)
+		const envelope = invokeCli('list_files', { path: relative, recursive: false }, fakeNodeEnv)
 		expect(envelope.status).toBe('ok')
 		expect(envelope.engine).toBe('filesystem-core')
 		expect(existsSync(nodeInvokeLog)).toBe(false)
@@ -124,11 +109,7 @@ describe('shipped path matrix (Rust core, no legacy flags)', () => {
 
 	it('read_content routes through filesystem-core without legacy runtime', () => {
 		const relative = path.relative(repoRoot, path.join(matrixDir, 'probe.txt'))
-		const envelope = invokeCli(
-			'read_content',
-			{ root: repoRoot, paths: [relative] },
-			fakeNodeEnv,
-		)
+		const envelope = invokeCli('read_content', { root: repoRoot, paths: [relative] }, fakeNodeEnv)
 		expect(envelope.status).toBe('ok')
 		expect(envelope.engine).toBe('filesystem-core')
 		expect(envelope.tool).toBe('read_content')
@@ -162,11 +143,7 @@ describe('shipped path matrix (Rust core, no legacy flags)', () => {
 
 	it('stat_items routes through filesystem-core without legacy runtime', () => {
 		const relative = path.relative(repoRoot, path.join(matrixDir, 'probe.txt'))
-		const envelope = invokeCli(
-			'stat_items',
-			{ root: repoRoot, paths: [relative] },
-			fakeNodeEnv,
-		)
+		const envelope = invokeCli('stat_items', { root: repoRoot, paths: [relative] }, fakeNodeEnv)
 		expect(envelope.status).toBe('ok')
 		expect(envelope.engine).toBe('filesystem-core')
 		expect(envelope.tool).toBe('stat_items')
@@ -178,10 +155,7 @@ describe('shipped path matrix (Rust core, no legacy flags)', () => {
 	})
 
 	it('documents explicit shipped routing table in mcp-server sources', () => {
-		const routes = readFileSync(
-			path.join(repoRoot, 'crates/filesystem-mcp-server/src/tool_routes.rs'),
-			'utf8',
-		)
+		const routes = readFileSync(path.join(repoRoot, 'crates/filesystem-mcp-server/src/tool_routes.rs'), 'utf8')
 		expect(routes).toContain('list_files')
 		expect(routes).toContain('read_content')
 		expect(routes).toContain('RustCore')

@@ -1,10 +1,10 @@
+import { execSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
-import { execSync } from 'node:child_process'
-import { handleApplyDiff } from '../../src/handlers/apply-diff.js'
 import { hashContent } from '../../src/engine/rust-audit.js'
+import { handleApplyDiff } from '../../src/handlers/apply-diff.js'
 
 const repoRoot = path.resolve(import.meta.dirname, '../..')
 

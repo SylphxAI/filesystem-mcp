@@ -53,9 +53,7 @@ describe('Rust audit engine boundary', () => {
 		expect(recorded.operationId.startsWith('op_')).toBe(true)
 		expect(existsSync(recorded.ledgerPath)).toBe(true)
 		expect(recorded.records[0]?.rollback?.available).toBe(true)
-		expect(recorded.records[0]?.rollback?.snapshot_path).toContain(
-			'.filesystem-mcp/rollback/',
-		)
+		expect(recorded.records[0]?.rollback?.snapshot_path).toContain('.filesystem-mcp/rollback/')
 		expect(recorded.records[0]?.rollback?.restore_content_hash).toBe(beforeHash)
 
 		const ledger = readFileSync(recorded.ledgerPath, 'utf8').trim().split('\n')

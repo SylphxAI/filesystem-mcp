@@ -1,5 +1,5 @@
-import type { ApplyDiffOutput, DiffApplyResult } from '../schemas/apply-diff-schema.js'
 import { hashContent, recordWriteAudit, shouldUseRustAuditEngine } from '../engine/rust-audit.js'
+import type { ApplyDiffOutput, DiffApplyResult } from '../schemas/apply-diff-schema.js'
 import { applyDiffsToFileContent } from '../utils/apply-diff-utils.js'
 import { formatFileProcessingError } from '../utils/error-utils.js'
 import type { FileSystemDependencies } from './common.js'
@@ -114,8 +114,10 @@ export async function handleApplyDiff(
 					success: false,
 					before_hash: beforeHash,
 					diff_count: diffs.length,
-					error: 'Content hash conflict: file changed since the caller recorded expected_content_hash.',
-					context: 'Re-read the file and retry with the current hash or without expected_content_hash.',
+					error:
+						'Content hash conflict: file changed since the caller recorded expected_content_hash.',
+					context:
+						'Re-read the file and retry with the current hash or without expected_content_hash.',
 				})
 				auditRecords.push({
 					path: filePath,
@@ -181,9 +183,7 @@ export async function handleApplyDiff(
 					afterHash: record.after_hash,
 					diffCount: record.diff_count,
 					success: record.success,
-					...(record.before_content !== undefined
-						? { beforeContent: record.before_content }
-						: {}),
+					...(record.before_content !== undefined ? { beforeContent: record.before_content } : {}),
 				})),
 			)
 			operationId = recorded.operationId

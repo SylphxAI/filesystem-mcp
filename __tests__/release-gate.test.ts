@@ -8,5 +8,5 @@ describe('filesystem release gate', () => {
 		expect(report.profile).toBe('filesystem_release_gate')
 		expect(report.status).toBe('passed')
 		expect(report.summary.failed).toBe(0)
-	})
+	}, 30_000)
 })

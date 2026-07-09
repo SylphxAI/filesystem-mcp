@@ -1,7 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs'
 import { execSync, spawnSync } from 'node:child_process'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
-import { describe, expect, it, beforeAll } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 
 const repoRoot = path.resolve(import.meta.dirname, '../..')
 const rustServerBin = path.join(repoRoot, 'target/release/filesystem-mcp-server')

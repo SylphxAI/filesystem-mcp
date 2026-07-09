@@ -301,7 +301,8 @@ async function processAllFilesReplacement(
 				relativePath,
 				operations,
 				deps,
-				expectedContentHashes?.[relativePath] ?? expectedContentHashes?.[relativePath.replaceAll('\\', '/')],
+				expectedContentHashes?.[relativePath] ??
+					expectedContentHashes?.[relativePath.replaceAll('\\', '/')],
 			),
 		),
 	)

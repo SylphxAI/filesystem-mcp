@@ -129,7 +129,7 @@ interface MoveOperationParams {
 
 /** Validates move operation parameters. */
 function validateMoveOperation(op: MoveOperation | undefined): MoveResult | undefined {
-	if (!op || !op.source || !op.destination) {
+	if (!op?.source || !op.destination) {
 		const sourceOutput = op?.source?.replaceAll('\\', '/') || 'undefined'
 		const destOutput = op?.destination?.replaceAll('\\', '/') || 'undefined'
 		return {

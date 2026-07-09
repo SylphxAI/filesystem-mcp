@@ -8,11 +8,11 @@ const repoRoot = path.resolve(import.meta.dirname, '../..')
 describe('rust search engine boundary', () => {
 	beforeAll(() => {
 		execSync('cargo build --release -q', { cwd: repoRoot, stdio: 'pipe' })
-		process.env['FILESYSTEM_USE_RUST_SEARCH'] = '1'
+		process.env.FILESYSTEM_USE_RUST_SEARCH = '1'
 	})
 
 	afterAll(() => {
-		delete process.env['FILESYSTEM_USE_RUST_SEARCH']
+		delete process.env.FILESYSTEM_USE_RUST_SEARCH
 	})
 
 	it('delegates search_files to the Rust CLI and returns structured matches', async () => {
@@ -33,8 +33,6 @@ describe('rust search engine boundary', () => {
 		)
 
 		const results = response.data?.results ?? []
-		expect(results.some((entry) => entry.type === 'match' && entry.file === 'package.json')).toBe(
-			true,
-		)
+		expect(results.some((entry) => entry.type === 'match' && entry.file === 'package.json')).toBe(true)
 	})
 })
