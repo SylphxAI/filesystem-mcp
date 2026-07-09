@@ -162,12 +162,22 @@ bun run test
 | `chmod_items` | Change POSIX permissions |
 | `chown_items` | Change ownership |
 
-## Performance benchmarks
+## Release proof
 
-Reproduce local throughput measurements:
+Claims are backed by CI `benchmark:release-gate`, safety fixture corpus, and the shipped-path matrix (Rust-default primary tools).
 
 ```bash
-bun run benchmark
+bun run benchmark:release-gate
+```
+
+Artifact: `benchmark-artifacts/filesystem_release_gate.json` — must report `status: passed` before release.
+
+## Performance benchmarks
+
+Reproduce local throughput on the **shipped Rust CLI path**:
+
+```bash
+bunx vitest bench __tests__/benchmarks/throughput.bench.ts --run
 ```
 
 See [docs/benchmark.md](docs/benchmark.md) for scenarios, design goals, and how to interpret results.

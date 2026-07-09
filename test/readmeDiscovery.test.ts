@@ -14,6 +14,8 @@ describe('README discovery surfaces', () => {
 		expect(readme).toContain('glama.ai/mcp/servers/@sylphx/filesystem-mcp')
 		expect(readme).toContain('read_content')
 		expect(readme).toContain('docs/benchmark.md')
+		expect(readme).toContain('## Release proof')
+		expect(readme).toContain('benchmark:release-gate')
 		expect(readme).not.toContain('- [ ] Performance benchmarks')
 	})
 
