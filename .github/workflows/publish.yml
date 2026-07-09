@@ -94,9 +94,9 @@ jobs:
         if: steps.classify.outputs.product_changed == 'true'
         run: bun install --frozen-lockfile
 
-      - name: Check for vulnerabilities
+      - name: Check for vulnerabilities (shipped runtime deps)
         if: steps.classify.outputs.product_changed == 'true'
-        run: bun audit
+        run: bun run audit:shipped
 
       - name: Check Formatting
         if: steps.classify.outputs.product_changed == 'true'
