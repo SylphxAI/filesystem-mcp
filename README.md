@@ -16,6 +16,7 @@ project-root confinement without shell spawn overhead.
 
 [⭐ Star this repo](https://github.com/SylphxAI/filesystem-mcp) if agents should read and edit your codebase safely — not spawn shells per file.
 · [Quick start](#quick-start) · [See it work](#see-it-work) · [Why not shell commands?](#why-not-shell-commands)
+· [Roadmap](docs/roadmap/sota-family-roadmap.md)
 
 <a href="https://glama.ai/mcp/servers/@sylphx/filesystem-mcp">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/@sylphx/filesystem-mcp/badge" alt="Filesystem MCP Server" />
