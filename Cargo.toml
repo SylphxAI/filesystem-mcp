@@ -1,5 +1,9 @@
 [workspace]
-members = ["crates/filesystem-core", "crates/filesystem-cli"]
+members = [
+    "crates/filesystem-core",
+    "crates/filesystem-cli",
+    "crates/filesystem-mcp-server",
+]
 resolver = "2"
 
 [workspace.package]

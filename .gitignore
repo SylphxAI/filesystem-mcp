@@ -33,3 +33,4 @@ yarn-error.log*
 test-report.junit.xml
 benchmark-artifacts/*.json
 target/
+.filesystem-mcp/

@@ -91,6 +91,13 @@ export function buildReleaseGateReport(artifactDir: string): ReleaseGateReport {
 		'Rust filesystem-core write audit ledger module is present',
 	)
 
+	addCheck(
+		checks,
+		'rust:mcp_server',
+		fileExists('crates/filesystem-mcp-server/src/lib.rs'),
+		'Rust-native MCP transport (rmcp) is present instead of a TypeScript MCP adapter',
+	)
+
 	const rustCli = path.join(repoRoot, 'target/release/filesystem-cli')
 	const hashProbe = existsSync(rustCli)
 		? spawnSync(rustCli, [], {

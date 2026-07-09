@@ -7,7 +7,7 @@
 	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"bin": {
-		"filesystem-mcp": "./dist/index.js"
+		"filesystem-mcp": "./bin/filesystem-mcp"
 	},
 	"exports": {
 		".": {
@@ -17,6 +17,7 @@
 		"./package.json": "./package.json"
 	},
 	"files": [
+		"bin/",
 		"dist/",
 		"README.md",
 		"LICENSE"
@@ -25,7 +26,8 @@
 		"node": "22.14"
 	},
 	"scripts": {
-		"build": "bunup",
+		"build": "bunx bunup && bun build src/engine-invoke.ts --outdir dist --target node",
+		"build:rust": "cargo build --release -p filesystem-core -p filesystem-cli -p filesystem-mcp-server",
 		"watch": "tsc --watch",
 		"inspector": "npx @modelcontextprotocol/inspector dist/index.js",
 		"test": "vitest run",
