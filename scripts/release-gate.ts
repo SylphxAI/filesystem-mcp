@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { runDoctor } from '../src/doctor.js'
@@ -81,6 +82,32 @@ export function buildReleaseGateReport(artifactDir: string): ReleaseGateReport {
 		'rust:walk_engine',
 		fileExists('crates/filesystem-core/src/walk.rs'),
 		'Rust filesystem-core directory walk engine module is present',
+	)
+
+	addCheck(
+		checks,
+		'rust:audit_engine',
+		fileExists('crates/filesystem-core/src/audit.rs'),
+		'Rust filesystem-core write audit ledger module is present',
+	)
+
+	const rustCli = path.join(repoRoot, 'target/release/filesystem-cli')
+	const hashProbe = existsSync(rustCli)
+		? spawnSync(rustCli, [], {
+				input: JSON.stringify({ tool: 'content_hash', input: { content: 'audit-probe' } }),
+				encoding: 'utf8',
+			})
+		: null
+	const hashEnvelope =
+		hashProbe && hashProbe.status === 0
+			? (JSON.parse(hashProbe.stdout) as { status?: string; hash?: string })
+			: undefined
+	addCheck(
+		checks,
+		'boundary:rust_content_hash',
+		hashEnvelope?.status === 'ok' && (hashEnvelope.hash?.length ?? 0) === 64,
+		'Rust CLI content_hash returns a deterministic SHA-256 digest',
+		{ hashLength: hashEnvelope?.hash?.length ?? 0 },
 	)
 
 	addCheck(

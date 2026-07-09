@@ -1,7 +1,10 @@
 //! Root-scoped filesystem path policy and search engine.
 
+pub mod audit;
 pub mod search;
 pub mod walk;
+
+pub use audit::{append_audit_batch, content_hash, generate_operation_id, WriteAuditFileRecord};
 
 use std::path::{Component, Path, PathBuf};
 

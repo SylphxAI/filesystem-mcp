@@ -1,6 +1,9 @@
+use filesystem_core::audit::WriteAuditFileRecord;
 use filesystem_core::search::SearchMatch;
 use filesystem_core::walk::{ListEntry, ListFilesMetrics};
-use filesystem_core::{resolve_path, PolicyErrorCode, ENGINE_NAME, ENGINE_VERSION};
+use filesystem_core::{
+    append_audit_batch, content_hash, resolve_path, PolicyErrorCode, ENGINE_NAME, ENGINE_VERSION,
+};
 use serde::{Deserialize, Serialize};
 use std::io::{self, Read};
 use std::path::PathBuf;
@@ -50,6 +53,24 @@ struct ListFilesSuccessEnvelope {
     version: &'static str,
     entries: Vec<ListEntry>,
     metrics: ListFilesMetrics,
+}
+
+#[derive(Debug, Serialize)]
+struct ContentHashSuccessEnvelope {
+    status: &'static str,
+    engine: &'static str,
+    version: &'static str,
+    hash: String,
+}
+
+#[derive(Debug, Serialize)]
+struct AuditSuccessEnvelope {
+    status: &'static str,
+    engine: &'static str,
+    version: &'static str,
+    operation_id: String,
+    ledger_path: String,
+    record_count: usize,
 }
 
 #[derive(Debug, Serialize)]
@@ -181,6 +202,70 @@ fn handle_search_files(input: &serde_json::Value) -> Result<SearchSuccessEnvelop
     }
 }
 
+fn handle_content_hash(input: &serde_json::Value) -> Result<ContentHashSuccessEnvelope, ErrorEnvelope> {
+    let content = input
+        .get("content")
+        .and_then(|value| value.as_str())
+        .ok_or_else(|| ErrorEnvelope {
+            status: "error",
+            code: "INVALID_PARAMS".into(),
+            message: "content is required".into(),
+            next_action: "Pass the file content string to hash.".into(),
+        })?;
+
+    Ok(ContentHashSuccessEnvelope {
+        status: "ok",
+        engine: ENGINE_NAME,
+        version: ENGINE_VERSION,
+        hash: content_hash(content),
+    })
+}
+
+fn handle_record_write_audit(input: &serde_json::Value) -> Result<AuditSuccessEnvelope, ErrorEnvelope> {
+    let root = input
+        .get("root")
+        .and_then(|value| value.as_str())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+
+    let tool = input
+        .get("tool")
+        .and_then(|value| value.as_str())
+        .unwrap_or("apply_diff");
+
+    let records_value = input.get("records").ok_or_else(|| ErrorEnvelope {
+        status: "error",
+        code: "INVALID_PARAMS".into(),
+        message: "records is required".into(),
+        next_action: "Pass an array of write audit file records.".into(),
+    })?;
+
+    let records: Vec<WriteAuditFileRecord> =
+        serde_json::from_value(records_value.clone()).map_err(|error| ErrorEnvelope {
+            status: "error",
+            code: "INVALID_PARAMS".into(),
+            message: format!("Invalid records payload: {error}"),
+            next_action: "Each record needs path, beforeHash, afterHash, diffCount, and success.".into(),
+        })?;
+
+    match append_audit_batch(&root, tool, &records) {
+        Ok((operation_id, ledger_path)) => Ok(AuditSuccessEnvelope {
+            status: "ok",
+            engine: ENGINE_NAME,
+            version: ENGINE_VERSION,
+            operation_id,
+            ledger_path: ledger_path.to_string_lossy().into_owned(),
+            record_count: records.len(),
+        }),
+        Err(message) => Err(ErrorEnvelope {
+            status: "error",
+            code: "AUDIT_FAILED".into(),
+            message,
+            next_action: "Ensure the project root is writable and records are non-empty.".into(),
+        }),
+    }
+}
+
 fn handle_resolve_path(input: &serde_json::Value) -> Result<SuccessEnvelope, ErrorEnvelope> {
     let relative_path = input
         .get("relative_path")
@@ -248,11 +333,19 @@ fn main() {
             Ok(success) => serde_json::to_string(&success).expect("serialize"),
             Err(error) => serde_json::to_string(&error).expect("serialize"),
         },
+        "content_hash" => match handle_content_hash(&request.input) {
+            Ok(success) => serde_json::to_string(&success).expect("serialize"),
+            Err(error) => serde_json::to_string(&error).expect("serialize"),
+        },
+        "record_write_audit" => match handle_record_write_audit(&request.input) {
+            Ok(success) => serde_json::to_string(&success).expect("serialize"),
+            Err(error) => serde_json::to_string(&error).expect("serialize"),
+        },
         other => serde_json::to_string(&ErrorEnvelope {
             status: "error",
             code: "UNSUPPORTED_TOOL".into(),
             message: format!("Unsupported tool: {other}"),
-            next_action: "Use resolve_path, search_files, or list_files.".into(),
+            next_action: "Use resolve_path, search_files, list_files, content_hash, or record_write_audit.".into(),
         })
         .expect("serialize"),
     };

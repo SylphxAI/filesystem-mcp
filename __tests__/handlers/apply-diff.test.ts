@@ -14,6 +14,9 @@ describe('applyDiff Handler', () => {
 
 	beforeEach(() => {
 		vi.resetAllMocks()
+		process.env.FILESYSTEM_USE_RUST_AUDIT = '0'
+		mockDeps.readFile.mockResolvedValue('')
+		mockDeps.writeFile.mockResolvedValue(undefined)
 	})
 
 	describe('handleApplyDiffInternal', () => {

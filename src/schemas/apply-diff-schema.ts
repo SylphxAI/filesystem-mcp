@@ -40,6 +40,12 @@ const refinedDiffBlockSchema = diffBlockSchema.refine(
 // Schema for changes to a single file
 const fileDiffSchema = z.object({
 	path: z.string().min(1).describe('Relative path to the file to modify.'),
+	expected_content_hash: z
+		.string()
+		.min(64)
+		.max(64)
+		.optional()
+		.describe('Optional SHA-256 of the current file content for conflict detection.'),
 	diffs: z
 		.array(refinedDiffBlockSchema)
 		.min(1)
@@ -82,9 +88,21 @@ export const diffResultSchema = z.object({
 export type DiffResult = z.infer<typeof diffResultSchema>
 
 // Define potential output structure
+const writeAuditRecordSchema = z.object({
+	path: z.string(),
+	before_hash: z.string(),
+	after_hash: z.string(),
+	diff_count: z.number().int().min(0),
+	success: z.boolean(),
+})
+
 const diffApplyResultSchema = z.object({
 	path: z.string(),
 	success: z.boolean(),
+	operation_id: z.string().optional(),
+	before_hash: z.string().optional(),
+	after_hash: z.string().optional(),
+	diff_count: z.number().int().min(0).optional(),
 	error: z.string().optional().describe('Detailed error message if success is false.'),
 	context: z.string().optional().describe('Lines around the error location if success is false.'),
 	diffResults: z.array(diffResultSchema).optional(),
@@ -92,6 +110,13 @@ const diffApplyResultSchema = z.object({
 
 export const applyDiffOutputSchema = z.object({
 	success: z.boolean().describe('True if all operations succeeded.'),
+	operation_id: z.string().optional().describe('Batch operation id recorded in the audit ledger.'),
+	audit: z
+		.object({
+			ledger_path: z.string(),
+			records: z.array(writeAuditRecordSchema),
+		})
+		.optional(),
 	results: z.array(diffApplyResultSchema).describe('Results for each file processed.'),
 })
 

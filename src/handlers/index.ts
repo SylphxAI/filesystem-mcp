@@ -77,6 +77,8 @@ export const allToolDefinitions: HandlerToolDefinition[] = [
 						text: JSON.stringify(
 							{
 								success: result.success,
+								operation_id: result.operation_id,
+								audit: result.audit,
 								results: result.results,
 							},
 							undefined,
