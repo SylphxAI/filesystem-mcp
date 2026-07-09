@@ -55,7 +55,9 @@
 		"prepublishOnly": "bun run clean && bun run build && bun run build:rust",
 		"changeset": "changeset",
 		"changeset:version": "changeset version",
-		"changeset:publish": "changeset publish"
+		"changeset:publish": "changeset publish",
+		"version-packages": "changeset version",
+		"release": "bun run build && bun run build:rust && bun run benchmark:release-gate && changeset publish"
 	},
 	"homepage": "https://github.com/SylphxAI/filesystem-mcp#readme",
 	"repository": {
