@@ -94,6 +94,14 @@ jobs:
         if: steps.classify.outputs.product_changed == 'true'
         run: bun install --frozen-lockfile
 
+      - name: Set up Rust
+        if: steps.classify.outputs.product_changed == 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Rust core and MCP server
+        if: steps.classify.outputs.product_changed == 'true'
+        run: bun run build:rust
+
       - name: Check for vulnerabilities (shipped runtime deps)
         if: steps.classify.outputs.product_changed == 'true'
         run: bun run audit:shipped
@@ -109,6 +117,10 @@ jobs:
       - name: Run Tests and Check Coverage
         if: steps.classify.outputs.product_changed == 'true'
         run: bun run test:cov # Fails job if tests fail or coverage threshold not met
+
+      - name: Release gate
+        if: steps.classify.outputs.product_changed == 'true'
+        run: bun run benchmark:release-gate
 
       - name: Upload coverage to Codecov
         if: steps.classify.outputs.product_changed == 'true'
