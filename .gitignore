@@ -1,5 +1,7 @@
 node_modules/
 .bench-fixture-*/
+jest-temp-*/
+temp-test-*/
 build/
 *.log
 .env*

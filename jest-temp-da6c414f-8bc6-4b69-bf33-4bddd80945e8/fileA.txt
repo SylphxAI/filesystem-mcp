@@ -1,4 +1,0 @@
-Line 1: Hello world
-Line 2: Another line
-Line 3: Search term here
-Line 4: End of fileA

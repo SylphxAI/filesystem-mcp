@@ -8,7 +8,9 @@
 			"!**/build",
 			"!**/coverage",
 			"!**/docs/.vitepress/dist",
-			"!**/docs/.vitepress/cache"
+			"!**/docs/.vitepress/cache",
+			"!**/jest-temp-*",
+			"!**/temp-test-*"
 		]
 	}
 }
