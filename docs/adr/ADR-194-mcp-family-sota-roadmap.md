@@ -1,7 +1,7 @@
 # ADR-194: Adopt Filesystem MCP Family SOTA Roadmap
 
 Date: 2026-07-09
-Status: Proposed in PR #194
+Status: Accepted
 Slug: mcp-family-sota-roadmap
 
 ## Context
