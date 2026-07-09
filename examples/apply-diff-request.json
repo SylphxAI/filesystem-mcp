@@ -1,0 +1,16 @@
+{
+	"changes": [
+		{
+			"path": "src/example.ts",
+			"diffs": [
+				{
+					"search": "export const version = '1.0.0';",
+					"replace": "export const version = '1.0.1';",
+					"start_line": 1,
+					"end_line": 1,
+					"operation": "replace"
+				}
+			]
+		}
+	]
+}

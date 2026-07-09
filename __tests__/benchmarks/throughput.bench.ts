@@ -1,8 +1,8 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
-import { bench, describe, beforeAll, afterAll } from 'vitest'
-import { readContentToolDefinition } from '../../src/handlers/read-content.js'
+import { afterAll, beforeAll, bench, describe } from 'vitest'
 import { listFilesToolDefinition } from '../../src/handlers/list-files.js'
+import { readContentToolDefinition } from '../../src/handlers/read-content.js'
 import { searchFilesToolDefinition } from '../../src/handlers/search-files.js'
 import { PROJECT_ROOT } from '../../src/utils/path-utils.js'
 
@@ -17,11 +17,7 @@ beforeAll(async () => {
 	for (let index = 0; index < 10; index += 1) {
 		const fileName = `module-${index}.ts`
 		const absolutePath = join(fixtureRoot, fileName)
-		await writeFile(
-			absolutePath,
-			`export const value${index} = ${index};\n`.repeat(20),
-			'utf8',
-		)
+		await writeFile(absolutePath, `export const value${index} = ${index};\n`.repeat(20), 'utf8')
 		filePaths.push(`${fixturePrefix}/${fileName}`)
 	}
 })

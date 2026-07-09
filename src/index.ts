@@ -12,6 +12,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js'
 import type { ZodTypeAny } from 'zod' // Keep ZodTypeAny
 import { zodToJsonSchema } from 'zod-to-json-schema'
+import { formatDoctorReport, runDoctor } from './doctor.js'
 // Import the LOCAL McpRequest/McpResponse types defined in handlers/index.ts
 import type { ToolDefinition } from './handlers/index.js'
 // Import the aggregated tool definitions
@@ -21,6 +22,12 @@ import type {
 	McpRequest as LocalMcpRequest,
 	McpToolResponse as LocalMcpResponse,
 } from './types/mcp-types.js'
+
+if (process.argv[2] === 'doctor') {
+	const report = runDoctor('0.6.1')
+	console.log(formatDoctorReport(report))
+	process.exit(report.status === 'unavailable' ? 1 : 0)
+}
 
 // --- Server Setup ---
 

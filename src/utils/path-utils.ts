@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { ErrorCode, McpError as OriginalMcpError } from '@modelcontextprotocol/sdk/types.js'
+import { resolvePathViaRustEngine, shouldUseRustPolicyEngine } from '../engine/rust-policy.js'
 
 const McpError = OriginalMcpError
 
@@ -37,11 +38,17 @@ export async function resolvePath(relativePath: string, rootPath?: string): Prom
 	}
 
 	// Validate path format
-	if (path.isAbsolute(relativePath)) {
+	const looksLikeWindowsAbsolute = /^[A-Za-z]:[\\/]/.test(relativePath)
+	if (path.isAbsolute(relativePath) || looksLikeWindowsAbsolute) {
 		throw new McpError(ErrorCode.InvalidParams, `Absolute paths are not allowed: ${relativePath}`)
 	}
 
 	const root = rootPath || PROJECT_ROOT
+
+	if (shouldUseRustPolicyEngine()) {
+		return resolvePathViaRustEngine(relativePath, root)
+	}
+
 	const absolutePath = path.resolve(root, relativePath)
 
 	// Validate path traversal (initial check before symlink resolution).

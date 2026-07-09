@@ -1,0 +1,36 @@
+{
+	"profile": "filesystem_safety_fixture_corpus",
+	"description": "Phase 0 safety baseline fixtures for root confinement and policy regression tests.",
+	"cases": [
+		{
+			"id": "root-traversal",
+			"input": "../outside/secret.txt",
+			"expects": { "error": "Path traversal detected" }
+		},
+		{
+			"id": "sibling-prefix",
+			"input": "../override-secret/secret.txt",
+			"expects": { "error": "Path traversal detected" }
+		},
+		{
+			"id": "symlink-escape",
+			"fixture": "symlink-outside-root",
+			"expects": { "error": "Path traversal via symlink detected" }
+		},
+		{
+			"id": "hidden-file",
+			"fixture": "hidden/.secret",
+			"expects": { "allowed": true }
+		},
+		{
+			"id": "binary-file",
+			"fixture": "binary/tiny.bin",
+			"expects": { "allowed": true }
+		},
+		{
+			"id": "oversized-file",
+			"fixture": "oversized/large.bin",
+			"expects": { "policy": "size-limit-v1" }
+		}
+	]
+}

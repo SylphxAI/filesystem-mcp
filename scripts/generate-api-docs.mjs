@@ -3,7 +3,7 @@
  * Minimal API docs placeholder for VitePress build.
  * Full Typedoc generation can replace this when wired.
  */
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const apiDir = join(process.cwd(), 'docs', 'api')

@@ -19,8 +19,19 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust policy core tests
+        run: cargo test
+
       - name: Lint and typecheck
         run: bun run validate
+
+      - name: Rust policy boundary
+        run: bun run test:rust-policy
+
+      - name: Release gate
+        run: bun run benchmark:release-gate
 
       - name: Public surface audit (README discovery)
         run: bunx vitest run test/readmeDiscovery.test.ts

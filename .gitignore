@@ -31,3 +31,5 @@ yarn-error.log*
 
 # Test reports
 test-report.junit.xml
+benchmark-artifacts/*.json
+target/
