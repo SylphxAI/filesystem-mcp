@@ -71,6 +71,25 @@ describe('handleReplaceContent Error & Edge Scenarios', () => {
 		vi.restoreAllMocks() // Use restoreAllMocks to reset spies/mocks
 	})
 
+	it('returns CONFLICT when expectedContentHashes does not match the current file', async () => {
+		const request = {
+			paths: ['fileA.txt'],
+			operations: [{ search: 'world', replace: 'planet' }],
+			expectedContentHashes: {
+				'fileA.txt': '0000000000000000000000000000000000000000000000000000000000000000',
+			},
+		}
+		const rawResult = await handleReplaceContentInternal(request, mockDependencies)
+		const resultsArray = rawResult.data?.results as ReplaceResult[]
+		expect(resultsArray?.[0]).toMatchObject({
+			file: 'fileA.txt',
+			modified: false,
+			code: 'CONFLICT',
+		})
+		expect(resultsArray?.[0].actualContentHash).toHaveLength(64)
+		expect(mockWriteFile).not.toHaveBeenCalled()
+	})
+
 	it('should return error if path does not exist', async () => {
 		const request = {
 			paths: ['nonexistent.txt'],

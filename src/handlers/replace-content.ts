@@ -5,6 +5,7 @@ import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 // Import centralized types
 import type { McpToolResponse } from '../types/mcp-types.js'
+import { hashUtf8Content } from '../utils/content-hash.js'
 import { resolvePath } from '../utils/path-utils.js'
 import { escapeRegex } from '../utils/string-utils.js' // Import escapeRegex
 
@@ -29,6 +30,12 @@ export const ReplaceContentArgsSchema = z
 			.array(ReplaceOperationSchema)
 			.min(1, { message: 'Operations array cannot be empty' })
 			.describe('An array of search/replace operations to apply to each file.'),
+		expectedContentHashes: z
+			.record(z.string(), z.string())
+			.optional()
+			.describe(
+				'Optional map of relative path to SHA-256 content hash. When provided, a mismatch returns CONFLICT instead of silently editing stale files.',
+			),
 	})
 	.strict()
 
@@ -40,6 +47,9 @@ export interface ReplaceResult {
 	replacements: number
 	modified: boolean
 	error?: string
+	code?: 'CONFLICT'
+	expectedContentHash?: string
+	actualContentHash?: string
 }
 
 // --- Define Dependencies Interface ---
@@ -189,6 +199,7 @@ async function processSingleFileReplacement(
 	relativePath: string,
 	operations: ReplaceOperation[],
 	deps: ReplaceContentDeps,
+	expectedContentHash?: string,
 ): Promise<ReplaceResult> {
 	const pathOutput = relativePath.replaceAll('\\', '/')
 	let targetPath = ''
@@ -211,6 +222,20 @@ async function processSingleFileReplacement(
 		}
 
 		originalContent = await deps.readFile(targetPath, 'utf8')
+		if (expectedContentHash) {
+			const actualContentHash = hashUtf8Content(originalContent)
+			if (actualContentHash !== expectedContentHash) {
+				return {
+					file: pathOutput,
+					replacements: 0,
+					modified: false,
+					code: 'CONFLICT',
+					error: 'File content hash does not match expectedContentHashes entry.',
+					expectedContentHash,
+					actualContentHash,
+				}
+			}
+		}
 		fileContent = originalContent
 
 		for (const op of operations) {
@@ -267,11 +292,17 @@ async function processAllFilesReplacement(
 	relativePaths: string[],
 	operations: ReplaceOperation[],
 	deps: ReplaceContentDeps,
+	expectedContentHashes?: Record<string, string>,
 ): Promise<ReplaceResult[]> {
 	// No try-catch needed here as processSingleFileReplacement handles its errors
 	const settledResults = await Promise.allSettled(
 		relativePaths.map((relativePath) =>
-			processSingleFileReplacement(relativePath, operations, deps),
+			processSingleFileReplacement(
+				relativePath,
+				operations,
+				deps,
+				expectedContentHashes?.[relativePath] ?? expectedContentHashes?.[relativePath.replaceAll('\\', '/')],
+			),
 		),
 	)
 	const fileProcessingResults = processSettledReplaceResults(settledResults, relativePaths)
@@ -295,9 +326,14 @@ export const handleReplaceContentInternal = async (
 	deps: ReplaceContentDeps,
 ): Promise<McpToolResponse> => {
 	// Specify output type
-	const { paths: relativePaths, operations } = parseAndValidateArgs(args)
+	const { paths: relativePaths, operations, expectedContentHashes } = parseAndValidateArgs(args)
 
-	const finalResults = await processAllFilesReplacement(relativePaths, operations, deps)
+	const finalResults = await processAllFilesReplacement(
+		relativePaths,
+		operations,
+		deps,
+		expectedContentHashes,
+	)
 
 	// Return results in McpToolResponse format
 	return {
