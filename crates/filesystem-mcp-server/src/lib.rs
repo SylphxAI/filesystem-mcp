@@ -1,4 +1,5 @@
 pub mod cli_bridge;
+pub mod tool_routes;
 
 use rmcp::{
     handler::server::router::tool::ToolRouter,

@@ -50,10 +50,32 @@ pub fn resolve_legacy_runtime_script() -> Option<PathBuf> {
     None
 }
 
+pub fn legacy_engine_allowed() -> bool {
+    std::env::var("FILESYSTEM_ALLOW_LEGACY_ENGINE")
+        .ok()
+        .as_deref()
+        == Some("1")
+}
+
 pub fn handle_legacy_mcp_tool(
     tool: &str,
     input: &Value,
 ) -> Result<LegacyToolSuccessEnvelope, ErrorEnvelope> {
+    if !legacy_engine_allowed() {
+        return Err(ErrorEnvelope {
+            status: "error",
+            code: "LEGACY_ENGINE_DISABLED".into(),
+            message: format!(
+                "Legacy TypeScript engine runtime is disabled for tool '{tool}'. \
+                 Use the Rust engine path or set FILESYSTEM_ALLOW_LEGACY_ENGINE=1."
+            ),
+            next_action:
+                "Use Rust-routed tools (list_files, search_files, resolve_path, content_hash) \
+                 or export FILESYSTEM_ALLOW_LEGACY_ENGINE=1."
+                    .into(),
+        });
+    }
+
     let script = resolve_legacy_runtime_script().ok_or_else(|| ErrorEnvelope {
         status: "error",
         code: "LEGACY_RUNTIME_UNAVAILABLE".into(),
@@ -139,8 +161,8 @@ pub fn handle_legacy_mcp_tool(
 
 pub fn is_native_rust_engine_request(tool: &str, input: &Value) -> bool {
     match tool {
-        "list_files" => input.get("root").is_some(),
-        "search_files" => input.get("root").is_some() && input.get("regex").is_some(),
+        "list_files" => true,
+        "search_files" => input.get("regex").and_then(Value::as_str).is_some_and(|value| !value.is_empty()),
         "resolve_path" | "content_hash" | "record_write_audit" => true,
         _ => false,
     }

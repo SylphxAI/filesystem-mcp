@@ -111,11 +111,27 @@ export function buildReleaseGateReport(artifactDir: string): ReleaseGateReport {
 			binWrapper.includes('use_ts_transport'),
 		'Default npm bin launches the Rust rmcp MCP server; TypeScript adapter is opt-in only',
 	)
+	const matrixProbe = spawnSync('bun', ['test', '__tests__/engine/shippedPath.matrix.test.ts'], {
+		cwd: repoRoot,
+		encoding: 'utf8',
+		env: {
+			...process.env,
+			FILESYSTEM_ALLOW_LEGACY_ENGINE: '',
+		},
+		timeout: 300_000,
+	})
 	addCheck(
 		checks,
 		'boundary:rust_cli_engine',
-		cliBridge.includes('filesystem-cli') && !fileExists('src/engine-invoke.ts'),
-		'Rust MCP routes engine work through filesystem-cli; no TS engine-invoke bridge on default path',
+		!fileExists('src/engine-invoke.ts') && matrixProbe.status === 0,
+		'Shipped-path matrix test proves Rust-core tools route without legacy runtime',
+		matrixProbe.status === 0
+			? { exitCode: 0 }
+			: {
+					exitCode: matrixProbe.status,
+					stderr: matrixProbe.stderr?.slice(-2000),
+					stdout: matrixProbe.stdout?.slice(-2000),
+				},
 	)
 
 	const rustCli = path.join(repoRoot, 'target/release/filesystem-cli')
