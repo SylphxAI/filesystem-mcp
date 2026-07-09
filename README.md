@@ -10,7 +10,7 @@
 
 **Batch operations** • **Project root safety** • **Token optimized** • **Zod validation**
 
-[Quick Start](#-quick-start) • [Installation](#-installation) • [Tools](#-features)
+[Quick Start](#-quick-start) • [Installation](#-installation) • [Tools](#-features) • [Roadmap](docs/roadmap/sota-family-roadmap.md)
 
 <a href="https://glama.ai/mcp/servers/@sylphx/filesystem-mcp">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/@sylphx/filesystem-mcp/badge" alt="Filesystem MCP Server" />

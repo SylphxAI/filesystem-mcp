@@ -49,6 +49,7 @@ consumer MCP behavior cannot be fully undone by source revert.
 
 - Machine manifest: `.doctrine/project.json`
 - Public docs: `README.md`
+- SOTA family roadmap: `docs/roadmap/sota-family-roadmap.md`
 - Package: `package.json`
 - CI/publish: `.github/workflows/publish.yml`
 - Release: `.github/workflows/release.yml`
