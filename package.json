@@ -45,6 +45,7 @@
 		"doctor": "bun run src/index.ts doctor",
 		"benchmark:release-gate": "bun scripts/release-gate.ts",
 		"test:rust-policy": "cargo test && vitest run __tests__/engine/rust-policy.boundary.test.ts",
+		"test:rust-walk": "cargo test && vitest run __tests__/engine/rust-walk.boundary.test.ts",
 		"clean": "rimraf dist coverage",
 		"docs:api": "node scripts/generate-api-docs.mjs",
 		"prepublishOnly": "bun run clean && bun run build",

@@ -78,6 +78,13 @@ export function buildReleaseGateReport(artifactDir: string): ReleaseGateReport {
 
 	addCheck(
 		checks,
+		'rust:walk_engine',
+		fileExists('crates/filesystem-core/src/walk.rs'),
+		'Rust filesystem-core directory walk engine module is present',
+	)
+
+	addCheck(
+		checks,
 		'fixtures:safety_corpus',
 		manifest.profile === 'filesystem_safety_fixture_corpus' && manifest.cases.length >= 6,
 		'Safety fixture corpus documents traversal, symlink, hidden, binary, and oversized cases',

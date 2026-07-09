@@ -30,6 +30,9 @@ jobs:
       - name: Rust policy boundary
         run: bun run test:rust-policy
 
+      - name: Rust walk boundary
+        run: bun run test:rust-walk
+
       - name: Release gate
         run: bun run benchmark:release-gate
 

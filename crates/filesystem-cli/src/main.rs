@@ -1,4 +1,5 @@
 use filesystem_core::search::SearchMatch;
+use filesystem_core::walk::{ListEntry, ListFilesMetrics};
 use filesystem_core::{resolve_path, PolicyErrorCode, ENGINE_NAME, ENGINE_VERSION};
 use serde::{Deserialize, Serialize};
 use std::io::{self, Read};
@@ -43,6 +44,15 @@ struct SearchMetricsDto {
 }
 
 #[derive(Debug, Serialize)]
+struct ListFilesSuccessEnvelope {
+    status: &'static str,
+    engine: &'static str,
+    version: &'static str,
+    entries: Vec<ListEntry>,
+    metrics: ListFilesMetrics,
+}
+
+#[derive(Debug, Serialize)]
 struct ErrorEnvelope {
     status: &'static str,
     code: String,
@@ -63,6 +73,54 @@ fn map_search_match(entry: SearchMatch) -> SearchMatchDto {
         line: entry.line,
         matched_text: entry.matched_text,
         context: entry.context,
+    }
+}
+
+fn handle_list_files(input: &serde_json::Value) -> Result<ListFilesSuccessEnvelope, ErrorEnvelope> {
+    let root = input
+        .get("root")
+        .and_then(|value| value.as_str())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+
+    let relative_path = input
+        .get("path")
+        .and_then(|value| value.as_str())
+        .unwrap_or(".");
+
+    let recursive = input
+        .get("recursive")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
+
+    let include_stats = input
+        .get("include_stats")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
+
+    match filesystem_core::walk::list_files(&root, relative_path, recursive, include_stats) {
+        Ok(result) => Ok(ListFilesSuccessEnvelope {
+            status: "ok",
+            engine: ENGINE_NAME,
+            version: ENGINE_VERSION,
+            entries: result.entries,
+            metrics: result.metrics,
+        }),
+        Err(message) => {
+            let code = if message.contains("Path traversal") || message.starts_with("INVALID_ROOT") {
+                "INVALID_REQUEST"
+            } else if message.contains("Absolute paths") {
+                "INVALID_PARAMS"
+            } else {
+                "LIST_FAILED"
+            };
+            Err(ErrorEnvelope {
+                status: "error",
+                code: code.into(),
+                message,
+                next_action: "Use a root-scoped relative directory path.".into(),
+            })
+        }
     }
 }
 
@@ -186,11 +244,15 @@ fn main() {
             Ok(success) => serde_json::to_string(&success).expect("serialize"),
             Err(error) => serde_json::to_string(&error).expect("serialize"),
         },
+        "list_files" => match handle_list_files(&request.input) {
+            Ok(success) => serde_json::to_string(&success).expect("serialize"),
+            Err(error) => serde_json::to_string(&error).expect("serialize"),
+        },
         other => serde_json::to_string(&ErrorEnvelope {
             status: "error",
             code: "UNSUPPORTED_TOOL".into(),
             message: format!("Unsupported tool: {other}"),
-            next_action: "Use resolve_path or search_files.".into(),
+            next_action: "Use resolve_path, search_files, or list_files.".into(),
         })
         .expect("serialize"),
     };

@@ -7,6 +7,7 @@ import type { GlobOptions, Path as GlobPath } from 'glob'
 import { glob as globFn } from 'glob'
 import { z } from 'zod'
 import type { McpToolResponse } from '../types/mcp-types.js'
+import { listFilesViaRustEngine, shouldUseRustWalkEngine } from '../engine/rust-walk.js'
 import {
 	PROJECT_ROOT as projectRootUtil,
 	resolvePath as resolvePathUtil,
@@ -118,6 +119,43 @@ function handleFileCase(
 	const statsResult = deps.formatStats(relativePath, absolutePath, stats) // Pass absolutePath
 	const outputJson = JSON.stringify(statsResult, null, 2)
 	return { content: [{ type: 'text', text: outputJson }] }
+}
+
+/** Delegates list_files to the Rust walk engine when enabled. */
+async function handleListFilesViaRustEngine(
+	deps: ListFilesDependencies,
+	args: ListFilesArgs,
+): Promise<McpToolResponse> {
+	const envelope = listFilesViaRustEngine({
+		root: deps.PROJECT_ROOT,
+		path: args.path,
+		recursive: args.recursive,
+		include_stats: true,
+	})
+
+	if (envelope.status !== 'ok') {
+		const code =
+			envelope.code === 'INVALID_PARAMS' ? ErrorCode.InvalidParams : ErrorCode.InvalidRequest
+		if (envelope.message.includes('LIST_FAILED') || envelope.message.includes('not found')) {
+			throw new McpError(ErrorCode.InvalidRequest, `Path not found: ${args.path}`)
+		}
+		throw new McpError(code, envelope.message)
+	}
+
+	if (
+		envelope.entries.length === 1 &&
+		envelope.entries[0]?.stats?.isFile &&
+		!envelope.entries[0].path.endsWith('/')
+	) {
+		const stats = envelope.entries[0].stats
+		return { content: [{ type: 'text', text: JSON.stringify(stats, null, 2) }] }
+	}
+
+	const processed: ProcessedEntry[] = envelope.entries.map((entry) => ({
+		path: entry.path,
+		...(args.include_stats && entry.stats ? { stats: entry.stats } : {}),
+	}))
+	return formatResults(processed, args.include_stats)
 }
 
 /** Formats the final results into the MCP response. */
@@ -350,6 +388,10 @@ export const handleListFilesFunc = async (
 ): Promise<McpToolResponse> => {
 	// Remove unused variables from function scope
 	const parsedArgs = parseAndValidateArgs(args)
+	if (shouldUseRustWalkEngine()) {
+		return await handleListFilesViaRustEngine(deps, parsedArgs)
+	}
+
 	const { path: relativeInputPath, recursive, include_stats: includeStats } = parsedArgs
 	const targetAbsolutePath = await deps.resolvePath(relativeInputPath)
 

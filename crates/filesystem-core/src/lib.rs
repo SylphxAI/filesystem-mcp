@@ -1,6 +1,7 @@
 //! Root-scoped filesystem path policy and search engine.
 
 pub mod search;
+pub mod walk;
 
 use std::path::{Component, Path, PathBuf};
 
