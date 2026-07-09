@@ -124,18 +124,21 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: steps.classify.outputs.product_changed == 'true'
-        uses: codecov/codecov-action@v4.5.0 # Use Codecov action with fixed version
+        continue-on-error: true
+        uses: codecov/codecov-action@v6.0.1
         with:
-          token: ${{ secrets.CODECOV_TOKEN }} # Use Codecov token
-          files: ./coverage/lcov.info # Specify LCOV file path
-          fail_ci_if_error: true # Optional: fail CI if upload error
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
 
       - name: Upload test results to Codecov
         if: ${{ !cancelled() && steps.classify.outputs.product_changed == 'true' }}
-        uses: codecov/test-results-action@v1
+        continue-on-error: true
+        uses: codecov/codecov-action@v6.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          # No file specified, action defaults to common patterns like test-report.junit.xml
+          report_type: test_results
+          fail_ci_if_error: false
 
       - name: Perform CodeQL Analysis # Added CodeQL analyze
         if: steps.classify.outputs.product_changed == 'true'
