@@ -1,4 +1,4 @@
-pub mod engine_bridge;
+pub mod cli_bridge;
 
 use rmcp::{
     handler::server::router::tool::ToolRouter,
@@ -26,7 +26,7 @@ impl FilesystemMcp {
     }
 
     fn invoke(&self, tool: &str, args: Value) -> Result<rmcp::model::CallToolResult, ErrorData> {
-        engine_bridge::invoke_ts_engine(tool, args)
+        cli_bridge::invoke_cli_tool(tool, args)
     }
 }
 

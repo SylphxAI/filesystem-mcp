@@ -26,7 +26,7 @@
 		"node": "22.14"
 	},
 	"scripts": {
-		"build": "bunx bunup && bun build src/engine-invoke.ts --outdir dist --target node",
+		"build": "bunx bunup && bun build src/legacy-engine-runtime.ts --outdir dist --target node",
 		"build:rust": "cargo build --release -p filesystem-core -p filesystem-cli -p filesystem-mcp-server && bun scripts/stage-rust-mcp.ts",
 		"watch": "tsc --watch",
 		"inspector": "npx @modelcontextprotocol/inspector dist/index.js",

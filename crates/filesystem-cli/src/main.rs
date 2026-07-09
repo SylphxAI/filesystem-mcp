@@ -1,3 +1,6 @@
+mod legacy_runtime;
+
+use legacy_runtime::{handle_legacy_mcp_tool, is_native_rust_engine_request};
 use filesystem_core::audit::{WriteAuditFileRecord, WriteAuditRequestRecord};
 use filesystem_core::search::SearchMatch;
 use filesystem_core::walk::{ListEntry, ListFilesMetrics};
@@ -330,34 +333,41 @@ fn main() {
         }
     };
 
-    let output = match request.tool.as_str() {
-        "resolve_path" => match handle_resolve_path(&request.input) {
+    let output = if is_native_rust_engine_request(request.tool.as_str(), &request.input) {
+        match request.tool.as_str() {
+            "resolve_path" => match handle_resolve_path(&request.input) {
+                Ok(success) => serde_json::to_string(&success).expect("serialize"),
+                Err(error) => serde_json::to_string(&error).expect("serialize"),
+            },
+            "search_files" => match handle_search_files(&request.input) {
+                Ok(success) => serde_json::to_string(&success).expect("serialize"),
+                Err(error) => serde_json::to_string(&error).expect("serialize"),
+            },
+            "list_files" => match handle_list_files(&request.input) {
+                Ok(success) => serde_json::to_string(&success).expect("serialize"),
+                Err(error) => serde_json::to_string(&error).expect("serialize"),
+            },
+            "content_hash" => match handle_content_hash(&request.input) {
+                Ok(success) => serde_json::to_string(&success).expect("serialize"),
+                Err(error) => serde_json::to_string(&error).expect("serialize"),
+            },
+            "record_write_audit" => match handle_record_write_audit(&request.input) {
+                Ok(success) => serde_json::to_string(&success).expect("serialize"),
+                Err(error) => serde_json::to_string(&error).expect("serialize"),
+            },
+            other => serde_json::to_string(&ErrorEnvelope {
+                status: "error",
+                code: "UNSUPPORTED_TOOL".into(),
+                message: format!("Unsupported native tool: {other}"),
+                next_action: "Use resolve_path, search_files, list_files, content_hash, or record_write_audit.".into(),
+            })
+            .expect("serialize"),
+        }
+    } else {
+        match handle_legacy_mcp_tool(request.tool.as_str(), &request.input) {
             Ok(success) => serde_json::to_string(&success).expect("serialize"),
             Err(error) => serde_json::to_string(&error).expect("serialize"),
-        },
-        "search_files" => match handle_search_files(&request.input) {
-            Ok(success) => serde_json::to_string(&success).expect("serialize"),
-            Err(error) => serde_json::to_string(&error).expect("serialize"),
-        },
-        "list_files" => match handle_list_files(&request.input) {
-            Ok(success) => serde_json::to_string(&success).expect("serialize"),
-            Err(error) => serde_json::to_string(&error).expect("serialize"),
-        },
-        "content_hash" => match handle_content_hash(&request.input) {
-            Ok(success) => serde_json::to_string(&success).expect("serialize"),
-            Err(error) => serde_json::to_string(&error).expect("serialize"),
-        },
-        "record_write_audit" => match handle_record_write_audit(&request.input) {
-            Ok(success) => serde_json::to_string(&success).expect("serialize"),
-            Err(error) => serde_json::to_string(&error).expect("serialize"),
-        },
-        other => serde_json::to_string(&ErrorEnvelope {
-            status: "error",
-            code: "UNSUPPORTED_TOOL".into(),
-            message: format!("Unsupported tool: {other}"),
-            next_action: "Use resolve_path, search_files, list_files, content_hash, or record_write_audit.".into(),
-        })
-        .expect("serialize"),
+        }
     };
 
     println!("{output}");

@@ -223,7 +223,9 @@ name = "filesystem-mcp-server"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "filesystem-core",
  "rmcp",
+ "serde",
  "serde_json",
  "tokio",
 ]
