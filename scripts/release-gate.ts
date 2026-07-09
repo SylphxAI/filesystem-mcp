@@ -95,15 +95,19 @@ export function buildReleaseGateReport(artifactDir: string): ReleaseGateReport {
 		checks,
 		'rust:mcp_server',
 		fileExists('crates/filesystem-mcp-server/src/lib.rs'),
-		'Opt-in Rust MCP transport preview (rmcp) is present for Phase 4 evaluation',
+		'Rust MCP server (modelcontextprotocol/rust-sdk rmcp) is present',
 	)
 
 	const binWrapper = readFileSync(path.join(repoRoot, 'bin/filesystem-mcp'), 'utf8')
+	const stagedRustBin = path.join(repoRoot, 'bin/native/filesystem-mcp-server')
 	addCheck(
 		checks,
-		'mcp:ts_adapter_default',
-		binWrapper.includes('dist/index.js') && binWrapper.includes('exec node'),
-		'Default npm bin launches the TypeScript MCP adapter; Rust rmcp is opt-in only',
+		'mcp:rust_adapter_default',
+		binWrapper.includes('filesystem-mcp-server') &&
+			binWrapper.includes('use_ts_transport') &&
+			existsSync(stagedRustBin),
+		'Default npm bin launches the Rust rmcp MCP server; TypeScript transport is legacy opt-in only',
+		{ staged_binary: stagedRustBin },
 	)
 
 	const rustCli = path.join(repoRoot, 'target/release/filesystem-cli')
