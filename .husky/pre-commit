@@ -1,1 +1,1 @@
-npm exec pnpm test
+bun run test

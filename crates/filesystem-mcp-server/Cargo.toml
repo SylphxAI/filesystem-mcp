@@ -1,0 +1,21 @@
+[package]
+name = "filesystem-mcp-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Rust-native MCP server for filesystem-mcp (rmcp)"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "filesystem-mcp-server"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+filesystem-core = { path = "../filesystem-core" }
+rmcp = { version = "0.16.0", features = ["server", "transport-io"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }

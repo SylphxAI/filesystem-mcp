@@ -1,55 +1,48 @@
 {
-  "compilerOptions": {
-    /* Base Options */
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "target": "ES2022",
-    "allowJs": false,
-    "resolveJsonModule": true,
-    "moduleDetection": "force",
-    "isolatedModules": true,
+	"compilerOptions": {
+		/* Base Options */
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"target": "ES2022",
+		"allowJs": false,
+		"resolveJsonModule": true,
+		"moduleDetection": "force",
+		"isolatedModules": true,
 
-    /* Strictness */
-    "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "strictBindCallApply": true,
-    "strictPropertyInitialization": true,
-    "noImplicitThis": true,
-    "useUnknownInCatchVariables": true,
-    "alwaysStrict": true,
+		/* Strictness */
+		"strict": true,
+		"noImplicitAny": true,
+		"strictNullChecks": true,
+		"strictFunctionTypes": true,
+		"strictBindCallApply": true,
+		"strictPropertyInitialization": true,
+		"noImplicitThis": true,
+		"useUnknownInCatchVariables": true,
+		"alwaysStrict": true,
 
-    /* Linter Checks */
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": true,
+		/* Linter Checks */
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"exactOptionalPropertyTypes": true,
+		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+		"noPropertyAccessFromIndexSignature": true,
 
-    /* Module Resolution */
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+		/* Module Resolution */
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
 
-    /* Emit */
-    "outDir": "dist",
-    "declaration": true,
-    "sourceMap": true,
-    "removeComments": false,
+		/* Emit */
+		"outDir": "dist",
+		"declaration": true,
+		"sourceMap": true,
+		"removeComments": false,
 
-    /* Other */
-    "forceConsistentCasingInFileNames": true
-  },
-  "include": ["src/**/*.ts", "src/types/**/*.d.ts"],
-  "exclude": [
-    "node_modules",
-    "build",
-    "dist",
-    "**/*.test.ts",
-    "**/*.spec.ts",
-    "**/*.bench.ts"
-  ]
+		/* Other */
+		"forceConsistentCasingInFileNames": true
+	},
+	"include": ["src/**/*.ts", "src/types/**/*.d.ts"],
+	"exclude": ["node_modules", "build", "dist", "**/*.test.ts", "**/*.spec.ts", "**/*.bench.ts"]
 }

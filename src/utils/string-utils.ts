@@ -6,12 +6,12 @@
  * @returns The escaped string.
  */
 export function escapeRegex(str: string): string {
-  // Escape characters with special meaning either inside or outside character sets.
-  // Use a simple backslash escape for characters like *, +, ?, ^, $, {}, (), |, [], \.
-  // - Outside character sets, escape special characters: * + ? ^ $ { } ( ) | [ ] \
-  // - Inside character sets, escape special characters: ^ - ] \
-  // This function handles the common cases for use outside character sets.
-  return str.replaceAll(/[$()*+.?[\\\]^{|}]/g, '\\$&'); // $& means the whole matched string. Manually escape backslash.
+	// Escape characters with special meaning either inside or outside character sets.
+	// Use a simple backslash escape for characters like *, +, ?, ^, $, {}, (), |, [], \.
+	// - Outside character sets, escape special characters: * + ? ^ $ { } ( ) | [ ] \
+	// - Inside character sets, escape special characters: ^ - ] \
+	// This function handles the common cases for use outside character sets.
+	return str.replaceAll(/[$()*+.?[\\\]^{|}]/g, '\\$&') // $& means the whole matched string. Manually escape backslash.
 }
 
 /**
@@ -20,9 +20,9 @@ export function escapeRegex(str: string): string {
  * @returns The leading whitespace, or an empty string if no line or no whitespace.
  */
 export function getIndentation(line: string | undefined): string {
-  if (!line) return '';
-  const match = /^\s*/.exec(line);
-  return match ? match[0] : '';
+	if (!line) return ''
+	const match = /^\s*/.exec(line)
+	return match ? match[0] : ''
 }
 
 /**
@@ -32,7 +32,7 @@ export function getIndentation(line: string | undefined): string {
  * @returns An array of indented lines.
  */
 export function applyIndentation(content: string, indent: string): string[] {
-  return content.split('\n').map((line) => indent + line);
+	return content.split('\n').map((line) => indent + line)
 }
 
 /**
@@ -43,16 +43,16 @@ export function applyIndentation(content: string, indent: string): string[] {
  * @returns True if the lines match according to the rules.
  */
 export function linesMatch(
-  fileLine: string | undefined,
-  searchLine: string | undefined,
-  ignoreLeadingWhitespace: boolean,
+	fileLine: string | undefined,
+	searchLine: string | undefined,
+	ignoreLeadingWhitespace: boolean,
 ): boolean {
-  if (fileLine === undefined || searchLine === undefined) {
-    return false;
-  }
-  const trimmedSearchLine = searchLine.trimStart();
-  // Always trim fileLine if ignoring whitespace, compare against trimmed searchLine
-  const effectiveFileLine = ignoreLeadingWhitespace ? fileLine.trimStart() : fileLine;
-  const effectiveSearchLine = ignoreLeadingWhitespace ? trimmedSearchLine : searchLine;
-  return effectiveFileLine === effectiveSearchLine;
+	if (fileLine === undefined || searchLine === undefined) {
+		return false
+	}
+	const trimmedSearchLine = searchLine.trimStart()
+	// Always trim fileLine if ignoring whitespace, compare against trimmed searchLine
+	const effectiveFileLine = ignoreLeadingWhitespace ? fileLine.trimStart() : fileLine
+	const effectiveSearchLine = ignoreLeadingWhitespace ? trimmedSearchLine : searchLine
+	return effectiveFileLine === effectiveSearchLine
 }

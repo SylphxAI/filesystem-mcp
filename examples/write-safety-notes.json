@@ -1,0 +1,8 @@
+{
+	"notes": [
+		"All filesystem tools resolve paths relative to the configured project root.",
+		"Absolute paths and parent traversal (..) are rejected before IO.",
+		"Symlink targets outside the root are denied after realpath resolution.",
+		"Preview exact search blocks with apply_diff before replacing content in production workflows."
+	]
+}

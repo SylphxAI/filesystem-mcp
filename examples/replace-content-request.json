@@ -1,0 +1,5 @@
+{
+	"path": "src/example.ts",
+	"content": "export const version = '1.0.0';\n",
+	"create_if_missing": true
+}

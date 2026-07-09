@@ -1,137 +1,137 @@
 {
-  "schemaVersion": 1,
-  "project": {
-    "repo": "SylphxAI/filesystem-mcp",
-    "name": "Filesystem MCP",
-    "lifecycle": "production",
-    "layer": "tooling",
-    "summary": "Filesystem MCP is a production MCP server that provides secure, token-efficient, project-root-confined filesystem tools for AI agents.",
-    "goals": [
-      "Own the filesystem MCP server, tool schemas, path-safety model, batch operations, docs, package, Docker image, and release workflows.",
-      "Keep filesystem side effects explicit, validated, root-confined, and safe for autonomous agents.",
-      "Publish artifacts only with CI, release intent, npm/Docker readback, and GitHub release evidence."
-    ],
-    "nonGoals": [
-      "Own downstream agent policy, host configuration, or project-specific filesystem rules.",
-      "Bypass root confinement or make shell execution a hidden filesystem transport.",
-      "Treat source revert as complete recovery after npm or Docker publish."
-    ]
-  },
-  "boundaries": {
-    "owns": [
-      {
-        "name": "mcp-filesystem-tools",
-        "description": "MCP tool schemas and implementations for root-confined read, write, edit, search, copy, move, delete, chmod, and chown operations."
-      },
-      {
-        "name": "filesystem-mcp-release-artifacts",
-        "description": "npm package, Docker image, generated docs, and release workflows for Filesystem MCP."
-      }
-    ],
-    "doesNotOwn": [
-      "Downstream agent policy, host configuration, or project-specific filesystem rules.",
-      "Enterprise doctrine, org-wide branch protection, or external MCP host behavior.",
-      "The npm registry, Docker Hub, GitHub release infrastructure, or Codecov."
-    ],
-    "publicSurfaces": [
-      {
-        "type": "package-export",
-        "name": "@sylphx/filesystem-mcp npm package and CLI",
-        "location": "package.json"
-      },
-      {
-        "type": "api",
-        "name": "MCP filesystem tools",
-        "location": "README.md"
-      },
-      {
-        "type": "workflow",
-        "name": "CI, publish, and release workflow",
-        "location": ".github/workflows/publish.yml"
-      },
-      {
-        "type": "status-context",
-        "name": "Required branch contexts",
-        "location": "Validate Code Quality, Build and Archive Artifacts, Publish to NPM, Publish to Docker Hub, Create GitHub Release"
-      }
-    ],
-    "allowedDependencies": [
-      {
-        "repo": "SylphxAI/doctrine",
-        "surface": "enterprise engineering doctrine",
-        "direction": "downward"
-      },
-      {
-        "repo": "SylphxAI/.github",
-        "surface": "reusable release workflow",
-        "direction": "downward"
-      }
-    ],
-    "forbiddenCouplings": [
-      "Do not add host-specific filesystem behavior without a documented MCP option or public contract.",
-      "Do not weaken root confinement, path traversal prevention, or side-effect validation for convenience.",
-      "Do not rely on source revert for already-published npm or Docker artifacts."
-    ]
-  },
-  "documentation": {
-    "adr": {
-      "path": "docs/adr/",
-      "status": "planned"
-    },
-    "specs": {
-      "path": "README.md",
-      "status": "present"
-    },
-    "catalog": {
-      "path": "PROJECT.md",
-      "status": "present"
-    },
-    "runbooks": {
-      "path": ".github/workflows/publish.yml",
-      "status": "present"
-    },
-    "generatedReferences": {
-      "path": "docs/",
-      "status": "generated"
-    }
-  },
-  "delivery": {
-    "ciModel": "legacy-ci",
-    "requiredContexts": [
-      "Build and Archive Artifacts",
-      "Create GitHub Release",
-      "Publish to Docker Hub",
-      "Publish to NPM",
-      "Validate Code Quality"
-    ],
-    "deployPath": "Publish workflow validates on PR/merge-group and publishes npm, Docker Hub, GitHub Release, and docs artifacts on tag/main release paths.",
-    "productionProof": "Required contexts, package build output, npm readback, Docker image readback, GitHub release evidence, docs build evidence, and MCP smoke tests.",
-    "recoveryClass": "forward-fix-only",
-    "packageRelease": {
-      "publishesPackages": true,
-      "ecosystems": ["npm", "docker-hub", "github-release", "changesets"],
-      "releaseIntent": "Changesets and version tags capture package/image release intent.",
-      "versionPr": "Changesets version changes and release workflow evidence must precede publish.",
-      "publisher": "GitHub Actions publish workflow with NPM_TOKEN and Docker Hub credentials.",
-      "requiredContexts": ["Validate Code Quality"],
-      "publishProof": "npm package readback, Docker Hub image tags, GitHub Release, and attached build artifact."
-    }
-  },
-  "adoption": {
-    "status": "baseline",
-    "gaps": [
-      {
-        "id": "central-admission",
-        "description": "CI is repo-local legacy GitHub Actions; migrate to central admission or stable status fan-in when the fleet workflow is ready.",
-        "owner": "SylphxAI/filesystem-mcp",
-        "target": "before full doctrine adoption"
-      },
-      {
-        "id": "release-context-scope",
-        "description": "Branch protection requires tag/publish context names; verify skipped release-only contexts are intentional for PR and merge-group flows.",
-        "owner": "SylphxAI/filesystem-mcp",
-        "target": "before claiming full package-release adoption"
-      }
-    ]
-  }
+	"schemaVersion": 1,
+	"project": {
+		"repo": "SylphxAI/filesystem-mcp",
+		"name": "Filesystem MCP",
+		"lifecycle": "production",
+		"layer": "tooling",
+		"summary": "Filesystem MCP is a production MCP server that provides secure, token-efficient, project-root-confined filesystem tools for AI agents.",
+		"goals": [
+			"Own the filesystem MCP server, tool schemas, path-safety model, batch operations, docs, package, Docker image, and release workflows.",
+			"Keep filesystem side effects explicit, validated, root-confined, and safe for autonomous agents.",
+			"Publish artifacts only with CI, release intent, npm/Docker readback, and GitHub release evidence."
+		],
+		"nonGoals": [
+			"Own downstream agent policy, host configuration, or project-specific filesystem rules.",
+			"Bypass root confinement or make shell execution a hidden filesystem transport.",
+			"Treat source revert as complete recovery after npm or Docker publish."
+		]
+	},
+	"boundaries": {
+		"owns": [
+			{
+				"name": "mcp-filesystem-tools",
+				"description": "MCP tool schemas and implementations for root-confined read, write, edit, search, copy, move, delete, chmod, and chown operations."
+			},
+			{
+				"name": "filesystem-mcp-release-artifacts",
+				"description": "npm package, Docker image, generated docs, and release workflows for Filesystem MCP."
+			}
+		],
+		"doesNotOwn": [
+			"Downstream agent policy, host configuration, or project-specific filesystem rules.",
+			"Enterprise doctrine, org-wide branch protection, or external MCP host behavior.",
+			"The npm registry, Docker Hub, GitHub release infrastructure, or Codecov."
+		],
+		"publicSurfaces": [
+			{
+				"type": "package-export",
+				"name": "@sylphx/filesystem-mcp npm package and CLI",
+				"location": "package.json"
+			},
+			{
+				"type": "api",
+				"name": "MCP filesystem tools",
+				"location": "README.md"
+			},
+			{
+				"type": "workflow",
+				"name": "CI, publish, and release workflow",
+				"location": ".github/workflows/publish.yml"
+			},
+			{
+				"type": "status-context",
+				"name": "Required branch contexts",
+				"location": "Validate Code Quality, Build and Archive Artifacts, Publish to NPM, Publish to Docker Hub, Create GitHub Release"
+			}
+		],
+		"allowedDependencies": [
+			{
+				"repo": "SylphxAI/doctrine",
+				"surface": "enterprise engineering doctrine",
+				"direction": "downward"
+			},
+			{
+				"repo": "SylphxAI/.github",
+				"surface": "reusable release workflow",
+				"direction": "downward"
+			}
+		],
+		"forbiddenCouplings": [
+			"Do not add host-specific filesystem behavior without a documented MCP option or public contract.",
+			"Do not weaken root confinement, path traversal prevention, or side-effect validation for convenience.",
+			"Do not rely on source revert for already-published npm or Docker artifacts."
+		]
+	},
+	"documentation": {
+		"adr": {
+			"path": "docs/adr/",
+			"status": "planned"
+		},
+		"specs": {
+			"path": "README.md",
+			"status": "present"
+		},
+		"catalog": {
+			"path": "PROJECT.md",
+			"status": "present"
+		},
+		"runbooks": {
+			"path": ".github/workflows/publish.yml",
+			"status": "present"
+		},
+		"generatedReferences": {
+			"path": "docs/",
+			"status": "generated"
+		}
+	},
+	"delivery": {
+		"ciModel": "legacy-ci",
+		"requiredContexts": [
+			"Build and Archive Artifacts",
+			"Create GitHub Release",
+			"Publish to Docker Hub",
+			"Publish to NPM",
+			"Validate Code Quality"
+		],
+		"deployPath": "Publish workflow validates on PR/merge-group and publishes npm, Docker Hub, GitHub Release, and docs artifacts on tag/main release paths.",
+		"productionProof": "Required contexts, package build output, npm readback, Docker image readback, GitHub release evidence, docs build evidence, and MCP smoke tests.",
+		"recoveryClass": "forward-fix-only",
+		"packageRelease": {
+			"publishesPackages": true,
+			"ecosystems": ["npm", "docker-hub", "github-release", "changesets"],
+			"releaseIntent": "Changesets and version tags capture package/image release intent.",
+			"versionPr": "Changesets version changes and release workflow evidence must precede publish.",
+			"publisher": "GitHub Actions publish workflow with NPM_TOKEN and Docker Hub credentials.",
+			"requiredContexts": ["Validate Code Quality"],
+			"publishProof": "npm package readback, Docker Hub image tags, GitHub Release, and attached build artifact."
+		}
+	},
+	"adoption": {
+		"status": "baseline",
+		"gaps": [
+			{
+				"id": "central-admission",
+				"description": "CI is repo-local legacy GitHub Actions; migrate to central admission or stable status fan-in when the fleet workflow is ready.",
+				"owner": "SylphxAI/filesystem-mcp",
+				"target": "before full doctrine adoption"
+			},
+			{
+				"id": "release-context-scope",
+				"description": "Branch protection requires tag/publish context names; verify skipped release-only contexts are intentional for PR and merge-group flows.",
+				"owner": "SylphxAI/filesystem-mcp",
+				"target": "before claiming full package-release adoption"
+			}
+		]
+	}
 }
