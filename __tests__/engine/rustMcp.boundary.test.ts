@@ -16,15 +16,34 @@ describe('MCP transport boundary', () => {
 		execSync('bun run build', { cwd: repoRoot, stdio: 'pipe', timeout: 180_000 })
 	}, 300_000)
 
-	it('defaults the published bin wrapper to the TypeScript MCP adapter', () => {
+	it('defaults the published bin wrapper to the Rust rmcp MCP server', () => {
 		const script = readFileSync(binWrapper, 'utf8')
-		expect(script).toContain('dist/index.js')
-		const tail = execSync(`grep -v '^#' "${binWrapper}" | tail -n 3`, { encoding: 'utf8' })
-		expect(tail).toContain('exec node')
-		expect(tail).toContain('$TS_ENTRY')
+		expect(script).toContain('filesystem-mcp-server')
+		expect(script).toContain('resolve_rust_bin')
+		expect(script).toContain('use_ts_transport')
+		const tail = execSync(`grep -v '^#' "${binWrapper}" | tail -n 8`, { encoding: 'utf8' })
+		expect(tail).toContain('exec "$bin"')
+		expect(tail).not.toMatch(/^\s*exec node "\$TS_ENTRY"/m)
 	})
 
-	it('builds the opt-in rmcp stdio server binary for Phase 4 preview', () => {
+	it('executes the shipped default bin path through the Rust rmcp server', () => {
+		const result = spawnSync(binWrapper, ['doctor'], {
+			cwd: repoRoot,
+			encoding: 'utf8',
+			env: {
+				...process.env,
+				FILESYSTEM_MCP_TRANSPORT: '',
+			},
+			timeout: 30_000,
+		})
+
+		const output = `${result.stdout ?? ''}${result.stderr ?? ''}`
+		expect(result.status).toBe(0)
+		expect(output).toContain('Rust MCP server')
+		expect(output).toContain('engine cli')
+	})
+
+	it('builds the rmcp stdio server binary for the default MCP path', () => {
 		expect(existsSync(rustServerBin)).toBe(true)
 		expect(existsSync(stagedRustBin)).toBe(true)
 		expect(existsSync(rustCliBin)).toBe(true)
@@ -47,14 +66,14 @@ describe('MCP transport boundary', () => {
 		expect(cliEnvelope.hash?.length).toBe(64)
 	})
 
-	it('launches the Rust MCP server only when rust transport is requested', () => {
+	it('allows opt-in TypeScript MCP transport via FILESYSTEM_MCP_TRANSPORT=ts', () => {
 		const script = readFileSync(binWrapper, 'utf8')
 		expect(script).toContain('FILESYSTEM_MCP_TRANSPORT')
-		expect(script).toContain('filesystem-mcp-server')
-		expect(script).toContain('use_rust_transport')
+		expect(script).toContain('use_ts_transport')
+		expect(script).toContain('dist/index.js')
 	})
 
-	it('reports doctor diagnostics from the opt-in Rust MCP entrypoint', () => {
+	it('reports doctor diagnostics from the default Rust MCP entrypoint', () => {
 		const result = spawnSync(rustServerBin, ['doctor'], {
 			cwd: repoRoot,
 			encoding: 'utf8',
