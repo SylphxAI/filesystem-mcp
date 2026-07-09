@@ -1,16 +1,22 @@
 <div align="center">
 
-# Filesystem MCP 📁
+# Filesystem MCP
 
-**Secure filesystem operations for AI agents - Token-optimized with batch processing**
+### Your agent touched the repo. **Did it stay in the project?**
+
+Secure, token-optimized filesystem operations for AI agents — batch reads, surgical edits, and
+project-root confinement without shell spawn overhead.
 
 [![npm version](https://img.shields.io/npm/v/@sylphx/filesystem-mcp?style=flat-square)](https://www.npmjs.com/package/@sylphx/filesystem-mcp)
 [![Docker Pulls](https://img.shields.io/docker/pulls/sylphx/filesystem-mcp?style=flat-square)](https://hub.docker.com/r/sylphx/filesystem-mcp)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](https://github.com/SylphxAI/filesystem-mcp/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-7.0-blue.svg?style=flat-square)](https://www.typescriptlang.org/)
 
-**Batch operations** • **Project root safety** • **Token optimized** • **Zod validation**
+**Batch operations** · **Project root safety** · **Zod validation** · **13 MCP tools** · **Docker-ready**
 
-[Quick Start](#-quick-start) • [Installation](#-installation) • [Tools](#-features) • [Roadmap](docs/roadmap/sota-family-roadmap.md)
+[⭐ Star this repo](https://github.com/SylphxAI/filesystem-mcp) if agents should read and edit your codebase safely — not spawn shells per file.
+· [Quick start](#quick-start) · [See it work](#see-it-work) · [Why not shell commands?](#why-not-shell-commands)
+· [Roadmap](docs/roadmap/sota-family-roadmap.md)
 
 <a href="https://glama.ai/mcp/servers/@sylphx/filesystem-mcp">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/@sylphx/filesystem-mcp/badge" alt="Filesystem MCP Server" />
@@ -20,115 +26,99 @@
 
 ---
 
-## 🚀 Overview
+## The problem
 
-Empower your AI agents (like Claude/Cline) with secure, efficient, and token-saving access to your project files. This Node.js server implements the [Model Context Protocol (MCP)](https://docs.modelcontextprotocol.com/) to provide a robust set of filesystem tools.
+Agents need filesystem access to read code, apply edits, and search across a repo. The default
+path is **shell commands** — one spawn per operation, no batching, stderr parsing, and paths
+that can wander outside the project.
 
-**The Problem:**
+That costs tokens, adds latency, and turns every file touch into a trust exercise.
+
+**Filesystem MCP is built for the moment your agent needs fast, bounded, batch-friendly file
+operations — confined to the project root.**
+
+## Why not shell commands?
+
+| Shell commands per file | Filesystem MCP |
+| --- | --- |
+| One operation per spawn | Batch 10+ files in one MCP call |
+| Full shell access | Confined to server `cwd` at launch |
+| stderr parsing | Per-item success/failure in structured JSON |
+| High token round trips | Fewer host↔server calls |
+| Path traversal risk | Relative paths only; traversal blocked |
+| No schema | Zod-validated arguments on every tool |
+
+Full benchmark contract: [docs/benchmark.md](docs/benchmark.md).
+
+## See it work
+
+**Configure once. Read many files in one call.**
+
+```bash
+claude mcp add filesystem -- npx @sylphx/filesystem-mcp
 ```
-Traditional AI filesystem access:
-- Shell commands for each operation ❌
-- No batch processing (high token cost) ❌
-- Unsafe (no project root boundaries) ❌
-- High latency (shell spawn overhead) ❌
+
+```json
+{
+  "paths": ["src/index.ts", "package.json", "README.md"]
+}
 ```
 
-**The Solution:**
+`read_content` returns per-file results in one response:
+
+```json
+{
+  "results": [
+    { "path": "src/index.ts", "content": "...", "success": true },
+    { "path": "package.json", "content": "...", "success": true },
+    { "path": "README.md", "content": "...", "success": true }
+  ]
+}
 ```
-Filesystem MCP Server:
-- Batch operations (10+ files at once) ✅
-- Token optimized (reduce round trips) ✅
-- Secure (confined to project root) ✅
-- Direct API (no shell overhead) ✅
+
+**Important:** launch the MCP server with `cwd` set to your project root. All paths are relative
+to that directory.
+
+## Why agents use it
+
+| Need | What you get |
+| --- | --- |
+| Read multiple files | `read_content` — batch paths, optional line ranges |
+| Write or append | `write_content` — multiple files per call |
+| Surgical edits | `apply_diff`, `replace_content` — diff output and per-file status |
+| Search the tree | `search_files` — regex with context |
+| Refactor across files | `replace_content` — multi-file search & replace |
+| Explore structure | `list_files` — recursive listing with optional stats |
+| Move/copy/delete | `move_items`, `copy_items`, `delete_items` |
+| Permissions | `chmod_items`, `chown_items` |
+| Inspect metadata | `stat_items`, `create_directories` |
+
+## Quick Start
+
+### Claude Code
+
+```bash
+claude mcp add filesystem -- npx @sylphx/filesystem-mcp
 ```
 
-**Result: Safe, fast, and token-efficient filesystem operations for AI agents.**
+Run from your project directory so `cwd` is the repo root.
 
----
+### Claude Desktop / any MCP host
 
-## ⚡ Performance Advantages
-
-### Token & Latency Optimization
-
-| Metric | Individual Shell Commands | Filesystem MCP | Improvement |
-|--------|---------------------------|----------------|-------------|
-| **Operations/Request** | 1 file | 10+ files | **10x reduction** |
-| **Round Trips** | N operations | 1 request | **N× fewer** |
-| **Latency** | Shell spawn per op | Direct API | **5-10× faster** |
-| **Token Usage** | High overhead | Batched context | **50-70% less** |
-| **Error Reporting** | stderr parsing | Per-item status | Detailed |
-
-### Real-World Benefits
-
-- **Batch file reads** - Read 10 files in one request vs 10 requests
-- **Multi-file edits** - Edit multiple files with single tool call
-- **Recursive operations** - List entire directory trees efficiently
-- **Detailed status** - Per-item success/failure reporting
-
----
-
-## 🎯 Why Choose This Server?
-
-### Security & Safety
-
-- **🛡️ Project Root Confinement** - All operations restricted to `cwd` at launch
-- **🔒 Permission Control** - Built-in chmod/chown tools
-- **✅ Validation** - Zod schemas validate all arguments
-- **🚫 Path Traversal Prevention** - Cannot escape project directory
-
-### Efficiency & Performance
-
-- **⚡ Batch Processing** - Process multiple files/directories per request
-- **🎯 Token Optimized** - Reduce AI-server communication overhead
-- **🚀 Direct API** - No shell process spawning
-- **📊 Detailed Results** - Per-item status for batch operations
-
-### Developer Experience
-
-- **🔧 Easy Setup** - `npx`/`bunx` for instant use
-- **🐳 Docker Ready** - Official Docker image available
-- **📦 Comprehensive Tools** - 11+ filesystem operations
-- **🔄 MCP Standard** - Full protocol compliance
-
----
-
-## 📦 Installation
-
-### Method 1: npx/bunx (Recommended)
-
-The simplest way - always uses latest version from npm.
-
-**Using npx:**
 ```json
 {
   "mcpServers": {
     "filesystem-mcp": {
       "command": "npx",
-      "args": ["@sylphx/filesystem-mcp"],
-      "name": "Filesystem (npx)"
+      "args": ["@sylphx/filesystem-mcp"]
     }
   }
 }
 ```
 
-**Using bunx:**
-```json
-{
-  "mcpServers": {
-    "filesystem-mcp": {
-      "command": "bunx",
-      "args": ["@sylphx/filesystem-mcp"],
-      "name": "Filesystem (bunx)"
-    }
-  }
-}
-```
+Set the host's working directory to your project root.
 
-**Important:** The server uses its own Current Working Directory (`cwd`) as the project root. Ensure your MCP host (e.g., Cline/VSCode) launches the command with `cwd` set to your project's root directory.
-
-### Method 2: Docker
-
-Use the official Docker image for containerized environments.
+### Docker
 
 ```json
 {
@@ -136,302 +126,111 @@ Use the official Docker image for containerized environments.
     "filesystem-mcp": {
       "command": "docker",
       "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-v",
-        "/path/to/your/project:/app",
+        "run", "-i", "--rm",
+        "-v", "/path/to/your/project:/app",
         "sylphx/filesystem-mcp:latest"
-      ],
-      "name": "Filesystem (Docker)"
+      ]
     }
   }
 }
 ```
 
-**Remember to replace `/path/to/your/project` with your actual project path.**
-
-### Method 3: Local Build (Development)
+### Local development
 
 ```bash
-# Clone repository
 git clone https://github.com/SylphxAI/filesystem-mcp.git
 cd filesystem-mcp
-
-# Install dependencies
-pnpm install
-
-# Build
-pnpm run build
-
-# Watch mode (auto-rebuild)
-pnpm run dev
+bun install
+bun run build
+bun run test
 ```
 
-**MCP Host Configuration:**
-```json
-{
-  "mcpServers": {
-    "filesystem-mcp": {
-      "command": "node",
-      "args": ["/path/to/filesystem-mcp/dist/index.js"],
-      "name": "Filesystem (Local Build)"
-    }
-  }
-}
-```
+## MCP Tool Surface
 
----
+| Tool | Use it when the agent needs to... |
+| --- | --- |
+| `read_content` | Read one or more files (optional line ranges) |
+| `write_content` | Write or append to files |
+| `apply_diff` | Apply structured diffs across files |
+| `search_files` | Regex search with context lines |
+| `replace_content` | Multi-file search and replace |
+| `list_files` | List a directory tree (optional stats) |
+| `stat_items` | Get detailed file/directory metadata |
+| `create_directories` | Create directories (with parents) |
+| `delete_items` | Remove files or directories |
+| `move_items` | Move or rename items |
+| `copy_items` | Copy files or directories |
+| `chmod_items` | Change POSIX permissions |
+| `chown_items` | Change ownership |
 
-## 🚀 Quick Start
+## Release proof
 
-Once configured in your MCP host (see Installation), your AI agent can immediately use the filesystem tools.
-
-### Example Agent Interaction
-
-```xml
-<use_mcp_tool>
-  <server_name>filesystem-mcp</server_name>
-  <tool_name>read_content</tool_name>
-  <arguments>{"paths": ["src/index.ts", "package.json"]}</arguments>
-</use_mcp_tool>
-```
-
-**Server Response:**
-```json
-{
-  "results": [
-    {
-      "path": "src/index.ts",
-      "content": "...",
-      "success": true
-    },
-    {
-      "path": "package.json",
-      "content": "...",
-      "success": true
-    }
-  ]
-}
-```
-
----
-
-## 📋 Features
-
-### File Operations
-
-| Tool | Description | Batch Support |
-|------|-------------|---------------|
-| **read_content** | Read file contents | ✅ Multiple files |
-| **write_content** | Write/append to files | ✅ Multiple files |
-| **edit_file** | Surgical edits with diff output | ✅ Multiple files |
-| **search_files** | Regex search with context | ✅ Multiple files |
-| **replace_content** | Multi-file search & replace | ✅ Multiple files |
-
-### Directory Operations
-
-| Tool | Description | Batch Support |
-|------|-------------|---------------|
-| **list_files** | List files/directories recursively | Single path |
-| **stat_items** | Get detailed file/directory status | ✅ Multiple items |
-| **create_directories** | Create directories with parents | ✅ Multiple paths |
-
-### Management Operations
-
-| Tool | Description | Batch Support |
-|------|-------------|---------------|
-| **delete_items** | Remove files/directories | ✅ Multiple items |
-| **move_items** | Move/rename files/directories | ✅ Multiple items |
-| **copy_items** | Copy files/directories | ✅ Multiple items |
-
-### Permission Operations
-
-| Tool | Description | Batch Support |
-|------|-------------|---------------|
-| **chmod_items** | Change POSIX permissions | ✅ Multiple items |
-| **chown_items** | Change ownership | ✅ Multiple items |
-
-**Key Benefit:** Tools supporting batch operations process each item individually and return detailed per-item status reports.
-
----
-
-## 💡 Design Philosophy
-
-### Core Principles
-
-1. **Security First**
-   - All operations confined to project root
-   - Path traversal prevention
-   - Permission controls built-in
-
-2. **Efficiency Focused**
-   - Batch processing reduces token usage
-   - Direct API calls (no shell overhead)
-   - Minimal communication round trips
-
-3. **Robustness**
-   - Per-item success/failure reporting
-   - Detailed error messages
-   - Zod schema validation
-
-4. **Simplicity**
-   - Clear, consistent API
-   - MCP standard compliance
-   - Easy integration
-
----
-
-## 📊 Comparison with Alternatives
-
-| Feature | Filesystem MCP | Shell Commands | Other Scripts |
-|---------|----------------|----------------|---------------|
-| **Security** | ✅ Root confined | ❌ Full shell access | ⚠️ Variable |
-| **Token Efficiency** | ✅ Batching | ❌ One op/command | ⚠️ Variable |
-| **Latency** | ✅ Direct API | ❌ Shell spawn | ⚠️ Variable |
-| **Batch Operations** | ✅ Most tools | ❌ No | ⚠️ Maybe |
-| **Error Reporting** | ✅ Per-item detail | ❌ stderr parsing | ⚠️ Variable |
-| **Setup** | ✅ Easy (npx/Docker) | ⚠️ Secure shell setup | ⚠️ Custom |
-| **MCP Standard** | ✅ Full compliance | ❌ No | ⚠️ Variable |
-
----
-
-## 🛠️ Tech Stack
-
-| Component | Technology |
-|-----------|------------|
-| **Language** | TypeScript (strict mode) |
-| **Runtime** | Node.js / Bun |
-| **Protocol** | Model Context Protocol (MCP) |
-| **Validation** | Zod schemas |
-| **Package Manager** | pnpm |
-| **Distribution** | npm + Docker Hub |
-
----
-
-## 🎯 Use Cases
-
-### AI Agent Development
-Enable AI agents to:
-- **Read project files** - Access code, configs, docs
-- **Edit multiple files** - Refactor across codebase
-- **Search codebases** - Find patterns and definitions
-- **Manage project structure** - Create, move, organize files
-
-### Code Assistants
-Build powerful coding tools:
-- **Cline/Claude integration** - Direct filesystem access
-- **Batch refactoring** - Edit multiple files at once
-- **Safe operations** - Confined to project directory
-- **Efficient operations** - Reduce token costs
-
-### Automation & Scripting
-Automate development tasks:
-- **File generation** - Create boilerplate files
-- **Project setup** - Initialize directory structures
-- **Batch processing** - Handle multiple files efficiently
-- **Content transformation** - Search and replace across files
-
----
-
-## 🗺️ Roadmap
-
-**✅ Completed**
-- [x] Core filesystem operations (read, write, edit, etc.)
-- [x] Batch processing for most tools
-- [x] Project root security
-- [x] Docker image
-- [x] npm package
-- [x] Zod validation
-
-**🚀 Planned**
-- [ ] File watching capabilities
-- [ ] Streaming support for large files
-- [ ] Advanced filtering for `list_files`
-- [ ] Performance benchmarks
-- [ ] Compression/decompression tools
-- [ ] Symlink management
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these guidelines:
-
-1. **Fork the repository**
-2. **Create a feature branch** - `git checkout -b feature/my-feature`
-3. **Write tests** - Ensure good coverage
-4. **Follow TypeScript strict mode** - Type safety first
-5. **Add documentation** - Update README if needed
-6. **Submit a pull request**
-
-### Development Setup
+Claims are backed by CI `benchmark:release-gate`, safety fixture corpus, and the shipped-path matrix (Rust-default primary tools).
 
 ```bash
-# Clone and install
-git clone https://github.com/SylphxAI/filesystem-mcp.git
-cd filesystem-mcp
-pnpm install
-
-# Build
-pnpm run build
-
-# Watch mode (auto-rebuild)
-pnpm run dev
+bun run benchmark:release-gate
 ```
 
----
+Artifact: `benchmark-artifacts/filesystem_release_gate.json` — must report `status: passed` before release.
 
-## 🤝 Support
+## Performance benchmarks
 
-[![npm](https://img.shields.io/npm/v/@sylphx/filesystem-mcp?style=flat-square)](https://www.npmjs.com/package/@sylphx/filesystem-mcp)
-[![GitHub Issues](https://img.shields.io/github/issues/SylphxAI/filesystem-mcp?style=flat-square)](https://github.com/SylphxAI/filesystem-mcp/issues)
+Reproduce local throughput on the **shipped Rust CLI path**:
 
-- 🐛 [Bug Reports](https://github.com/SylphxAI/filesystem-mcp/issues)
-- 💬 [Discussions](https://github.com/SylphxAI/filesystem-mcp/discussions)
-- 📧 [Email](mailto:hi@sylphx.com)
+```bash
+bunx vitest bench __tests__/benchmarks/throughput.bench.ts --run
+```
 
-**Show Your Support:**
-⭐ Star • 👀 Watch • 🐛 Report bugs • 💡 Suggest features • 🔀 Contribute
+See [docs/benchmark.md](docs/benchmark.md) for scenarios, design goals, and how to interpret results.
 
----
+## Security model
 
-## 📄 License
+- All operations confined to the server `cwd` at launch.
+- Absolute paths rejected; path traversal blocked.
+- Zod schemas validate every tool argument.
+- Batch tools return per-item status — one failure does not hide the rest.
+
+## Documentation
+
+| Topic | Link |
+| --- | --- |
+| Docs site | [sylphxai.github.io/filesystem-mcp](https://sylphxai.github.io/filesystem-mcp/) |
+| Introduction | [docs/guide/introduction.md](docs/guide/introduction.md) |
+| Benchmarks | [docs/benchmark.md](docs/benchmark.md) |
+
+## Development
+
+```bash
+bun run validate    # lint + typecheck + test
+bun run docs:build  # VitePress + API docs
+bun run benchmark   # vitest bench
+```
+
+## Support
+
+- [Issues](https://github.com/SylphxAI/filesystem-mcp/issues)
+- [Discussions](https://github.com/SylphxAI/filesystem-mcp/discussions)
+- [npm package](https://www.npmjs.com/package/@sylphx/filesystem-mcp)
+
+## Help this reach more builders
+
+If shell-per-file agent workflows have burned your tokens or your trust in path safety, this
+project is for you.
+
+**[⭐ Star the repo](https://github.com/SylphxAI/filesystem-mcp)** — it helps more agent builders
+find secure, batch-friendly filesystem access.
+
+### Discovery (in progress)
+
+| Channel | Status |
+| --- | --- |
+| [Glama MCP directory](https://glama.ai/mcp/servers/@sylphx/filesystem-mcp) | Listed — [claim server](https://glama.ai/mcp/servers/@sylphx/filesystem-mcp/admin) for full discoverability |
+| [Official MCP Registry](https://registry.modelcontextprotocol.io/) | Not listed yet |
+| [mcp.so submit](https://mcp.so/submit) | Not listed yet — directory submission |
+| [mcpservers.org submit](https://mcpservers.org/submit) | Not listed yet — free web-form submission |
+
+Know another MCP directory? [Open an issue](https://github.com/SylphxAI/filesystem-mcp/issues/new) with the link.
+
+## License
 
 MIT © [Sylphx](https://sylphx.com)
-
----
-
-## 🙏 Credits
-
-Built with:
-- [Model Context Protocol](https://docs.modelcontextprotocol.com/) - MCP standard
-- [Zod](https://zod.dev) - Schema validation
-- [TypeScript](https://typescriptlang.org) - Type safety
-- [pnpm](https://pnpm.io) - Package manager
-
-Special thanks to the MCP community ❤️
-
----
-
-## 📚 Publishing
-
-This repository uses GitHub Actions to automatically publish to:
-- **npm**: [@sylphx/filesystem-mcp](https://www.npmjs.com/package/@sylphx/filesystem-mcp)
-- **Docker Hub**: [sylphx/filesystem-mcp](https://hub.docker.com/r/sylphx/filesystem-mcp)
-
-Triggered on version tags (`v*.*.*`) pushed to `main` branch.
-
-**Required secrets**: `NPM_TOKEN`, `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`
-
----
-
-<p align="center">
-  <strong>Secure. Efficient. Token-optimized.</strong>
-  <br>
-  <sub>The filesystem MCP server that saves tokens and keeps your projects safe</sub>
-  <br><br>
-  <a href="https://sylphx.com">sylphx.com</a> •
-  <a href="https://x.com/SylphxAI">@SylphxAI</a> •
-  <a href="mailto:hi@sylphx.com">hi@sylphx.com</a>
-</p>

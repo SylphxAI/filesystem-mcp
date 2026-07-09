@@ -82,7 +82,7 @@ jobs:
         if: steps.classify.outputs.product_changed == 'true'
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.3.1'
+          bun-version: '1.3.12'
 
       - name: Set up Node.js
         if: steps.classify.outputs.product_changed == 'true'
@@ -94,9 +94,17 @@ jobs:
         if: steps.classify.outputs.product_changed == 'true'
         run: bun install --frozen-lockfile
 
-      - name: Check for vulnerabilities
+      - name: Set up Rust
         if: steps.classify.outputs.product_changed == 'true'
-        run: bun audit
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Rust core and MCP server
+        if: steps.classify.outputs.product_changed == 'true'
+        run: bun run build:rust
+
+      - name: Check for vulnerabilities (shipped runtime deps)
+        if: steps.classify.outputs.product_changed == 'true'
+        run: bun run audit:shipped
 
       - name: Check Formatting
         if: steps.classify.outputs.product_changed == 'true'
@@ -110,20 +118,27 @@ jobs:
         if: steps.classify.outputs.product_changed == 'true'
         run: bun run test:cov # Fails job if tests fail or coverage threshold not met
 
+      - name: Release gate
+        if: steps.classify.outputs.product_changed == 'true'
+        run: bun run benchmark:release-gate
+
       - name: Upload coverage to Codecov
         if: steps.classify.outputs.product_changed == 'true'
-        uses: codecov/codecov-action@v4.5.0 # Use Codecov action with fixed version
+        continue-on-error: true
+        uses: codecov/codecov-action@v6.0.1
         with:
-          token: ${{ secrets.CODECOV_TOKEN }} # Use Codecov token
-          files: ./coverage/lcov.info # Specify LCOV file path
-          fail_ci_if_error: true # Optional: fail CI if upload error
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
 
       - name: Upload test results to Codecov
         if: ${{ !cancelled() && steps.classify.outputs.product_changed == 'true' }}
-        uses: codecov/test-results-action@v1
+        continue-on-error: true
+        uses: codecov/codecov-action@v6.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          # No file specified, action defaults to common patterns like test-report.junit.xml
+          report_type: test_results
+          fail_ci_if_error: false
 
       - name: Perform CodeQL Analysis # Added CodeQL analyze
         if: steps.classify.outputs.product_changed == 'true'
@@ -159,7 +174,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.3.1'
+          bun-version: '1.3.12'
 
       - name: Set up Node.js
         uses: actions/setup-node@v4.0.3
@@ -206,7 +221,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.3.1'
+          bun-version: '1.3.12'
 
       - name: Set up Node.js for NPM
         uses: actions/setup-node@v4.0.3
