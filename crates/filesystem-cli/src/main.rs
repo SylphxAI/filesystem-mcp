@@ -1,3 +1,4 @@
+use filesystem_core::search::SearchMatch;
 use filesystem_core::{resolve_path, PolicyErrorCode, ENGINE_NAME, ENGINE_VERSION};
 use serde::{Deserialize, Serialize};
 use std::io::{self, Read};
@@ -18,6 +19,30 @@ struct SuccessEnvelope {
 }
 
 #[derive(Debug, Serialize)]
+struct SearchSuccessEnvelope {
+    status: &'static str,
+    engine: &'static str,
+    version: &'static str,
+    results: Vec<SearchMatchDto>,
+    metrics: SearchMetricsDto,
+}
+
+#[derive(Debug, Serialize)]
+struct SearchMatchDto {
+    file: String,
+    line: u32,
+    matched_text: String,
+    context: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct SearchMetricsDto {
+    files_scanned: usize,
+    matches_found: usize,
+    elapsed_ms: u64,
+}
+
+#[derive(Debug, Serialize)]
 struct ErrorEnvelope {
     status: &'static str,
     code: String,
@@ -29,6 +54,72 @@ fn policy_code(code: PolicyErrorCode) -> &'static str {
     match code {
         PolicyErrorCode::InvalidParams => "INVALID_PARAMS",
         PolicyErrorCode::InvalidRequest => "INVALID_REQUEST",
+    }
+}
+
+fn map_search_match(entry: SearchMatch) -> SearchMatchDto {
+    SearchMatchDto {
+        file: entry.file,
+        line: entry.line,
+        matched_text: entry.matched_text,
+        context: entry.context,
+    }
+}
+
+fn handle_search_files(input: &serde_json::Value) -> Result<SearchSuccessEnvelope, ErrorEnvelope> {
+    let root = input
+        .get("root")
+        .and_then(|value| value.as_str())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+
+    let relative_path = input
+        .get("path")
+        .and_then(|value| value.as_str())
+        .unwrap_or(".");
+
+    let regex = input
+        .get("regex")
+        .and_then(|value| value.as_str())
+        .ok_or_else(|| ErrorEnvelope {
+            status: "error",
+            code: "INVALID_PARAMS".into(),
+            message: "regex is required".into(),
+            next_action: "Pass a regex pattern string.".into(),
+        })?;
+
+    let file_pattern = input
+        .get("file_pattern")
+        .and_then(|value| value.as_str())
+        .unwrap_or("*");
+
+    match filesystem_core::search::search_files(&root, relative_path, regex, file_pattern, None, None) {
+        Ok((results, stats)) => Ok(SearchSuccessEnvelope {
+            status: "ok",
+            engine: ENGINE_NAME,
+            version: ENGINE_VERSION,
+            results: results.into_iter().map(map_search_match).collect(),
+            metrics: SearchMetricsDto {
+                files_scanned: stats.files_scanned,
+                matches_found: stats.matches_found,
+                elapsed_ms: stats.elapsed_ms,
+            },
+        }),
+        Err(message) => {
+            let code = if message.starts_with("INVALID_REGEX") {
+                "INVALID_PARAMS"
+            } else if message.starts_with("INVALID_ROOT") || message.contains("Path traversal") {
+                "INVALID_REQUEST"
+            } else {
+                "SEARCH_FAILED"
+            };
+            Err(ErrorEnvelope {
+                status: "error",
+                code: code.into(),
+                message,
+                next_action: "Use a root-scoped relative path and a valid regex pattern.".into(),
+            })
+        }
     }
 }
 
@@ -91,11 +182,15 @@ fn main() {
             Ok(success) => serde_json::to_string(&success).expect("serialize"),
             Err(error) => serde_json::to_string(&error).expect("serialize"),
         },
+        "search_files" => match handle_search_files(&request.input) {
+            Ok(success) => serde_json::to_string(&success).expect("serialize"),
+            Err(error) => serde_json::to_string(&error).expect("serialize"),
+        },
         other => serde_json::to_string(&ErrorEnvelope {
             status: "error",
             code: "UNSUPPORTED_TOOL".into(),
             message: format!("Unsupported tool: {other}"),
-            next_action: "Use resolve_path.".into(),
+            next_action: "Use resolve_path or search_files.".into(),
         })
         .expect("serialize"),
     };

@@ -1,4 +1,6 @@
-//! Root-scoped filesystem path policy.
+//! Root-scoped filesystem path policy and search engine.
+
+pub mod search;
 
 use std::path::{Component, Path, PathBuf};
 

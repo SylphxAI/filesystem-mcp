@@ -9,6 +9,7 @@ import { z } from 'zod'
 import type { McpToolResponse } from '../types/mcp-types.js'
 export type LocalMcpResponse = McpToolResponse
 
+import { searchFilesViaRustEngine, shouldUseRustSearchEngine } from '../engine/rust-search.js'
 import {
 	PROJECT_ROOT as projectRootUtil,
 	resolvePath as resolvePathUtil,
@@ -228,8 +229,46 @@ export const handleSearchFilesFunc = async (
 		file_pattern: filePattern,
 	} = parseAndValidateArgs(args)
 
-	const searchRegex = compileSearchRegex(regexString)
 	const allResults: SearchResultItem[] = []
+
+	if (shouldUseRustSearchEngine()) {
+		const envelope = searchFilesViaRustEngine({
+			root: deps.PROJECT_ROOT,
+			path: relativePath,
+			regex: regexString,
+			file_pattern: filePattern,
+		})
+
+		if (envelope.status !== 'ok') {
+			const code =
+				envelope.code === 'INVALID_PARAMS' ? ErrorCode.InvalidParams : ErrorCode.InvalidRequest
+			throw new McpError(code, envelope.message)
+		}
+
+		for (const match of envelope.results) {
+			allResults.push({
+				type: 'match',
+				file: match.file,
+				line: match.line,
+				match: match.matched_text,
+				context: match.context,
+			})
+		}
+
+		return {
+			content: [
+				{
+					type: 'text',
+					text: JSON.stringify({ results: allResults }, undefined, 2),
+				},
+			],
+			data: {
+				results: allResults,
+			},
+		}
+	}
+
+	const searchRegex = compileSearchRegex(regexString)
 
 	try {
 		const filesToSearch = await findFilesToSearch(deps, relativePath, filePattern)
