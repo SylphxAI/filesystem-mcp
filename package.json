@@ -43,7 +43,7 @@
 		"docs:preview": "vitepress preview docs",
 		"start": "node dist/index.js",
 		"typecheck": "tsc --noEmit",
-		"benchmark": "vitest bench",
+		"benchmark": "vitest bench --run",
 		"doctor": "bun run src/index.ts doctor",
 		"benchmark:release-gate": "bun scripts/release-gate.ts",
 		"test:rust-policy": "cargo test && vitest run __tests__/engine/rust-policy.boundary.test.ts",
