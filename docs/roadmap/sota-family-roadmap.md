@@ -3,12 +3,13 @@
 Status: adoption plan  
 Owner: Filesystem MCP  
 Scope: repo-local future plan and its role in the SylphxAI MCP family
+Decision record: `docs/adr/ADR-194-mcp-family-sota-roadmap.md`
 
 ## Family Role
 
 Filesystem MCP is the safe local operation engine for the MCP family. It gives
-agents root-confined read, search, list, edit, copy, move, delete, chmod, and
-chown capabilities with explicit validation and auditability.
+agents root-confined read, search, list, edit, duplicate-file, move, delete,
+chmod, and chown capabilities with explicit validation and auditability.
 
 It is the execution-side complement to evidence tools. Other MCPs help agents
 understand files and decisions; Filesystem MCP changes the local project only
