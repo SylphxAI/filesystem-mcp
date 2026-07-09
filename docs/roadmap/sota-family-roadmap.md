@@ -35,8 +35,11 @@ and auditable enough to reconstruct every side effect.
 
 Rust should own path canonicalization, root confinement, symlink policy,
 directory walking, streaming IO, hashing, search, diff preview, diff apply, and
-operation ledgers. The TypeScript adapter can remain while tool schemas and
-release compatibility are preserved.
+operation ledgers. It should also own MCP serving through
+`modelcontextprotocol/rust-sdk` / `rmcp`.
+
+TypeScript can remain only as a compatibility wrapper, generated client surface,
+or package-transition layer. It is not the target MCP adapter runtime.
 
 WASM is not the default runtime for filesystem tools because the host capability
 model is the product boundary. WASM may be used only for sandboxed transforms
@@ -59,6 +62,7 @@ that cannot escape the host policy engine.
 - Add fast ignore-aware directory walk and content search.
 - Add streaming reads and bounded memory behavior.
 - Add deterministic diff preview and apply primitives.
+- Add Rust MCP handlers for read, search, diff preview, and guarded writes.
 
 ### Phase 2: Write Integrity And Audit
 
