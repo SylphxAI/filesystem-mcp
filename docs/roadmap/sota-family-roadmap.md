@@ -17,13 +17,13 @@ through guarded operations.
 
 ## Family Fit
 
-| Project | Relationship |
-| --- | --- |
-| Architecture Reader MCP | Identifies architecture impact and affected files. Filesystem MCP performs safe reads or edits when an agent acts. |
-| CodeRAG | Finds relevant code evidence. Filesystem MCP applies file operations and can expose exact file content to retrieval workflows. |
-| Reader MCPs | Read media and documents. Filesystem MCP owns generic filesystem access and write safety, not media interpretation. |
-| Consultant MCP | Reviews high-risk operations and policies. Filesystem MCP provides operation evidence and write ledgers. |
-| Smart Reader MCP | Routes media reads. Filesystem MCP stays broader and owns root-scoped filesystem tools. |
+| Project                 | Relationship                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Architecture Reader MCP | Identifies architecture impact and affected files. Filesystem MCP performs safe reads or edits when an agent acts.             |
+| CodeRAG                 | Finds relevant code evidence. Filesystem MCP applies file operations and can expose exact file content to retrieval workflows. |
+| Reader MCPs             | Read media and documents. Filesystem MCP owns generic filesystem access and write safety, not media interpretation.            |
+| Consultant MCP          | Reviews high-risk operations and policies. Filesystem MCP provides operation evidence and write ledgers.                       |
+| Smart Reader MCP        | Routes media reads. Filesystem MCP stays broader and owns root-scoped filesystem tools.                                        |
 
 ## SOTA End State
 
