@@ -95,30 +95,27 @@ export function buildReleaseGateReport(artifactDir: string): ReleaseGateReport {
 		checks,
 		'rust:mcp_server',
 		fileExists('crates/filesystem-mcp-server/src/lib.rs'),
-		'Rust MCP server (modelcontextprotocol/rust-sdk rmcp) is present',
+		'Opt-in Rust MCP transport preview (rmcp) is present for Phase 4 evaluation',
 	)
 
 	const binWrapper = readFileSync(path.join(repoRoot, 'bin/filesystem-mcp'), 'utf8')
-	const stagedRustBin = path.join(repoRoot, 'bin/native/filesystem-mcp-server')
 	const cliBridge = readFileSync(
 		path.join(repoRoot, 'crates/filesystem-mcp-server/src/cli_bridge.rs'),
 		'utf8',
 	)
 	addCheck(
 		checks,
-		'mcp:rust_adapter_default',
-		binWrapper.includes('filesystem-mcp-server') &&
-			binWrapper.includes('use_ts_transport') &&
-			!binWrapper.includes('engine-invoke.js') &&
-			existsSync(stagedRustBin),
-		'Default npm bin launches the Rust rmcp MCP server; TypeScript transport is legacy opt-in only',
-		{ staged_binary: stagedRustBin },
+		'mcp:ts_adapter_default',
+		binWrapper.includes('dist/index.js') &&
+			binWrapper.includes('exec node') &&
+			binWrapper.includes('use_rust_transport'),
+		'Default npm bin launches the TypeScript MCP adapter; Rust rmcp is opt-in only',
 	)
 	addCheck(
 		checks,
 		'boundary:rust_cli_engine',
 		cliBridge.includes('filesystem-cli') && !fileExists('src/engine-invoke.ts'),
-		'Rust MCP routes engine work through filesystem-cli instead of a TypeScript MCP engine bridge',
+		'Opt-in Rust MCP routes engine work through filesystem-cli; no TS engine-invoke bridge on default path',
 	)
 
 	const rustCli = path.join(repoRoot, 'target/release/filesystem-cli')
