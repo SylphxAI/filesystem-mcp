@@ -4,7 +4,11 @@ pub mod audit;
 pub mod search;
 pub mod walk;
 
-pub use audit::{append_audit_batch, content_hash, generate_operation_id, WriteAuditFileRecord};
+pub use audit::{
+    append_audit_batch, append_audit_batch_with_limit, content_hash, generate_operation_id,
+    rollback_snapshot_path, RollbackMetadata, WriteAuditFileRecord, WriteAuditRequestRecord,
+    DEFAULT_MAX_ROLLBACK_BYTES,
+};
 
 use std::path::{Component, Path, PathBuf};
 

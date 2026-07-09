@@ -110,6 +110,50 @@ export function buildReleaseGateReport(artifactDir: string): ReleaseGateReport {
 		{ hashLength: hashEnvelope?.hash?.length ?? 0 },
 	)
 
+	const auditProbe = existsSync(rustCli)
+		? spawnSync(rustCli, [], {
+				input: JSON.stringify({
+					tool: 'record_write_audit',
+					input: {
+						root: repoRoot,
+						tool: 'apply_diff',
+						records: [
+							{
+								path: 'release-gate-probe.txt',
+								beforeHash: hashEnvelope?.hash ?? '0'.repeat(64),
+								afterHash: hashEnvelope?.hash ?? '0'.repeat(64),
+								diffCount: 1,
+								success: true,
+								beforeContent: 'audit-probe',
+							},
+						],
+					},
+				}),
+				encoding: 'utf8',
+			})
+		: null
+	const auditEnvelope =
+		auditProbe && auditProbe.status === 0
+			? (JSON.parse(auditProbe.stdout) as {
+					status?: string
+					records?: Array<{
+						rollback?: { available?: boolean; snapshotPath?: string }
+					}>
+				})
+			: undefined
+	addCheck(
+		checks,
+		'boundary:rollback_snapshot',
+		auditEnvelope?.status === 'ok' &&
+			auditEnvelope.records?.[0]?.rollback?.available === true &&
+			(auditEnvelope.records?.[0]?.rollback?.snapshotPath?.includes('rollback/') ?? false),
+		'record_write_audit stores rollback snapshots with restore metadata for successful writes',
+		{
+			rollbackAvailable: auditEnvelope?.records?.[0]?.rollback?.available,
+			snapshotPath: auditEnvelope?.records?.[0]?.rollback?.snapshotPath,
+		},
+	)
+
 	addCheck(
 		checks,
 		'fixtures:safety_corpus',

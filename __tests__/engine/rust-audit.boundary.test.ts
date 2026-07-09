@@ -35,9 +35,10 @@ describe('Rust audit engine boundary', () => {
 		expect(first).toHaveLength(64)
 	})
 
-	it('appends apply_diff audit records to the project ledger', () => {
-		const beforeHash = hashContent('before')
-		const afterHash = hashContent('after')
+	it('appends apply_diff audit records with rollback snapshots to the project ledger', () => {
+		const beforeContent = 'before\n'
+		const beforeHash = hashContent(beforeContent)
+		const afterHash = hashContent('after\n')
 		const recorded = recordWriteAudit(tempRoot, 'apply_diff', [
 			{
 				path: 'src/example.ts',
@@ -45,22 +46,35 @@ describe('Rust audit engine boundary', () => {
 				afterHash,
 				diffCount: 1,
 				success: true,
+				beforeContent,
 			},
 		])
 
 		expect(recorded.operationId.startsWith('op_')).toBe(true)
 		expect(existsSync(recorded.ledgerPath)).toBe(true)
+		expect(recorded.records[0]?.rollback?.available).toBe(true)
+		expect(recorded.records[0]?.rollback?.snapshot_path).toContain(
+			'.filesystem-mcp/rollback/',
+		)
+		expect(recorded.records[0]?.rollback?.restore_content_hash).toBe(beforeHash)
 
 		const ledger = readFileSync(recorded.ledgerPath, 'utf8').trim().split('\n')
 		const last = JSON.parse(ledger[ledger.length - 1] as string) as {
 			operationId?: string
 			tool: string
-			records: Array<{ path: string; beforeHash: string; afterHash: string }>
+			records: Array<{
+				path: string
+				beforeHash: string
+				afterHash: string
+				rollback?: { available: boolean; snapshotPath?: string }
+			}>
 		}
 		expect(last.tool).toBe('apply_diff')
 		expect(last.operationId?.startsWith('op_')).toBe(true)
 		expect(last.records[0]?.path).toBe('src/example.ts')
 		expect(last.records[0]?.beforeHash).toBe(beforeHash)
 		expect(last.records[0]?.afterHash).toBe(afterHash)
+		expect(last.records[0]?.rollback?.available).toBe(true)
+		expect(last.records[0]?.rollback?.snapshotPath).toContain('src__example.ts.snapshot')
 	})
 })

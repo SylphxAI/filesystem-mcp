@@ -57,6 +57,9 @@ describe('apply_diff audit envelope', () => {
 		expect(result.results[0]?.before_hash).toHaveLength(64)
 		expect(result.results[0]?.after_hash).toHaveLength(64)
 		expect(result.results[0]?.before_hash).not.toBe(result.results[0]?.after_hash)
+		expect(result.results[0]?.rollback?.available).toBe(true)
+		expect(result.results[0]?.rollback?.snapshot_path).toContain('.filesystem-mcp/rollback/')
+		expect(result.audit?.records[0]?.rollback?.available).toBe(true)
 		expect(readFileSync(target, 'utf8')).toContain('gamma')
 	})
 

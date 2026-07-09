@@ -1,8 +1,9 @@
-use filesystem_core::audit::WriteAuditFileRecord;
+use filesystem_core::audit::{WriteAuditFileRecord, WriteAuditRequestRecord};
 use filesystem_core::search::SearchMatch;
 use filesystem_core::walk::{ListEntry, ListFilesMetrics};
 use filesystem_core::{
-    append_audit_batch, content_hash, resolve_path, PolicyErrorCode, ENGINE_NAME, ENGINE_VERSION,
+    append_audit_batch_with_limit, content_hash, resolve_path, PolicyErrorCode, ENGINE_NAME,
+    ENGINE_VERSION, DEFAULT_MAX_ROLLBACK_BYTES,
 };
 use serde::{Deserialize, Serialize};
 use std::io::{self, Read};
@@ -71,6 +72,7 @@ struct AuditSuccessEnvelope {
     operation_id: String,
     ledger_path: String,
     record_count: usize,
+    records: Vec<WriteAuditFileRecord>,
 }
 
 #[derive(Debug, Serialize)]
@@ -240,22 +242,30 @@ fn handle_record_write_audit(input: &serde_json::Value) -> Result<AuditSuccessEn
         next_action: "Pass an array of write audit file records.".into(),
     })?;
 
-    let records: Vec<WriteAuditFileRecord> =
+    let records: Vec<WriteAuditRequestRecord> =
         serde_json::from_value(records_value.clone()).map_err(|error| ErrorEnvelope {
             status: "error",
             code: "INVALID_PARAMS".into(),
             message: format!("Invalid records payload: {error}"),
-            next_action: "Each record needs path, beforeHash, afterHash, diffCount, and success.".into(),
+            next_action:
+                "Each record needs path, beforeHash, afterHash, diffCount, success, and optional beforeContent."
+                    .into(),
         })?;
 
-    match append_audit_batch(&root, tool, &records) {
-        Ok((operation_id, ledger_path)) => Ok(AuditSuccessEnvelope {
+    let max_rollback_bytes = input
+        .get("maxRollbackBytes")
+        .and_then(|value| value.as_u64())
+        .unwrap_or(DEFAULT_MAX_ROLLBACK_BYTES);
+
+    match append_audit_batch_with_limit(&root, tool, &records, max_rollback_bytes) {
+        Ok((operation_id, ledger_path, enriched_records)) => Ok(AuditSuccessEnvelope {
             status: "ok",
             engine: ENGINE_NAME,
             version: ENGINE_VERSION,
             operation_id,
             ledger_path: ledger_path.to_string_lossy().into_owned(),
-            record_count: records.len(),
+            record_count: enriched_records.len(),
+            records: enriched_records,
         }),
         Err(message) => Err(ErrorEnvelope {
             status: "error",

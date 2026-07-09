@@ -88,12 +88,21 @@ export const diffResultSchema = z.object({
 export type DiffResult = z.infer<typeof diffResultSchema>
 
 // Define potential output structure
+const rollbackMetadataSchema = z.object({
+	available: z.boolean(),
+	restore_content_hash: z.string(),
+	snapshot_path: z.string().optional(),
+	snapshot_bytes: z.number().int().min(0).optional(),
+	reason: z.string().optional(),
+})
+
 const writeAuditRecordSchema = z.object({
 	path: z.string(),
 	before_hash: z.string(),
 	after_hash: z.string(),
 	diff_count: z.number().int().min(0),
 	success: z.boolean(),
+	rollback: rollbackMetadataSchema.optional(),
 })
 
 const diffApplyResultSchema = z.object({
@@ -103,6 +112,9 @@ const diffApplyResultSchema = z.object({
 	before_hash: z.string().optional(),
 	after_hash: z.string().optional(),
 	diff_count: z.number().int().min(0).optional(),
+	rollback: rollbackMetadataSchema
+		.optional()
+		.describe('Rollback metadata when a before-content snapshot was stored.'),
 	error: z.string().optional().describe('Detailed error message if success is false.'),
 	context: z.string().optional().describe('Lines around the error location if success is false.'),
 	diffResults: z.array(diffResultSchema).optional(),

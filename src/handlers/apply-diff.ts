@@ -97,6 +97,7 @@ export async function handleApplyDiff(
 		after_hash: string
 		diff_count: number
 		success: boolean
+		before_content?: string | undefined
 	}> = []
 
 	for (const change of changes) {
@@ -141,6 +142,7 @@ export async function handleApplyDiff(
 				after_hash: afterHash,
 				diff_count: diffs.length,
 				success: pendingResult.success,
+				before_content: originalContent,
 			})
 		} catch (error) {
 			const errorMessage =
@@ -179,15 +181,22 @@ export async function handleApplyDiff(
 					afterHash: record.after_hash,
 					diffCount: record.diff_count,
 					success: record.success,
+					...(record.before_content !== undefined
+						? { beforeContent: record.before_content }
+						: {}),
 				})),
 			)
 			operationId = recorded.operationId
 			audit = {
 				ledger_path: recorded.ledgerPath,
-				records: auditRecords,
+				records: recorded.records,
 			}
 			for (const result of results) {
 				result.operation_id = operationId
+				const ledgerRecord = recorded.records.find((entry) => entry.path === result.path)
+				if (ledgerRecord?.rollback) {
+					result.rollback = ledgerRecord.rollback
+				}
 			}
 		} catch {
 			// Audit failure should not hide write results; callers still get per-file hashes.
