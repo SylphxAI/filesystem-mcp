@@ -16,6 +16,10 @@ type CliEnvelope = {
 	entries?: unknown[]
 	results?: unknown[]
 	resolved_path?: string
+	tool?: string
+	result?: {
+		content?: Array<{ type?: string; text?: string }>
+	}
 }
 
 const invokeCli = (tool: string, input: Record<string, unknown>, env: NodeJS.ProcessEnv) => {
@@ -118,12 +122,68 @@ describe('shipped path matrix (Rust core, no legacy flags)', () => {
 		expect(existsSync(nodeInvokeLog)).toBe(false)
 	})
 
+	it('read_content routes through filesystem-core without legacy runtime', () => {
+		const relative = path.relative(repoRoot, path.join(matrixDir, 'probe.txt'))
+		const envelope = invokeCli(
+			'read_content',
+			{ root: repoRoot, paths: [relative] },
+			fakeNodeEnv,
+		)
+		expect(envelope.status).toBe('ok')
+		expect(envelope.engine).toBe('filesystem-core')
+		expect(envelope.tool).toBe('read_content')
+		const payload = JSON.parse(envelope.result?.content?.[0]?.text ?? '[]') as Array<{
+			path?: string
+			content?: string
+		}>
+		expect(payload[0]?.content).toContain('matrix-probe-content')
+		expect(existsSync(nodeInvokeLog)).toBe(false)
+	})
+
+	it('write_content routes through filesystem-core without legacy runtime', () => {
+		const relative = path.relative(repoRoot, path.join(matrixDir, 'written.txt'))
+		const envelope = invokeCli(
+			'write_content',
+			{
+				root: repoRoot,
+				items: [{ path: relative, content: 'matrix-write-probe' }],
+			},
+			fakeNodeEnv,
+		)
+		expect(envelope.status).toBe('ok')
+		expect(envelope.engine).toBe('filesystem-core')
+		expect(envelope.tool).toBe('write_content')
+		const payload = JSON.parse(envelope.result?.content?.[0]?.text ?? '[]') as Array<{
+			success?: boolean
+		}>
+		expect(payload[0]?.success).toBe(true)
+		expect(existsSync(nodeInvokeLog)).toBe(false)
+	})
+
+	it('stat_items routes through filesystem-core without legacy runtime', () => {
+		const relative = path.relative(repoRoot, path.join(matrixDir, 'probe.txt'))
+		const envelope = invokeCli(
+			'stat_items',
+			{ root: repoRoot, paths: [relative] },
+			fakeNodeEnv,
+		)
+		expect(envelope.status).toBe('ok')
+		expect(envelope.engine).toBe('filesystem-core')
+		expect(envelope.tool).toBe('stat_items')
+		const payload = JSON.parse(envelope.result?.content?.[0]?.text ?? '[]') as Array<{
+			status?: string
+		}>
+		expect(payload[0]?.status).toBe('success')
+		expect(existsSync(nodeInvokeLog)).toBe(false)
+	})
+
 	it('documents explicit shipped routing table in mcp-server sources', () => {
 		const routes = readFileSync(
 			path.join(repoRoot, 'crates/filesystem-mcp-server/src/tool_routes.rs'),
 			'utf8',
 		)
 		expect(routes).toContain('list_files')
+		expect(routes).toContain('read_content')
 		expect(routes).toContain('RustCore')
 		expect(routes).toContain('LegacyOptIn')
 	})

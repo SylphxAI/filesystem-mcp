@@ -1,11 +1,14 @@
 mod legacy_runtime;
 
-use legacy_runtime::{handle_legacy_mcp_tool, is_native_rust_engine_request};
+use legacy_runtime::{
+    handle_legacy_mcp_tool, is_native_rust_engine_request, LegacyToolSuccessEnvelope,
+};
 use filesystem_core::audit::{WriteAuditFileRecord, WriteAuditRequestRecord};
 use filesystem_core::search::SearchMatch;
 use filesystem_core::walk::{ListEntry, ListFilesMetrics};
 use filesystem_core::{
-    append_audit_batch_with_limit, content_hash, resolve_path, PolicyErrorCode, ENGINE_NAME,
+    append_audit_batch_with_limit, content_hash, read_content, resolve_path, stat_items,
+    write_content, PolicyErrorCode, ReadContentOptions, ReadFormat, WriteItem, ENGINE_NAME,
     ENGINE_VERSION, DEFAULT_MAX_ROLLBACK_BYTES,
 };
 use serde::{Deserialize, Serialize};
@@ -279,6 +282,152 @@ fn handle_record_write_audit(input: &serde_json::Value) -> Result<AuditSuccessEn
     }
 }
 
+fn project_root_from_input(input: &serde_json::Value) -> PathBuf {
+    input
+        .get("root")
+        .and_then(|value| value.as_str())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
+}
+
+fn wrap_mcp_text_payload(payload: &serde_json::Value) -> serde_json::Value {
+    serde_json::json!({
+        "content": [{
+            "type": "text",
+            "text": serde_json::to_string_pretty(payload).unwrap_or_else(|_| "[]".to_string())
+        }]
+    })
+}
+
+fn handle_read_content(
+    input: &serde_json::Value,
+) -> Result<LegacyToolSuccessEnvelope, ErrorEnvelope> {
+    let root = project_root_from_input(input);
+    let paths = input
+        .get("paths")
+        .and_then(|value| value.as_array())
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| item.as_str().map(str::to_string))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    if paths.is_empty() {
+        return Err(ErrorEnvelope {
+            status: "error",
+            code: "INVALID_PARAMS".into(),
+            message: "paths is required".into(),
+            next_action: "Pass a non-empty array of relative file paths.".into(),
+        });
+    }
+
+    let options = ReadContentOptions {
+        start_line: input
+            .get("start_line")
+            .and_then(|value| value.as_u64())
+            .map(|value| value as u32),
+        end_line: input
+            .get("end_line")
+            .and_then(|value| value.as_u64())
+            .map(|value| value as u32),
+        format: match input.get("format").and_then(|value| value.as_str()) {
+            Some("raw") => ReadFormat::Raw,
+            _ => ReadFormat::Lines,
+        },
+    };
+
+    let results = read_content(&root, &paths, &options);
+    Ok(LegacyToolSuccessEnvelope {
+        status: "ok",
+        engine: ENGINE_NAME,
+        version: ENGINE_VERSION,
+        tool: "read_content".into(),
+        result: wrap_mcp_text_payload(&serde_json::to_value(results).expect("serialize")),
+    })
+}
+
+fn handle_write_content(
+    input: &serde_json::Value,
+) -> Result<LegacyToolSuccessEnvelope, ErrorEnvelope> {
+    let root = project_root_from_input(input);
+    let items = input
+        .get("items")
+        .and_then(|value| value.as_array())
+        .map(|entries| {
+            entries
+                .iter()
+                .filter_map(|entry| {
+                    let path = entry.get("path")?.as_str()?;
+                    let content = entry.get("content")?.as_str()?;
+                    Some(WriteItem {
+                        path: path.to_string(),
+                        content: content.to_string(),
+                        append: entry.get("append").and_then(|value| value.as_bool()).unwrap_or(false),
+                        expected_content_hash: entry
+                            .get("expectedContentHash")
+                            .and_then(|value| value.as_str())
+                            .map(str::to_string),
+                    })
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    if items.is_empty() {
+        return Err(ErrorEnvelope {
+            status: "error",
+            code: "INVALID_PARAMS".into(),
+            message: "items is required".into(),
+            next_action: "Pass a non-empty array of {path, content} objects.".into(),
+        });
+    }
+
+    let results = write_content(&root, &items);
+    Ok(LegacyToolSuccessEnvelope {
+        status: "ok",
+        engine: ENGINE_NAME,
+        version: ENGINE_VERSION,
+        tool: "write_content".into(),
+        result: wrap_mcp_text_payload(&serde_json::to_value(results).expect("serialize")),
+    })
+}
+
+fn handle_stat_items(
+    input: &serde_json::Value,
+) -> Result<LegacyToolSuccessEnvelope, ErrorEnvelope> {
+    let root = project_root_from_input(input);
+    let paths = input
+        .get("paths")
+        .and_then(|value| value.as_array())
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| item.as_str().map(str::to_string))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    if paths.is_empty() {
+        return Err(ErrorEnvelope {
+            status: "error",
+            code: "INVALID_PARAMS".into(),
+            message: "paths is required".into(),
+            next_action: "Pass a non-empty array of relative paths.".into(),
+        });
+    }
+
+    let results = stat_items(&root, &paths);
+    Ok(LegacyToolSuccessEnvelope {
+        status: "ok",
+        engine: ENGINE_NAME,
+        version: ENGINE_VERSION,
+        tool: "stat_items".into(),
+        result: wrap_mcp_text_payload(&serde_json::to_value(results).expect("serialize")),
+    })
+}
+
 fn handle_resolve_path(input: &serde_json::Value) -> Result<SuccessEnvelope, ErrorEnvelope> {
     let relative_path = input
         .get("relative_path")
@@ -355,11 +504,23 @@ fn main() {
                 Ok(success) => serde_json::to_string(&success).expect("serialize"),
                 Err(error) => serde_json::to_string(&error).expect("serialize"),
             },
+            "read_content" => match handle_read_content(&request.input) {
+                Ok(success) => serde_json::to_string(&success).expect("serialize"),
+                Err(error) => serde_json::to_string(&error).expect("serialize"),
+            },
+            "write_content" => match handle_write_content(&request.input) {
+                Ok(success) => serde_json::to_string(&success).expect("serialize"),
+                Err(error) => serde_json::to_string(&error).expect("serialize"),
+            },
+            "stat_items" => match handle_stat_items(&request.input) {
+                Ok(success) => serde_json::to_string(&success).expect("serialize"),
+                Err(error) => serde_json::to_string(&error).expect("serialize"),
+            },
             other => serde_json::to_string(&ErrorEnvelope {
                 status: "error",
                 code: "UNSUPPORTED_TOOL".into(),
                 message: format!("Unsupported native tool: {other}"),
-                next_action: "Use resolve_path, search_files, list_files, content_hash, or record_write_audit.".into(),
+                next_action: "Use resolve_path, search_files, list_files, content_hash, record_write_audit, read_content, write_content, or stat_items.".into(),
             })
             .expect("serialize"),
         }

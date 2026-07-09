@@ -110,6 +110,10 @@ fn is_leap_year(year: i32) -> bool {
     (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
 }
 
+pub fn format_entry_stats(relative_path: &str, meta: &fs::Metadata) -> ListStats {
+    format_stats(relative_path, meta)
+}
+
 #[cfg(target_family = "unix")]
 fn format_stats(relative_path: &str, meta: &fs::Metadata) -> ListStats {
     use std::os::unix::fs::MetadataExt;

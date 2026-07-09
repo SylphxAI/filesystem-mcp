@@ -70,8 +70,8 @@ pub fn handle_legacy_mcp_tool(
                  Use the Rust engine path or set FILESYSTEM_ALLOW_LEGACY_ENGINE=1."
             ),
             next_action:
-                "Use Rust-routed tools (list_files, search_files, resolve_path, content_hash) \
-                 or export FILESYSTEM_ALLOW_LEGACY_ENGINE=1."
+                "Use Rust-routed tools (list_files, search_files, resolve_path, content_hash, \
+                 read_content, write_content, stat_items) or export FILESYSTEM_ALLOW_LEGACY_ENGINE=1."
                     .into(),
         });
     }
@@ -163,7 +163,12 @@ pub fn is_native_rust_engine_request(tool: &str, input: &Value) -> bool {
     match tool {
         "list_files" => true,
         "search_files" => input.get("regex").and_then(Value::as_str).is_some_and(|value| !value.is_empty()),
-        "resolve_path" | "content_hash" | "record_write_audit" => true,
+        "resolve_path"
+        | "content_hash"
+        | "record_write_audit"
+        | "read_content"
+        | "write_content"
+        | "stat_items" => true,
         _ => false,
     }
 }
