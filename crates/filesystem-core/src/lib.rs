@@ -8,8 +8,8 @@ pub mod walk;
 pub use walk::format_entry_stats;
 
 pub use content::{
-    read_content, stat_items, write_content, ReadContentOptions, ReadContentResult, ReadFormat,
-    StatItemResult, WriteContentResult, WriteItem, CONTENT_ROUTE,
+    delete_items, read_content, stat_items, write_content, DeleteItemsResult, ReadContentOptions,
+    ReadContentResult, ReadFormat, StatItemResult, WriteContentResult, WriteItem, CONTENT_ROUTE,
 };
 pub use audit::{
     append_audit_batch, append_audit_batch_with_limit, content_hash, generate_operation_id,

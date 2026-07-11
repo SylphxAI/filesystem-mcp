@@ -92,7 +92,14 @@ describe('filesystem-mcp differential harness (rej-010 tick-022 search+stat expa
 			serverContract: { tools: string[] }
 		}
 
-		const allowed = new Set(['list_files', 'read_content', 'write_content', 'search_files', 'stat_items'])
+		const allowed = new Set([
+			'list_files',
+			'read_content',
+			'write_content',
+			'search_files',
+			'stat_items',
+			'delete_items',
+		])
 		for (const route of corpus.toolRouteCases) {
 			expect(allowed.has(route.tool)).toBe(true)
 			expect(route.expect).toBe('RustCore')

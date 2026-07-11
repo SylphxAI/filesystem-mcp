@@ -15,9 +15,9 @@ pub fn route_for_tool(tool: &str) -> Option<ToolRoute> {
         | "record_write_audit"
         | "read_content"
         | "write_content"
-        | "stat_items" => Some(ToolRoute::RustCore),
-        "delete_items"
-        | "create_directories"
+        | "stat_items"
+        | "delete_items" => Some(ToolRoute::RustCore),
+        "create_directories"
         | "chmod_items"
         | "chown_items"
         | "move_items"
@@ -39,5 +39,6 @@ mod tests {
         assert_eq!(route_for_tool("read_content"), Some(ToolRoute::RustCore));
         assert_eq!(route_for_tool("write_content"), Some(ToolRoute::RustCore));
         assert_eq!(route_for_tool("stat_items"), Some(ToolRoute::RustCore));
+        assert_eq!(route_for_tool("delete_items"), Some(ToolRoute::RustCore));
     }
 }
