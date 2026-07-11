@@ -30,10 +30,10 @@
         "vitest": "^3.1.1",
       },
       "optionalDependencies": {
-        "@sylphx/filesystem-mcp-darwin-arm64": "0.7.0",
-        "@sylphx/filesystem-mcp-darwin-x64": "0.7.0",
-        "@sylphx/filesystem-mcp-linux-arm64-gnu": "0.7.0",
-        "@sylphx/filesystem-mcp-linux-x64-gnu": "0.7.0",
+        "@sylphx/filesystem-mcp-darwin-arm64": "0.7.1",
+        "@sylphx/filesystem-mcp-darwin-x64": "0.7.1",
+        "@sylphx/filesystem-mcp-linux-arm64-gnu": "0.7.1",
+        "@sylphx/filesystem-mcp-linux-x64-gnu": "0.7.1",
       },
     },
   },
@@ -323,6 +323,14 @@
     "@shikijs/vscode-textmate": ["@shikijs/vscode-textmate@10.0.2", "", {}, "sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg=="],
 
     "@sylphx/biome-config": ["@sylphx/biome-config@0.4.1", "", { "peerDependencies": { "@biomejs/biome": "^2.0.0" } }, "sha512-yNdrXKcnhrXK+OB2WLEJix6cryj3PME5DbKpGFMJGA6/B1/+mpk2ChKiohifrf956FKQ3JTAqhLhZfY7lu18yA=="],
+
+    "@sylphx/filesystem-mcp-darwin-arm64": ["@sylphx/filesystem-mcp-darwin-arm64@0.7.1", "", { "os": "darwin", "cpu": "arm64" }, "sha512-J2Ckvhx++lUlffOZop+w3Do4Gw3I4/nTEhkBRRj5/mP649SX9kahSLJLkiK/gHYNUfXVJBDzE8DSPp2NRfDYvg=="],
+
+    "@sylphx/filesystem-mcp-darwin-x64": ["@sylphx/filesystem-mcp-darwin-x64@0.7.1", "", { "os": "darwin", "cpu": "x64" }, "sha512-dqbUDRkZhRpD0oo0SM8xbK3hZAeNqMo7PaDmCURw3nNVN9OEnT4EvQAVH2XMkrU2xDPXs9VIRkrV08EWCUVEHA=="],
+
+    "@sylphx/filesystem-mcp-linux-arm64-gnu": ["@sylphx/filesystem-mcp-linux-arm64-gnu@0.7.1", "", { "os": "linux", "cpu": "arm64" }, "sha512-2MpDxYFMHggE7ss+gG+ZdF8N0wSG9uK9pO+ZfDPtrp9whWb7lIH4QXZmt6VxanEwmPnWNSO1Fn+jSzMjNn0EPw=="],
+
+    "@sylphx/filesystem-mcp-linux-x64-gnu": ["@sylphx/filesystem-mcp-linux-x64-gnu@0.7.1", "", { "os": "linux", "cpu": "x64" }, "sha512-cnbwWaByWtw5fyslp/XBEXiD0V+vzBPXObfk7oG2nbk1C1nd/9TsLPxFnSgZ69yBUA8b8ojWRsVmEOYuo/Rm7Q=="],
 
     "@sylphx/tsconfig": ["@sylphx/tsconfig@0.3.1", "", {}, "sha512-S7JAV9OEt3LUChz1jmFMG2coJGYdmSF+n4x6lPK9JziykFCvS37d4G5uoBS2kWVW4grnZa+WRmAtZkE9oMFi0Q=="],
 

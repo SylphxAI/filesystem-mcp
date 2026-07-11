@@ -1,0 +1,77 @@
+{
+	"schemaVersion": 1,
+	"source": "__tests__/handlers/write-content.test.ts",
+	"corpusRoot": "test/fixtures/golden/corpus",
+	"cases": [
+		{
+			"id": "write-new-file",
+			"tool": "write_content",
+			"input": {
+				"items": [{ "path": "new-file.txt", "content": "brand new content\n" }]
+			},
+			"expects": {
+				"results": [
+					{
+						"path": "new-file.txt",
+						"success": true,
+						"operation": "written"
+					}
+				]
+			}
+		},
+		{
+			"id": "write-overwrite",
+			"tool": "write_content",
+			"input": {
+				"items": [{ "path": "alpha.txt", "content": "replaced alpha\n" }]
+			},
+			"expects": {
+				"results": [
+					{
+						"path": "alpha.txt",
+						"success": true,
+						"operation": "written"
+					}
+				]
+			}
+		},
+		{
+			"id": "write-append",
+			"tool": "write_content",
+			"input": {
+				"items": [
+					{
+						"path": "alpha.txt",
+						"content": "appended line\n",
+						"append": true
+					}
+				]
+			},
+			"expects": {
+				"results": [
+					{
+						"path": "alpha.txt",
+						"success": true,
+						"operation": "appended"
+					}
+				]
+			}
+		},
+		{
+			"id": "write-nested-path",
+			"tool": "write_content",
+			"input": {
+				"items": [{ "path": "nested/gamma.txt", "content": "nested write\n" }]
+			},
+			"expects": {
+				"results": [
+					{
+						"path": "nested/gamma.txt",
+						"success": true,
+						"operation": "written"
+					}
+				]
+			}
+		}
+	]
+}

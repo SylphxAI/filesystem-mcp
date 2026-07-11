@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
 /**
- * TS contract oracle for filesystem-mcp list_files differential parity (rej-010).
- * Frozen baseline: pure TypeScript list_files handler on golden corpus.
+ * TS contract oracle for filesystem-mcp differential parity (rej-010 / tick-016).
+ * Frozen baseline: pure TypeScript list_files + read_content + write_content
+ * handlers on golden corpus. Fail-closed allow-list — no silent extra tools.
  */
 import { createHash } from 'node:crypto'
 import { cpSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync } from 'node:fs'
@@ -9,6 +10,8 @@ import { readFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { listFilesToolDefinition } from '../../src/handlers/list-files.ts'
+import { readContentToolDefinition } from '../../src/handlers/read-content.ts'
+import { writeContentToolDefinition } from '../../src/handlers/write-content.ts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 // realpath avoids /tmp vs /private/tmp drift on macOS which breaks PROJECT_ROOT confinement.
@@ -19,6 +22,10 @@ const SCRATCH_CANDIDATE =
 mkdirSync(SCRATCH_CANDIDATE, { recursive: true })
 const SCRATCH_ROOT = realpathSync(SCRATCH_CANDIDATE)
 
+/** Fail-closed tool allow-list for main-bound differential expansion. */
+const ALLOWED_TOOLS = new Set(['list_files', 'read_content', 'write_content'] as const)
+type AllowedTool = 'list_files' | 'read_content' | 'write_content'
+
 interface ToolRouteCase {
 	id: string
 	tool: string
@@ -27,7 +34,7 @@ interface ToolRouteCase {
 
 interface GoldenCase {
 	id: string
-	tool: 'list_files'
+	tool: AllowedTool
 	input: Record<string, unknown>
 	expects?: Record<string, unknown>
 }
@@ -40,6 +47,7 @@ interface Corpus {
 	corpusVersion: number
 	corpusRoot: string
 	listReadGolden: string
+	writeContentGolden: string
 	toolRouteCases: ToolRouteCase[]
 	serverContract: {
 		name: string
@@ -53,6 +61,12 @@ export interface DifferentialCase {
 	readonly domain: 'tool' | 'toolRouteContract' | 'serverContract'
 	readonly input: Record<string, unknown>
 	readonly output: unknown
+}
+
+const TOOL_SLICE: Record<AllowedTool, string> = {
+	list_files: 'list-files',
+	read_content: 'read-content',
+	write_content: 'write-content',
 }
 
 const sortPaths = (paths: string[]) => [...paths].sort()
@@ -84,6 +98,46 @@ const normalizeListPayload = (value: unknown, prefix: string) => {
 	return value
 }
 
+const normalizeReadError = (error: string | undefined, prefix: string) => {
+	if (!error) {
+		return error
+	}
+	const match = error.match(/\(from relative path '([^']+)'\)/)
+	if (!match) {
+		return error
+	}
+	const relativePath = stripCorpusPrefix(match[1], prefix)
+	return error.replace(match[0], `(from relative path '${relativePath}')`)
+}
+
+const normalizeReadPayload = (
+	results: Array<{ path?: string; content?: string | unknown; error?: string }>,
+	prefix: string,
+) =>
+	results.map((entry) => ({
+		...entry,
+		path: stripCorpusPrefix(entry.path ?? '', prefix),
+		error: normalizeReadError(entry.error, prefix),
+	}))
+
+const normalizeWritePayload = (
+	results: Array<{
+		path?: string
+		success?: boolean
+		operation?: string
+		code?: string
+		error?: string
+	}>,
+	prefix: string,
+) =>
+	results.map((entry) => ({
+		path: entry.path ? stripCorpusPrefix(entry.path, prefix) : entry.path,
+		success: entry.success,
+		operation: entry.operation,
+		code: entry.code,
+		error: entry.error,
+	}))
+
 function fixtureCorpusHash(raw: string): string {
 	return createHash('sha256').update(raw).digest('hex')
 }
@@ -96,21 +150,64 @@ function copyCorpus(destination: string, source: string): void {
 	cpSync(source, destination, { recursive: true })
 }
 
-function scopeListFilesInput(
+function assertAllowedTool(tool: string, context: string): asserts tool is AllowedTool {
+	if (!ALLOWED_TOOLS.has(tool as AllowedTool)) {
+		throw new Error(
+			`fail-closed allow-list rejected tool "${tool}" in ${context}; allowed: ${[...ALLOWED_TOOLS].join(', ')}`,
+		)
+	}
+}
+
+function scopeToolInput(
+	tool: AllowedTool,
 	root: string,
 	input: Record<string, unknown>,
 ): Record<string, unknown> {
 	const relativeRoot = relative(REPO_ROOT, root).replace(/\\/g, '/')
-	const pathValue =
-		input.path === '.' || input.path === undefined
-			? relativeRoot
-			: join(relativeRoot, String(input.path)).replace(/\\/g, '/')
-	return { ...input, path: pathValue }
+	if (tool === 'list_files') {
+		const pathValue =
+			input.path === '.' || input.path === undefined
+				? relativeRoot
+				: join(relativeRoot, String(input.path)).replace(/\\/g, '/')
+		return { ...input, path: pathValue }
+	}
+	if (tool === 'read_content') {
+		return {
+			...input,
+			paths: (input.paths as string[]).map((entry) =>
+				join(relativeRoot, entry).replace(/\\/g, '/'),
+			),
+		}
+	}
+	// write_content
+	return {
+		items: (
+			input.items as Array<{
+				path: string
+				content: string
+				append?: boolean
+				expectedContentHash?: string
+			}>
+		).map((item) => ({
+			...item,
+			path: join(relativeRoot, item.path).replace(/\\/g, '/'),
+		})),
+	}
 }
 
-async function invokeListFiles(root: string, input: Record<string, unknown>): Promise<unknown> {
-	const scopedInput = scopeListFilesInput(root, input)
-	const response = await listFilesToolDefinition.handler(scopedInput)
+async function invokeToolHandler(
+	tool: AllowedTool,
+	root: string,
+	input: Record<string, unknown>,
+): Promise<unknown> {
+	const scopedInput = scopeToolInput(tool, root, input)
+	const handler =
+		tool === 'list_files'
+			? listFilesToolDefinition.handler
+			: tool === 'read_content'
+				? readContentToolDefinition.handler
+				: writeContentToolDefinition.handler
+	const response = await handler(scopedInput)
 	return JSON.parse(response.content[0].text)
 }
 
@@ -121,13 +218,18 @@ async function main(): Promise<void> {
 		throw new Error(`unsupported corpusVersion: ${corpus.corpusVersion}`)
 	}
 
-	// Force pure TypeScript list_files for the oracle baseline.
+	// Force pure TypeScript handlers for the oracle baseline.
 	delete process.env.FILESYSTEM_USE_RUST_WALK
+	delete process.env.FILESYSTEM_USE_RUST_CONTENT
+	delete process.env.FILESYSTEM_USE_RUST_WRITE
 	delete process.env.FILESYSTEM_USE_RUST_POLICY
 
 	const corpusSource = join(REPO_ROOT, corpus.corpusRoot)
 	const listReadManifest = JSON.parse(
 		readFileSync(join(REPO_ROOT, corpus.listReadGolden), 'utf8'),
+	) as GoldenManifest
+	const writeManifest = JSON.parse(
+		readFileSync(join(REPO_ROOT, corpus.writeContentGolden), 'utf8'),
 	) as GoldenManifest
 
 	const cases: DifferentialCase[] = []
@@ -135,6 +237,7 @@ async function main(): Promise<void> {
 	copyCorpus(listReadRoot, corpusSource)
 
 	for (const testCase of corpus.toolRouteCases) {
+		assertAllowedTool(testCase.tool, `toolRouteCases/${testCase.id}`)
 		cases.push({
 			id: testCase.id,
 			slice: 'tool-route-contract',
@@ -142,6 +245,10 @@ async function main(): Promise<void> {
 			input: { tool: testCase.tool },
 			output: { route: testCase.expect },
 		})
+	}
+
+	for (const tool of corpus.serverContract.tools) {
+		assertAllowedTool(tool, 'serverContract.tools')
 	}
 
 	const packageJson = JSON.parse(await readFile(join(REPO_ROOT, 'package.json'), 'utf8')) as {
@@ -162,19 +269,23 @@ async function main(): Promise<void> {
 
 	const listReadPrefix = corpusPrefixFor(listReadRoot)
 	for (const testCase of listReadManifest.cases) {
-		if (testCase.tool !== 'list_files') {
-			continue
-		}
-		const payload = await invokeListFiles(listReadRoot, testCase.input)
-		const normalized = normalizeListPayload(payload, listReadPrefix)
+		assertAllowedTool(testCase.tool, `listReadGolden/${testCase.id}`)
+		const payload = await invokeToolHandler(testCase.tool, listReadRoot, testCase.input)
+		const normalized =
+			testCase.tool === 'list_files'
+				? normalizeListPayload(payload, listReadPrefix)
+				: normalizeReadPayload(
+						payload as Array<{ path?: string; content?: unknown; error?: string }>,
+						listReadPrefix,
+					)
 		cases.push({
 			id: `tool-${testCase.id}`,
-			slice: 'list-files',
+			slice: TOOL_SLICE[testCase.tool],
 			domain: 'tool',
 			input: {
 				tool: testCase.tool,
 				// Rust CLI root is the isolated corpus directory; args stay
-				// corpus-relative (path: ".") so engine-relative paths match.
+				// corpus-relative so engine-relative paths match.
 				root: listReadRoot,
 				args: testCase.input,
 				isolate: false,
@@ -183,6 +294,39 @@ async function main(): Promise<void> {
 				status: 'ok',
 				engine: 'filesystem-core',
 				payload: normalized,
+			},
+		})
+	}
+
+	for (const testCase of writeManifest.cases) {
+		assertAllowedTool(testCase.tool, `writeContentGolden/${testCase.id}`)
+		const caseRoot = join(SCRATCH_ROOT, 'cases', testCase.id)
+		copyCorpus(caseRoot, corpusSource)
+		const casePrefix = corpusPrefixFor(caseRoot)
+		const payload = await invokeToolHandler(testCase.tool, caseRoot, testCase.input)
+		cases.push({
+			id: `tool-${testCase.id}`,
+			slice: TOOL_SLICE[testCase.tool],
+			domain: 'tool',
+			input: {
+				tool: testCase.tool,
+				root: caseRoot,
+				args: testCase.input,
+				isolate: true,
+			},
+			output: {
+				status: 'ok',
+				engine: 'filesystem-core',
+				payload: normalizeWritePayload(
+					payload as Array<{
+						path?: string
+						success?: boolean
+						operation?: string
+						code?: string
+						error?: string
+					}>,
+					casePrefix,
+				),
 			},
 		})
 	}

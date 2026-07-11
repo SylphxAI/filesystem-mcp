@@ -1,5 +1,5 @@
-# Filesystem MCP list_files TS↔Rust differential parity (rej-010 / tick-010).
-# Main-bound single capability slice — not full tool authority.
+# Filesystem MCP TS↔Rust differential parity (rej-010 / tick-016).
+# Main-bound fail-closed slices: list-files + read-content + write-content.
 # Adopts rust-parity-drift-pass control-plane template: map-and-stale + differential + fan-in.
 # Workflow fixes from coderag/flux/gateway: no runner.temp at job env; CHANGED via env not <<<.
 name: rust-parity-differential
@@ -101,8 +101,8 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Run differential harness (list-files)
-        run: bash "${DIFFERENTIAL_SCRIPT}" --slice list-files
+      - name: Run differential harness (list-files + read-content + write-content)
+        run: bash "${DIFFERENTIAL_SCRIPT}" --slice all
 
       - name: Assert proof SHA binding
         run: |
@@ -115,19 +115,27 @@ jobs:
           LAST_COMPARED="$(jq -r '.lastComparedMainSha' "$ARTIFACT")"
           STATUS="$(jq -r '.status' "$ARTIFACT")"
           SLICE="$(jq -r '.slice' "$ARTIFACT")"
+          CASE_COUNT="$(jq -r '.caseCount' "$ARTIFACT")"
+          LIST_COUNT="$(jq -r '.listFilesCaseCount // 0' "$ARTIFACT")"
+          READ_COUNT="$(jq -r '.readContentCaseCount // 0' "$ARTIFACT")"
+          WRITE_COUNT="$(jq -r '.writeContentCaseCount // 0' "$ARTIFACT")"
           if [ "$STATUS" != "differential_green" ]; then
             echo "::error::verification status must be differential_green (got $STATUS)"
             exit 1
           fi
-          if [[ "$SLICE" != *"list-files"* ]]; then
-            echo "::error::expected list-files slice (got $SLICE)"
+          if [[ "$SLICE" != *"list-files"* ]] && [[ "$SLICE" != *"read_content"* ]] && [[ "$SLICE" != *"write_content"* ]]; then
+            echo "::error::expected expanded multi-tool slice (got $SLICE)"
+            exit 1
+          fi
+          if [ "$LIST_COUNT" -lt 2 ] || [ "$READ_COUNT" -lt 4 ] || [ "$WRITE_COUNT" -lt 4 ]; then
+            echo "::error::case floors not met list=$LIST_COUNT read=$READ_COUNT write=$WRITE_COUNT total=$CASE_COUNT"
             exit 1
           fi
           if [ "$LAST_COMPARED" != "$CANDIDATE_SHA" ]; then
             echo "::error::proof SHA binding failed: lastComparedMainSha=$LAST_COMPARED candidate=$CANDIDATE_SHA"
             exit 1
           fi
-          echo "proof SHA binding OK: lastComparedMainSha=$LAST_COMPARED slice=$SLICE"
+          echo "proof SHA binding OK: lastComparedMainSha=$LAST_COMPARED slice=$SLICE cases=$CASE_COUNT list=$LIST_COUNT read=$READ_COUNT write=$WRITE_COUNT"
 
       - name: Warn on stale capabilities without re-proof
         if: needs.map-and-stale.outputs.stale_capabilities != '[]'
@@ -168,4 +176,4 @@ jobs:
             echo "::error::rust-parity-drift-pass failed — differential parity not proven at candidate SHA"
             exit 1
           fi
-          echo "rust-parity-drift-pass OK (list-files)"
+          echo "rust-parity-drift-pass OK (list-files|read-content|write-content)"
