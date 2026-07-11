@@ -30,31 +30,6 @@ struct SuccessEnvelope {
 }
 
 #[derive(Debug, Serialize)]
-struct SearchSuccessEnvelope {
-    status: &'static str,
-    engine: &'static str,
-    version: &'static str,
-    results: Vec<SearchMatchDto>,
-    metrics: SearchMetricsDto,
-}
-
-#[derive(Debug, Serialize)]
-struct SearchMatchDto {
-    file: String,
-    line: u32,
-    matched_text: String,
-    context: Vec<String>,
-}
-
-#[derive(Debug, Serialize)]
-struct SearchMetricsDto {
-    files_scanned: usize,
-    matches_found: usize,
-    elapsed_ms: u64,
-}
-
-
-#[derive(Debug, Serialize)]
 struct ContentHashSuccessEnvelope {
     status: &'static str,
     engine: &'static str,
@@ -88,13 +63,23 @@ fn policy_code(code: PolicyErrorCode) -> &'static str {
     }
 }
 
-fn map_search_match(entry: SearchMatch) -> SearchMatchDto {
-    SearchMatchDto {
-        file: entry.file,
-        line: entry.line,
-        matched_text: entry.matched_text,
-        context: entry.context,
-    }
+/// MCP text payload for search_files — aligned with TS handler shape
+/// `{ results: [{ type, file, line, match, context }] }` so cli_bridge can
+/// surface CallToolResult (LegacyToolSuccessEnvelope.result).
+fn format_search_mcp_payload(results: Vec<SearchMatch>) -> serde_json::Value {
+    let entries = results
+        .into_iter()
+        .map(|entry| {
+            serde_json::json!({
+                "type": "match",
+                "file": entry.file,
+                "line": entry.line,
+                "match": entry.matched_text,
+                "context": entry.context,
+            })
+        })
+        .collect::<Vec<_>>();
+    serde_json::json!({ "results": entries })
 }
 
 fn format_list_files_mcp_payload(result: &ListFilesResult, include_stats: bool) -> serde_json::Value {
@@ -170,7 +155,7 @@ fn handle_list_files(input: &serde_json::Value) -> Result<LegacyToolSuccessEnvel
     }
 }
 
-fn handle_search_files(input: &serde_json::Value) -> Result<SearchSuccessEnvelope, ErrorEnvelope> {
+fn handle_search_files(input: &serde_json::Value) -> Result<LegacyToolSuccessEnvelope, ErrorEnvelope> {
     let root = input
         .get("root")
         .and_then(|value| value.as_str())
@@ -198,17 +183,16 @@ fn handle_search_files(input: &serde_json::Value) -> Result<SearchSuccessEnvelop
         .unwrap_or("*");
 
     match filesystem_core::search::search_files(&root, relative_path, regex, file_pattern, None, None) {
-        Ok((results, stats)) => Ok(SearchSuccessEnvelope {
-            status: "ok",
-            engine: ENGINE_NAME,
-            version: ENGINE_VERSION,
-            results: results.into_iter().map(map_search_match).collect(),
-            metrics: SearchMetricsDto {
-                files_scanned: stats.files_scanned,
-                matches_found: stats.matches_found,
-                elapsed_ms: stats.elapsed_ms,
-            },
-        }),
+        Ok((results, _stats)) => {
+            let payload = format_search_mcp_payload(results);
+            Ok(LegacyToolSuccessEnvelope {
+                status: "ok",
+                engine: ENGINE_NAME,
+                version: ENGINE_VERSION,
+                tool: "search_files".into(),
+                result: wrap_mcp_text_payload(&payload),
+            })
+        }
         Err(message) => {
             let code = if message.starts_with("INVALID_REGEX") {
                 "INVALID_PARAMS"

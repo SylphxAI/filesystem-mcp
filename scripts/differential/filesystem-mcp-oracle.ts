@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
 /**
- * TS contract oracle for filesystem-mcp differential parity (rej-010 / tick-016).
- * Frozen baseline: pure TypeScript list_files + read_content + write_content
- * handlers on golden corpus. Fail-closed allow-list — no silent extra tools.
+ * TS contract oracle for filesystem-mcp differential parity (rej-010 / tick-022).
+ * Frozen baseline: pure TypeScript list_files + read_content + write_content +
+ * search_files + stat_items handlers on golden corpus.
+ * Fail-closed allow-list — no silent extra tools.
  */
 import { createHash } from 'node:crypto'
 import { cpSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync } from 'node:fs'
@@ -11,6 +12,8 @@ import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { listFilesToolDefinition } from '../../src/handlers/list-files.ts'
 import { readContentToolDefinition } from '../../src/handlers/read-content.ts'
+import { searchFilesToolDefinition } from '../../src/handlers/search-files.ts'
+import { statItemsToolDefinition } from '../../src/handlers/stat-items.ts'
 import { writeContentToolDefinition } from '../../src/handlers/write-content.ts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -23,8 +26,14 @@ mkdirSync(SCRATCH_CANDIDATE, { recursive: true })
 const SCRATCH_ROOT = realpathSync(SCRATCH_CANDIDATE)
 
 /** Fail-closed tool allow-list for main-bound differential expansion. */
-const ALLOWED_TOOLS = new Set(['list_files', 'read_content', 'write_content'] as const)
-type AllowedTool = 'list_files' | 'read_content' | 'write_content'
+const ALLOWED_TOOLS = new Set([
+	'list_files',
+	'read_content',
+	'write_content',
+	'search_files',
+	'stat_items',
+] as const)
+type AllowedTool = 'list_files' | 'read_content' | 'write_content' | 'search_files' | 'stat_items'
 
 interface ToolRouteCase {
 	id: string
@@ -48,6 +57,7 @@ interface Corpus {
 	corpusRoot: string
 	listReadGolden: string
 	writeContentGolden: string
+	searchStatGolden: string
 	toolRouteCases: ToolRouteCase[]
 	serverContract: {
 		name: string
@@ -67,6 +77,8 @@ const TOOL_SLICE: Record<AllowedTool, string> = {
 	list_files: 'list-files',
 	read_content: 'read-content',
 	write_content: 'write-content',
+	search_files: 'search-files',
+	stat_items: 'stat-items',
 }
 
 const sortPaths = (paths: string[]) => [...paths].sort()
@@ -138,6 +150,75 @@ const normalizeWritePayload = (
 		error: entry.error,
 	}))
 
+/** Stable search payload: strip path prefix, sort by file+line, drop volatile fields. */
+const normalizeSearchPayload = (
+	payload: {
+		results?: Array<{
+			type?: string
+			file?: string
+			line?: number
+			match?: string
+			context?: string[]
+			error?: string
+		}>
+	},
+	prefix: string,
+) => {
+	const results = (payload.results ?? [])
+		.map((entry) => ({
+			type: entry.type ?? 'match',
+			file: stripCorpusPrefix(entry.file ?? '', prefix),
+			line: entry.line ?? null,
+			match: entry.match ?? null,
+			context: entry.context ?? [],
+			error: entry.error ?? null,
+		}))
+		.sort((a, b) => {
+			const fileCmp = a.file.localeCompare(b.file)
+			if (fileCmp !== 0) return fileCmp
+			return (a.line ?? 0) - (b.line ?? 0)
+		})
+	return { results }
+}
+
+/** Stable stat payload: strip path prefix; drop timestamps / uid / gid. */
+const normalizeStatPayload = (
+	results: Array<{
+		path?: string
+		status?: string
+		error?: string
+		stats?: {
+			path?: string
+			isFile?: boolean
+			isDirectory?: boolean
+			isSymbolicLink?: boolean
+			size?: number
+			mode?: string
+		}
+	}>,
+	prefix: string,
+) =>
+	results.map((entry) => {
+		const normalized: Record<string, unknown> = {
+			path: stripCorpusPrefix(entry.path ?? '', prefix),
+			status: entry.status,
+		}
+		if (entry.error) {
+			normalized.error = entry.error
+		}
+		if (entry.stats) {
+			normalized.stats = {
+				path: stripCorpusPrefix(entry.stats.path ?? entry.path ?? '', prefix),
+				isFile: entry.stats.isFile,
+				isDirectory: entry.stats.isDirectory,
+				isSymbolicLink: entry.stats.isSymbolicLink,
+				size: entry.stats.size,
+				mode: entry.stats.mode,
+			}
+		}
+		return normalized
+	})
+
 function fixtureCorpusHash(raw: string): string {
 	return createHash('sha256').update(raw).digest('hex')
 }
@@ -164,14 +245,14 @@ function scopeToolInput(
 	input: Record<string, unknown>,
 ): Record<string, unknown> {
 	const relativeRoot = relative(REPO_ROOT, root).replace(/\\/g, '/')
-	if (tool === 'list_files') {
+	if (tool === 'list_files' || tool === 'search_files') {
 		const pathValue =
 			input.path === '.' || input.path === undefined
 				? relativeRoot
 				: join(relativeRoot, String(input.path)).replace(/\\/g, '/')
 		return { ...input, path: pathValue }
 	}
-	if (tool === 'read_content') {
+	if (tool === 'read_content' || tool === 'stat_items') {
 		return {
 			...input,
 			paths: (input.paths as string[]).map((entry) =>
@@ -206,9 +287,68 @@ async function invokeToolHandler(
 			? listFilesToolDefinition.handler
 			: tool === 'read_content'
 				? readContentToolDefinition.handler
-				: writeContentToolDefinition.handler
+				: tool === 'write_content'
+					? writeContentToolDefinition.handler
+					: tool === 'search_files'
+						? searchFilesToolDefinition.handler
+						: statItemsToolDefinition.handler
 	const response = await handler(scopedInput)
 	return JSON.parse(response.content[0].text)
+}
+
+function normalizeToolPayload(tool: AllowedTool, payload: unknown, prefix: string): unknown {
+	if (tool === 'list_files') {
+		return normalizeListPayload(payload, prefix)
+	}
+	if (tool === 'read_content') {
+		return normalizeReadPayload(
+			payload as Array<{ path?: string; content?: unknown; error?: string }>,
+			prefix,
+		)
+	}
+	if (tool === 'write_content') {
+		return normalizeWritePayload(
+			payload as Array<{
+				path?: string
+				success?: boolean
+				operation?: string
+				code?: string
+				error?: string
+			}>,
+			prefix,
+		)
+	}
+	if (tool === 'search_files') {
+		return normalizeSearchPayload(
+			payload as {
+				results?: Array<{
+					type?: string
+					file?: string
+					line?: number
+					match?: string
+					context?: string[]
+					error?: string
+				}>
+			},
+			prefix,
+		)
+	}
+	return normalizeStatPayload(
+		payload as Array<{
+			path?: string
+			status?: string
+			error?: string
+			stats?: {
+				path?: string
+				isFile?: boolean
+				isDirectory?: boolean
+				isSymbolicLink?: boolean
+				size?: number
+				mode?: string
+			}
+		}>,
+		prefix,
+	)
 }
 
 async function main(): Promise<void> {
@@ -223,6 +363,7 @@ async function main(): Promise<void> {
 	delete process.env.FILESYSTEM_USE_RUST_CONTENT
 	delete process.env.FILESYSTEM_USE_RUST_WRITE
 	delete process.env.FILESYSTEM_USE_RUST_POLICY
+	delete process.env.FILESYSTEM_USE_RUST_SEARCH
 
 	const corpusSource = join(REPO_ROOT, corpus.corpusRoot)
 	const listReadManifest = JSON.parse(
@@ -230,6 +371,9 @@ async function main(): Promise<void> {
 	) as GoldenManifest
 	const writeManifest = JSON.parse(
 		readFileSync(join(REPO_ROOT, corpus.writeContentGolden), 'utf8'),
+	) as GoldenManifest
+	const searchStatManifest = JSON.parse(
+		readFileSync(join(REPO_ROOT, corpus.searchStatGolden), 'utf8'),
 	) as GoldenManifest
 
 	const cases: DifferentialCase[] = []
@@ -271,13 +415,6 @@ async function main(): Promise<void> {
 	for (const testCase of listReadManifest.cases) {
 		assertAllowedTool(testCase.tool, `listReadGolden/${testCase.id}`)
 		const payload = await invokeToolHandler(testCase.tool, listReadRoot, testCase.input)
-		const normalized =
-			testCase.tool === 'list_files'
-				? normalizeListPayload(payload, listReadPrefix)
-				: normalizeReadPayload(
-						payload as Array<{ path?: string; content?: unknown; error?: string }>,
-						listReadPrefix,
-					)
 		cases.push({
 			id: `tool-${testCase.id}`,
 			slice: TOOL_SLICE[testCase.tool],
@@ -293,7 +430,7 @@ async function main(): Promise<void> {
 			output: {
 				status: 'ok',
 				engine: 'filesystem-core',
-				payload: normalized,
+				payload: normalizeToolPayload(testCase.tool, payload, listReadPrefix),
 			},
 		})
 	}
@@ -317,16 +454,29 @@ async function main(): Promise<void> {
 			output: {
 				status: 'ok',
 				engine: 'filesystem-core',
-				payload: normalizeWritePayload(
-					payload as Array<{
-						path?: string
-						success?: boolean
-						operation?: string
-						code?: string
-						error?: string
-					}>,
-					casePrefix,
-				),
+				payload: normalizeToolPayload(testCase.tool, payload, casePrefix),
+			},
+		})
+	}
+
+	// search_files + stat_items share the non-mutating list/read corpus root.
+	for (const testCase of searchStatManifest.cases) {
+		assertAllowedTool(testCase.tool, `searchStatGolden/${testCase.id}`)
+		const payload = await invokeToolHandler(testCase.tool, listReadRoot, testCase.input)
+		cases.push({
+			id: `tool-${testCase.id}`,
+			slice: TOOL_SLICE[testCase.tool],
+			domain: 'tool',
+			input: {
+				tool: testCase.tool,
+				root: listReadRoot,
+				args: testCase.input,
+				isolate: false,
+			},
+			output: {
+				status: 'ok',
+				engine: 'filesystem-core',
+				payload: normalizeToolPayload(testCase.tool, payload, listReadPrefix),
 			},
 		})
 	}

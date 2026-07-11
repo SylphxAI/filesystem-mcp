@@ -246,13 +246,21 @@ export const handleSearchFilesFunc = async (
 		}
 
 		for (const match of envelope.results) {
-			allResults.push({
+			// exactOptionalPropertyTypes: omit optional keys instead of assigning undefined
+			const item: SearchResultItem = {
 				type: 'match',
 				file: match.file,
-				line: match.line,
-				match: match.matched_text,
-				context: match.context,
-			})
+			}
+			if (match.line !== undefined) {
+				item.line = match.line
+			}
+			if (match.matched_text !== undefined) {
+				item.match = match.matched_text
+			}
+			if (match.context !== undefined) {
+				item.context = match.context
+			}
+			allResults.push(item)
 		}
 
 		return {

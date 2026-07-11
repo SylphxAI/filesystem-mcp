@@ -2,12 +2,12 @@
 	"schemaVersion": 1,
 	"repo": "SylphxAI/filesystem-mcp",
 	"reauditRef": "rej-010",
-	"slice": "tool.list_files|tool.read_content|tool.write_content",
+	"slice": "tool.list_files|tool.read_content|tool.write_content|tool.search_files|tool.stat_items",
 	"differentialHarness": "scripts/run-filesystem-mcp-differential.sh",
 	"oracle": "scripts/differential/filesystem-mcp-oracle.ts",
 	"behaviorSpec": "scripts/differential/fixtures/filesystem-mcp-corpus.json",
-	"goldenFixture": "test/fixtures/golden/list_read.golden.json; test/fixtures/golden/write_content.golden.json",
-	"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#list_files_differential_matches_ts_oracle;read_content_differential_matches_ts_oracle;write_content_differential_matches_ts_oracle",
+	"goldenFixture": "test/fixtures/golden/list_read.golden.json; test/fixtures/golden/write_content.golden.json; test/fixtures/golden/search_stat.golden.json",
+	"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#list_files_differential_matches_ts_oracle;read_content_differential_matches_ts_oracle;write_content_differential_matches_ts_oracle;search_files_differential_matches_ts_oracle;stat_items_differential_matches_ts_oracle",
 	"domains": [
 		{
 			"id": "tool/list_files",
@@ -29,7 +29,21 @@
 			"boundedSlice": "write-content",
 			"minCases": 4,
 			"fixture": "test/fixtures/golden/write_content.golden.json"
+		},
+		{
+			"id": "tool/search_files",
+			"differentialTest": true,
+			"boundedSlice": "search-files",
+			"minCases": 4,
+			"fixture": "test/fixtures/golden/search_stat.golden.json"
+		},
+		{
+			"id": "tool/stat_items",
+			"differentialTest": true,
+			"boundedSlice": "stat-items",
+			"minCases": 3,
+			"fixture": "test/fixtures/golden/search_stat.golden.json"
 		}
 	],
-	"notes": "tick-016 rej-010: main-bound differential expansion beyond list_files to read_content + write_content. Fail-closed allow-list. Does not promote authority_rust or ts_deleted."
+	"notes": "tick-022 rej-010: main-bound differential expansion to search_files + stat_items (next highest-value RustCore tools). Also fixes search_files CLI MCP envelope to LegacyToolSuccessEnvelope/CallToolResult for cli_bridge. Fail-closed allow-list. Does not promote authority_rust or ts_deleted."
 }
