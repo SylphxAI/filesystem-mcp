@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.2
+
+### Patch Changes
+
+- Republish multi-arch natives from main tip including search_files MCP Success envelope fix (cli_bridge LegacyToolSuccessEnvelope) and expanded main differential (search_files + stat_items).
+
 ## 0.7.1
 
 ### Patch Changes
