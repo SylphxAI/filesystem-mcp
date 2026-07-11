@@ -1,37 +1,31 @@
 {
-  "schemaVersion": 1,
-  "source": "__tests__/handlers/list-files.test.ts",
-  "corpusRoot": "test/fixtures/golden/corpus",
-  "cases": [
-    {
-      "id": "list-non-recursive",
-      "tool": "list_files",
-      "input": {
-        "path": ".",
-        "recursive": false,
-        "include_stats": false
-      },
-      "expects": {
-        "paths": [".hidden", "alpha.txt", "nested/", "readme.md"]
-      }
-    },
-    {
-      "id": "list-recursive",
-      "tool": "list_files",
-      "input": {
-        "path": ".",
-        "recursive": true,
-        "include_stats": false
-      },
-      "expects": {
-        "paths": [
-          ".hidden",
-          "alpha.txt",
-          "nested/",
-          "nested/beta.txt",
-          "readme.md"
-        ]
-      }
-    }
-  ]
+	"schemaVersion": 1,
+	"source": "__tests__/handlers/list-files.test.ts",
+	"corpusRoot": "test/fixtures/golden/corpus",
+	"cases": [
+		{
+			"id": "list-non-recursive",
+			"tool": "list_files",
+			"input": {
+				"path": ".",
+				"recursive": false,
+				"include_stats": false
+			},
+			"expects": {
+				"paths": [".hidden", "alpha.txt", "nested/", "readme.md"]
+			}
+		},
+		{
+			"id": "list-recursive",
+			"tool": "list_files",
+			"input": {
+				"path": ".",
+				"recursive": true,
+				"include_stats": false
+			},
+			"expects": {
+				"paths": [".hidden", "alpha.txt", "nested/", "nested/beta.txt", "readme.md"]
+			}
+		}
+	]
 }

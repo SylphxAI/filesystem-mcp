@@ -15,8 +15,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = realpathSync(join(__dirname, '../..'))
 const CORPUS_PATH = join(__dirname, 'fixtures/filesystem-mcp-corpus.json')
 const SCRATCH_CANDIDATE =
-	process.env.FILESYSTEM_MCP_DIFF_SCRATCH ??
-	join(REPO_ROOT, 'test/fixtures/differential-scratch')
+	process.env.FILESYSTEM_MCP_DIFF_SCRATCH ?? join(REPO_ROOT, 'test/fixtures/differential-scratch')
 mkdirSync(SCRATCH_CANDIDATE, { recursive: true })
 const SCRATCH_ROOT = realpathSync(SCRATCH_CANDIDATE)
 
@@ -97,7 +96,10 @@ function copyCorpus(destination: string, source: string): void {
 	cpSync(source, destination, { recursive: true })
 }
 
-function scopeListFilesInput(root: string, input: Record<string, unknown>): Record<string, unknown> {
+function scopeListFilesInput(
+	root: string,
+	input: Record<string, unknown>,
+): Record<string, unknown> {
 	const relativeRoot = relative(REPO_ROOT, root).replace(/\\/g, '/')
 	const pathValue =
 		input.path === '.' || input.path === undefined
@@ -142,9 +144,9 @@ async function main(): Promise<void> {
 		})
 	}
 
-	const packageJson = JSON.parse(
-		await readFile(join(REPO_ROOT, 'package.json'), 'utf8'),
-	) as { version: string }
+	const packageJson = JSON.parse(await readFile(join(REPO_ROOT, 'package.json'), 'utf8')) as {
+		version: string
+	}
 	cases.push({
 		id: 'server-contract-rmcp',
 		slice: 'server-contract',
