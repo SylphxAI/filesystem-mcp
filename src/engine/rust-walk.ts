@@ -15,13 +15,18 @@ export type RustListEntry = {
 type RustListEnvelope =
 	| {
 			status: 'ok'
-			entries: RustListEntry[]
-			metrics: { entries_found: number; elapsed_ms: number; route: string }
+			tool?: 'list_files'
+			entries?: RustListEntry[]
+			metrics?: { entries_found: number; elapsed_ms: number; route: string }
+			result?: {
+				content?: Array<{ type?: string; text?: string }>
+			}
 	  }
 	| { status: 'error'; code: string; message: string }
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 
+/** Opt-in Rust walk engine for the TS adapter path (FILESYSTEM_USE_RUST_WALK=1). */
 export function shouldUseRustWalkEngine(): boolean {
 	return process.env['FILESYSTEM_USE_RUST_WALK'] === '1'
 }
@@ -58,7 +63,40 @@ export function listFilesViaRustEngine(input: {
 		)
 	}
 
-	return JSON.parse(result.stdout) as RustListEnvelope
+	const envelope = JSON.parse(result.stdout) as RustListEnvelope
+	if (envelope.status === 'ok' && envelope.result?.content?.[0]?.text) {
+		const payload = JSON.parse(envelope.result.content[0].text) as
+			| string[]
+			| RustListEntry[]
+			| (RustListEntry['stats'] & { path: string })
+		if (Array.isArray(payload)) {
+			if (payload.length > 0 && typeof payload[0] === 'string') {
+				return {
+					status: 'ok',
+					tool: 'list_files',
+					entries: (payload as string[]).map((entry) => ({ path: entry })),
+					metrics: { entries_found: payload.length, elapsed_ms: 0, route: 'rust-walk' },
+				}
+			}
+			return {
+				status: 'ok',
+				tool: 'list_files',
+				entries: payload as RustListEntry[],
+				metrics: {
+					entries_found: payload.length,
+					elapsed_ms: 0,
+					route: 'rust-walk',
+				},
+			}
+		}
+		return {
+			status: 'ok',
+			tool: 'list_files',
+			entries: [{ path: payload.path, stats: payload as RustListEntry['stats'] }],
+			metrics: { entries_found: 1, elapsed_ms: 0, route: 'rust-walk' },
+		}
+	}
+	return envelope
 }
 
 function resolveRustCliBinary(): string {

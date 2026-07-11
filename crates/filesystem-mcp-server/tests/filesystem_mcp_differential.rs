@@ -1,0 +1,278 @@
+//! TRUE differential parity: TS contract oracle vs native Rust list_files SSOT.
+//!
+//! Fail-closed — no SKIP-as-pass. Oracle subprocess must succeed before comparison.
+//! Bounded slice (rej-010 / tick-010):
+//! - `list_files_differential_matches_ts_oracle` — S1 discovery path (2 cases)
+//! See scripts/run-filesystem-mcp-differential.sh.
+
+use filesystem_mcp_server::cli_bridge;
+use filesystem_mcp_server::tool_routes::{route_for_tool, ToolRoute};
+use filesystem_mcp_server::{FilesystemMcp, SERVER_NAME, SERVER_VERSION};
+use serde::Deserialize;
+use serde_json::Value;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+const LIST_FILES_SLICE: &str = "list-files";
+
+fn repo_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
+
+fn corpus_fixture_path() -> PathBuf {
+    repo_root().join("scripts/differential/fixtures/filesystem-mcp-corpus.json")
+}
+
+fn golden_corpus_root() -> PathBuf {
+    repo_root().join("test/fixtures/golden/corpus")
+}
+
+fn copy_dir_all(source: &Path, destination: &Path) {
+    fs::create_dir_all(destination).expect("create destination");
+    for entry in fs::read_dir(source).expect("read source dir") {
+        let entry = entry.expect("dir entry");
+        let target = destination.join(entry.file_name());
+        if entry.file_type().expect("file type").is_dir() {
+            copy_dir_all(&entry.path(), &target);
+        } else {
+            fs::copy(entry.path(), &target).expect("copy file");
+        }
+    }
+}
+
+fn reset_isolated_corpus(case: &OracleCase) {
+    let isolate = case
+        .input
+        .get("isolate")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    if !isolate {
+        return;
+    }
+
+    let destination = PathBuf::from(case.input["root"].as_str().expect("tool case root"));
+    if destination.exists() {
+        fs::remove_dir_all(&destination).expect("remove isolated corpus");
+    }
+    copy_dir_all(&golden_corpus_root(), &destination);
+}
+
+#[derive(Debug, Deserialize)]
+struct OracleCase {
+    id: String,
+    slice: String,
+    domain: String,
+    input: Value,
+    output: Value,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct OracleCorpus {
+    corpus_version: u32,
+    fixture_corpus_hash: String,
+    scratch_root: String,
+    cases: Vec<OracleCase>,
+}
+
+fn run_ts_oracle() -> OracleCorpus {
+    if let Ok(path) = std::env::var("FILESYSTEM_MCP_ORACLE_JSON") {
+        let raw = fs::read_to_string(&path)
+            .unwrap_or_else(|error| panic!("read FILESYSTEM_MCP_ORACLE_JSON at {path}: {error}"));
+        return serde_json::from_str(&raw).expect("oracle JSON must be valid");
+    }
+
+    let script = repo_root().join("scripts/differential/filesystem-mcp-oracle.ts");
+    let output = Command::new("bun")
+        .arg("run")
+        .arg(&script)
+        .current_dir(repo_root())
+        .output()
+        .unwrap_or_else(|error| panic!("spawn TS oracle at {}: {error}", script.display()));
+
+    assert!(
+        output.status.success(),
+        "TS oracle failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    serde_json::from_slice(&output.stdout).expect("oracle output must be valid JSON")
+}
+
+fn sorted_string_array(value: &Value) -> Value {
+    let mut entries = value
+        .as_array()
+        .expect("string array payload")
+        .iter()
+        .map(|entry| entry.as_str().expect("string entry").to_string())
+        .collect::<Vec<_>>();
+    entries.sort();
+    Value::Array(entries.into_iter().map(Value::String).collect())
+}
+
+fn normalize_tool_payload(tool: &str, payload: Value) -> Value {
+    if tool == "list_files" {
+        return sorted_string_array(&payload);
+    }
+    payload
+}
+
+fn parse_rmcp_text_payload(result: &rmcp::model::CallToolResult) -> Value {
+    let content = result.content.first().expect("rmcp tool result content");
+    let text = content
+        .as_text()
+        .expect("rmcp tool result must contain text content")
+        .text
+        .clone();
+    serde_json::from_str(&text).expect("parse rmcp text payload")
+}
+
+fn compare_tool_case(case: &OracleCase) {
+    let tool = case.input["tool"].as_str().expect("tool case tool name");
+    let root = case.input["root"].as_str().expect("tool case root");
+    let args = case.input["args"].clone();
+
+    reset_isolated_corpus(case);
+
+    let mut cli_input = args;
+    if let Some(object) = cli_input.as_object_mut() {
+        object.insert("root".into(), Value::String(root.to_string()));
+    }
+
+    let rmcp_result = cli_bridge::invoke_cli_tool(tool, cli_input).expect("rmcp cli_bridge invoke");
+    let payload = normalize_tool_payload(tool, parse_rmcp_text_payload(&rmcp_result));
+
+    let native = serde_json::json!({
+        "status": "ok",
+        "engine": "filesystem-core",
+        "payload": payload,
+    });
+
+    assert_eq!(
+        native, case.output,
+        "tool differential mismatch for case {}",
+        case.id
+    );
+}
+
+fn compare_tool_route_case(case: &OracleCase) {
+    let tool = case.input["tool"].as_str().expect("tool route tool");
+    let route = route_for_tool(tool).expect("tool must be routed");
+    let route_name = match route {
+        ToolRoute::RustCore => "RustCore",
+        ToolRoute::LegacyOptIn => "LegacyOptIn",
+    };
+    let native = serde_json::json!({ "route": route_name });
+    assert_eq!(
+        native, case.output,
+        "tool route mismatch for case {}",
+        case.id
+    );
+}
+
+fn compare_server_contract_case(case: &OracleCase) {
+    let tools = FilesystemMcp::new().tool_router.list_all();
+    let names: Vec<String> = tools.iter().map(|tool| tool.name.to_string()).collect();
+    for expected in case.input["tools"]
+        .as_array()
+        .expect("server contract tools")
+    {
+        let tool_name = expected.as_str().expect("tool name");
+        assert!(
+            names.iter().any(|name| name == tool_name),
+            "rmcp server missing tool {tool_name}"
+        );
+    }
+
+    let native = serde_json::json!({
+        "name": SERVER_NAME,
+        "version": SERVER_VERSION,
+        "tools": case.input["tools"],
+    });
+    assert_eq!(
+        native, case.output,
+        "server contract mismatch for case {}",
+        case.id
+    );
+}
+
+fn assert_oracle_metadata(oracle: &OracleCorpus) {
+    assert_eq!(oracle.corpus_version, 1);
+    assert!(!oracle.fixture_corpus_hash.is_empty());
+    assert!(!oracle.cases.is_empty(), "oracle must emit cases");
+    assert!(
+        fs::metadata(&oracle.scratch_root).is_ok(),
+        "oracle scratch root must exist at {}",
+        oracle.scratch_root
+    );
+}
+
+fn assert_slice_metadata(case: &OracleCase) {
+    match case.slice.as_str() {
+        LIST_FILES_SLICE => {
+            assert_eq!(case.domain, "tool");
+            assert_eq!(case.input["tool"].as_str(), Some("list_files"));
+        }
+        "tool-route-contract" => assert_eq!(case.domain, "toolRouteContract"),
+        "server-contract" => assert_eq!(case.domain, "serverContract"),
+        other => panic!("unknown slice {other} for case {}", case.id),
+    }
+}
+
+fn compare_case(case: &OracleCase) {
+    match case.domain.as_str() {
+        "tool" => compare_tool_case(case),
+        "toolRouteContract" => compare_tool_route_case(case),
+        "serverContract" => compare_server_contract_case(case),
+        other => panic!("unknown oracle domain {other} in case {}", case.id),
+    }
+}
+
+fn cases_for_slice<'a>(oracle: &'a OracleCorpus, slice: &str) -> Vec<&'a OracleCase> {
+    oracle
+        .cases
+        .iter()
+        .filter(|case| case.slice == slice)
+        .collect()
+}
+
+fn run_bounded_slice(slice: &str, min_cases: usize) {
+    let _ = fs::read_to_string(corpus_fixture_path()).expect("read filesystem-mcp corpus fixture");
+    let oracle = run_ts_oracle();
+    assert_oracle_metadata(&oracle);
+
+    let cases = cases_for_slice(&oracle, slice);
+    assert!(
+        cases.len() >= min_cases,
+        "slice {slice} must have at least {min_cases} oracle cases, got {}",
+        cases.len()
+    );
+
+    for case in cases {
+        assert_slice_metadata(case);
+        compare_case(case);
+    }
+}
+
+#[test]
+fn list_files_differential_matches_ts_oracle() {
+    run_bounded_slice(LIST_FILES_SLICE, 2);
+}
+
+#[test]
+fn filesystem_mcp_list_files_differential_matches_ts_oracle() {
+    // Full list-files package: tool cases + route + server contract.
+    let _ = fs::read_to_string(corpus_fixture_path()).expect("read filesystem-mcp corpus fixture");
+    let oracle = run_ts_oracle();
+    assert_oracle_metadata(&oracle);
+
+    let list_cases = cases_for_slice(&oracle, LIST_FILES_SLICE);
+    assert!(list_cases.len() >= 2, "expected list-files cases");
+
+    for case in &oracle.cases {
+        assert_slice_metadata(case);
+        compare_case(case);
+    }
+}

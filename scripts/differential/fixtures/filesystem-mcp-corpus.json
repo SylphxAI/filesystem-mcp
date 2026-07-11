@@ -1,0 +1,16 @@
+{
+  "corpusVersion": 1,
+  "corpusRoot": "test/fixtures/golden/corpus",
+  "listReadGolden": "test/fixtures/golden/list_read.golden.json",
+  "toolRouteCases": [
+    {
+      "id": "route-list-files",
+      "tool": "list_files",
+      "expect": "RustCore"
+    }
+  ],
+  "serverContract": {
+    "name": "filesystem-mcp",
+    "tools": ["list_files"]
+  }
+}
