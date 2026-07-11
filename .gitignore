@@ -40,5 +40,5 @@ bin/native/*
 .filesystem-mcp/
 
 # differential harness scratch
-test/fixtures/differential-scratch/
+test/fixtures/differential-scratch*/
 /tmp/

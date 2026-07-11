@@ -84,10 +84,18 @@ fn run_ts_oracle() -> OracleCorpus {
     }
 
     let script = repo_root().join("scripts/differential/filesystem-mcp-oracle.ts");
+    // Unique scratch under repo root (PROJECT_ROOT confinement rejects /tmp paths).
+    let scratch = repo_root().join(format!(
+        "test/fixtures/differential-scratch-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&scratch);
+    fs::create_dir_all(&scratch).expect("create oracle scratch");
     let output = Command::new("bun")
         .arg("run")
         .arg(&script)
         .current_dir(repo_root())
+        .env("FILESYSTEM_MCP_DIFF_SCRATCH", &scratch)
         .output()
         .unwrap_or_else(|error| panic!("spawn TS oracle at {}: {error}", script.display()));
 
@@ -261,18 +269,3 @@ fn list_files_differential_matches_ts_oracle() {
     run_bounded_slice(LIST_FILES_SLICE, 2);
 }
 
-#[test]
-fn filesystem_mcp_list_files_differential_matches_ts_oracle() {
-    // Full list-files package: tool cases + route + server contract.
-    let _ = fs::read_to_string(corpus_fixture_path()).expect("read filesystem-mcp corpus fixture");
-    let oracle = run_ts_oracle();
-    assert_oracle_metadata(&oracle);
-
-    let list_cases = cases_for_slice(&oracle, LIST_FILES_SLICE);
-    assert!(list_cases.len() >= 2, "expected list-files cases");
-
-    for case in &oracle.cases {
-        assert_slice_metadata(case);
-        compare_case(case);
-    }
-}

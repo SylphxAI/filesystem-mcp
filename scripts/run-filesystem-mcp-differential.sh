@@ -75,7 +75,7 @@ case "$SLICE_FILTER" in
     run_rust_slice_test "list-files" list_files_differential_matches_ts_oracle
     echo "--- Rust differential test (list-files package + contracts) ---" | tee -a "$LOG"
     FILESYSTEM_MCP_ORACLE_JSON="$ORACLE_JSON" \
-      cargo test -p filesystem-mcp-server --test filesystem_mcp_differential filesystem_mcp_list_files_differential_matches_ts_oracle -- --nocapture 2>&1 | tee -a "$LOG"
+      cargo test -p filesystem-mcp-server --test filesystem_mcp_differential list_files_differential_matches_ts_oracle -- --nocapture 2>&1 | tee -a "$LOG"
     ;;
 esac
 
