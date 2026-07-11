@@ -119,14 +119,22 @@ export function searchFilesViaRustEngine(input: {
 		const body = JSON.parse(legacy.result.content[0].text) as {
 			results?: RustSearchMatch[]
 		}
-		const results = (body.results ?? []).map((entry) => ({
-			type: entry.type ?? 'match',
-			file: entry.file,
-			line: entry.line,
-			matched_text: entry.matched_text ?? entry.match ?? '',
-			context: entry.context ?? [],
-			error: entry.error,
-		}))
+		const results: RustSearchMatch[] = (body.results ?? []).map((entry) => {
+			const mapped: RustSearchMatch = {
+				type: entry.type ?? 'match',
+				file: entry.file,
+				matched_text: entry.matched_text ?? entry.match ?? '',
+				context: entry.context ?? [],
+			}
+			// exactOptionalPropertyTypes: omit keys rather than assign undefined
+			if (entry.line !== undefined) {
+				mapped.line = entry.line
+			}
+			if (entry.error !== undefined) {
+				mapped.error = entry.error
+			}
+			return mapped
+		})
 		return {
 			status: 'ok',
 			results,
@@ -142,16 +150,21 @@ export function searchFilesViaRustEngine(input: {
 	const legacyTop = parsed as {
 		status: string
 		results?: RustSearchMatch[]
-		metrics?: RustSearchEnvelope extends { status: 'ok' }
-			? { files_scanned: number; matches_found: number; elapsed_ms: number }
-			: never
+		metrics?: {
+			files_scanned: number
+			matches_found: number
+			elapsed_ms: number
+		}
 	}
 	if (Array.isArray(legacyTop.results)) {
-		return {
+		const ok: Extract<RustSearchEnvelope, { status: 'ok' }> = {
 			status: 'ok',
 			results: legacyTop.results,
-			metrics: legacyTop.metrics,
 		}
+		if (legacyTop.metrics !== undefined) {
+			ok.metrics = legacyTop.metrics
+		}
+		return ok
 	}
 
 	throw new McpError(
