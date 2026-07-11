@@ -10,12 +10,12 @@ import { cpSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync } fro
 import { readFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { deleteItemsToolDefinition } from '../../src/handlers/delete-items.ts'
 import { listFilesToolDefinition } from '../../src/handlers/list-files.ts'
 import { readContentToolDefinition } from '../../src/handlers/read-content.ts'
 import { searchFilesToolDefinition } from '../../src/handlers/search-files.ts'
 import { statItemsToolDefinition } from '../../src/handlers/stat-items.ts'
 import { writeContentToolDefinition } from '../../src/handlers/write-content.ts'
-import { deleteItemsToolDefinition } from '../../src/handlers/delete-items.ts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 // realpath avoids /tmp vs /private/tmp drift on macOS which breaks PROJECT_ROOT confinement.
@@ -35,7 +35,13 @@ const ALLOWED_TOOLS = new Set([
 	'stat_items',
 	'delete_items',
 ] as const)
-type AllowedTool = 'list_files' | 'read_content' | 'write_content' | 'search_files' | 'stat_items' | 'delete_items'
+type AllowedTool =
+	| 'list_files'
+	| 'read_content'
+	| 'write_content'
+	| 'search_files'
+	| 'stat_items'
+	| 'delete_items'
 
 interface ToolRouteCase {
 	id: string
@@ -301,7 +307,6 @@ async function invokeToolHandler(
 	const response = await handler(scopedInput)
 	return JSON.parse(response.content[0].text)
 }
-
 
 const normalizeDeletePayload = (
 	results: Array<{ path?: string; success?: boolean; note?: string; error?: string }>,

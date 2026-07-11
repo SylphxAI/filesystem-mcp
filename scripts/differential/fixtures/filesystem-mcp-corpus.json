@@ -1,51 +1,51 @@
 {
-  "corpusVersion": 1,
-  "corpusRoot": "test/fixtures/golden/corpus",
-  "listReadGolden": "test/fixtures/golden/list_read.golden.json",
-  "writeContentGolden": "test/fixtures/golden/write_content.golden.json",
-  "searchStatGolden": "test/fixtures/golden/search_stat.golden.json",
-  "toolRouteCases": [
-    {
-      "id": "route-list-files",
-      "tool": "list_files",
-      "expect": "RustCore"
-    },
-    {
-      "id": "route-read-content",
-      "tool": "read_content",
-      "expect": "RustCore"
-    },
-    {
-      "id": "route-write-content",
-      "tool": "write_content",
-      "expect": "RustCore"
-    },
-    {
-      "id": "route-search-files",
-      "tool": "search_files",
-      "expect": "RustCore"
-    },
-    {
-      "id": "route-stat-items",
-      "tool": "stat_items",
-      "expect": "RustCore"
-    },
-    {
-      "id": "route-delete-items",
-      "tool": "delete_items",
-      "expect": "RustCore"
-    }
-  ],
-  "serverContract": {
-    "name": "filesystem-mcp",
-    "tools": [
-      "list_files",
-      "read_content",
-      "write_content",
-      "search_files",
-      "stat_items",
-      "delete_items"
-    ]
-  },
-  "deleteItemsGolden": "test/fixtures/golden/delete_items.golden.json"
+	"corpusVersion": 1,
+	"corpusRoot": "test/fixtures/golden/corpus",
+	"listReadGolden": "test/fixtures/golden/list_read.golden.json",
+	"writeContentGolden": "test/fixtures/golden/write_content.golden.json",
+	"searchStatGolden": "test/fixtures/golden/search_stat.golden.json",
+	"toolRouteCases": [
+		{
+			"id": "route-list-files",
+			"tool": "list_files",
+			"expect": "RustCore"
+		},
+		{
+			"id": "route-read-content",
+			"tool": "read_content",
+			"expect": "RustCore"
+		},
+		{
+			"id": "route-write-content",
+			"tool": "write_content",
+			"expect": "RustCore"
+		},
+		{
+			"id": "route-search-files",
+			"tool": "search_files",
+			"expect": "RustCore"
+		},
+		{
+			"id": "route-stat-items",
+			"tool": "stat_items",
+			"expect": "RustCore"
+		},
+		{
+			"id": "route-delete-items",
+			"tool": "delete_items",
+			"expect": "RustCore"
+		}
+	],
+	"serverContract": {
+		"name": "filesystem-mcp",
+		"tools": [
+			"list_files",
+			"read_content",
+			"write_content",
+			"search_files",
+			"stat_items",
+			"delete_items"
+		]
+	},
+	"deleteItemsGolden": "test/fixtures/golden/delete_items.golden.json"
 }
