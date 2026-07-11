@@ -1,6 +1,6 @@
 {
 	"name": "@sylphx/filesystem-mcp-darwin-x64",
-	"version": "0.7.1",
+	"version": "0.7.2",
 	"description": "Filesystem MCP server native binary for darwin-x64",
 	"os": [
 		"darwin"
