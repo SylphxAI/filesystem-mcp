@@ -49,7 +49,7 @@ function packageExists(name: string, version: string): boolean {
 
 	// Tarball HEAD fallback (packument lag)
 	const scopedPath = name.startsWith('@') ? name.replace('/', '%2f') : name
-	const shortName = name.includes('/') ? name.split('/')[1]! : name
+	const shortName = name.includes('/') ? (name.split('/')[1] ?? name) : name
 	const url = `https://registry.npmjs.org/${scopedPath}/-/${shortName}-${version}.tgz`
 	const head = spawnSync(
 		'curl',

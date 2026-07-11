@@ -31,7 +31,7 @@ function sleep(ms: number): void {
 
 function tarballUrl(name: string, ver: string): string {
 	const scopedPath = name.startsWith('@') ? name.replace('/', '%2f') : name
-	const shortName = name.includes('/') ? name.split('/')[1]! : name
+	const shortName = name.includes('/') ? (name.split('/')[1] ?? name) : name
 	return `https://registry.npmjs.org/${scopedPath}/-/${shortName}-${ver}.tgz`
 }
 

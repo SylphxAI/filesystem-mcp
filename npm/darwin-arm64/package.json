@@ -1,27 +1,27 @@
 {
-  "name": "@sylphx/filesystem-mcp-darwin-arm64",
-  "version": "0.7.1",
-  "description": "Filesystem MCP server native binary for darwin-arm64",
-  "os": [
-    "darwin"
-  ],
-  "cpu": [
-    "arm64"
-  ],
-  "files": [
-    "filesystem-mcp-server"
-  ],
-  "license": "MIT",
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/SylphxAI/filesystem-mcp.git",
-    "directory": "npm/darwin-arm64"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+	"name": "@sylphx/filesystem-mcp-darwin-arm64",
+	"version": "0.7.1",
+	"description": "Filesystem MCP server native binary for darwin-arm64",
+	"os": [
+		"darwin"
+	],
+	"cpu": [
+		"arm64"
+	],
+	"files": [
+		"filesystem-mcp-server"
+	],
+	"license": "MIT",
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/SylphxAI/filesystem-mcp.git",
+		"directory": "npm/darwin-arm64"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	}
 }
