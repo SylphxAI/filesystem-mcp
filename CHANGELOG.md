@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.1
+
+### Patch Changes
+
+- Ship multi-arch native MCP binaries via optionalDependencies platform packages (darwin-arm64, darwin-x64, linux-x64-gnu, linux-arm64-gnu). Arch-aware bin wrapper fails closed on wrong-arch or missing native; TypeScript transport remains explicit opt-in.
+
 ## 0.7.0
 
 ### Minor Changes

@@ -21,9 +21,13 @@ describe('MCP transport boundary', () => {
 		expect(script).toContain('filesystem-mcp-server')
 		expect(script).toContain('resolve_rust_bin')
 		expect(script).toContain('use_ts_transport')
-		const tail = execSync(`grep -v '^#' "${binWrapper}" | tail -n 8`, { encoding: 'utf8' })
-		expect(tail).toContain('exec "$bin"')
-		expect(tail).not.toMatch(/^\s*exec node "\$TS_ENTRY"/m)
+		// Default path execs the resolved native bin; TS is only via use_ts_transport opt-in.
+		expect(script).toContain('exec "$bin"')
+		expect(script).toMatch(/if bin="\$\(resolve_rust_bin\)"; then[\s\S]*exec "\$bin"/)
+		// Arch-aware resolution (optionalDependencies) must be present for multi-arch npm.
+		expect(script).toContain('resolve_from_optional_dep')
+		expect(script).toContain('is_runnable_native')
+		expect(script).toContain('@sylphx/filesystem-mcp-darwin-arm64')
 	})
 
 	it('executes the shipped default bin path through the Rust rmcp server', () => {
