@@ -1,5 +1,7 @@
 # Filesystem MCP list_files TS↔Rust differential parity (rej-010 / tick-010).
+# Main-bound single capability slice — not full tool authority.
 # Adopts rust-parity-drift-pass control-plane template: map-and-stale + differential + fan-in.
+# Workflow fixes from coderag/flux/gateway: no runner.temp at job env; CHANGED via env not <<<.
 name: rust-parity-differential
 
 on:
@@ -34,14 +36,16 @@ jobs:
         env:
           MANIFEST: docs/specs/migration-ledger.json
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || 'origin/main' }}
-          HEAD_SHA: ${{ github.event.merge_group.head_sha || github.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
         run: |
           set -euo pipefail
-          CHANGED="$(git diff --name-only "${BASE_SHA}...${HEAD_SHA}" 2>/dev/null || git diff --name-only "${BASE_SHA}" "${HEAD_SHA}")"
-          python3 - <<'PY' "${MANIFEST}" <<<"${CHANGED}"
-          import json, sys, fnmatch
-          manifest, changed_raw = sys.argv[1], sys.stdin.read()
-          changed = [l.strip() for l in changed_raw.splitlines() if l.strip()]
+          CHANGED="$(git diff --name-only "${BASE_SHA}...${HEAD_SHA}" 2>/dev/null || git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" || true)"
+          export CHANGED
+          # Heredoc is program stdin; pass CHANGED via env (<<< + << cannot share stdin).
+          python3 - "$MANIFEST" <<'PY'
+          import json, sys, fnmatch, os
+          manifest = sys.argv[1]
+          changed = [l.strip() for l in os.environ.get("CHANGED", "").splitlines() if l.strip()]
           data = json.load(open(manifest))
           caps = list(data.get("capabilities") or [])
           for d in data.get("domains") or []:
@@ -57,7 +61,10 @@ jobs:
                   if any(fnmatch.fnmatch(c, g) for c in changed):
                       stale.append(cap["id"])
                       break
-          print(f"stale={json.dumps(sorted(set(stale)))}")
+          stale_json = json.dumps(sorted(set(stale)))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write(f"stale={stale_json}\n")
+          print(f"stale capabilities: {stale_json}")
           PY
 
   differential:
@@ -66,8 +73,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      CANDIDATE_SHA: ${{ github.event.merge_group.head_sha || github.sha }}
-      SCRATCH_DIR: ${{ runner.temp }}/filesystem-mcp-differential
+      # PR head (not merge commit) so proof binds to candidate branch tip.
+      CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
+      # runner context is step-only — do NOT use runner.temp in job-level env
+      # (Invalid workflow / 0 jobs). Fixed path matches script default.
+      SCRATCH_DIR: /tmp/filesystem-mcp-differential
       DIFFERENTIAL_SCRIPT: scripts/run-filesystem-mcp-differential.sh
 
     steps:
@@ -104,15 +114,20 @@ jobs:
           fi
           LAST_COMPARED="$(jq -r '.lastComparedMainSha' "$ARTIFACT")"
           STATUS="$(jq -r '.status' "$ARTIFACT")"
+          SLICE="$(jq -r '.slice' "$ARTIFACT")"
           if [ "$STATUS" != "differential_green" ]; then
             echo "::error::verification status must be differential_green (got $STATUS)"
+            exit 1
+          fi
+          if [[ "$SLICE" != *"list-files"* ]]; then
+            echo "::error::expected list-files slice (got $SLICE)"
             exit 1
           fi
           if [ "$LAST_COMPARED" != "$CANDIDATE_SHA" ]; then
             echo "::error::proof SHA binding failed: lastComparedMainSha=$LAST_COMPARED candidate=$CANDIDATE_SHA"
             exit 1
           fi
-          echo "proof SHA binding OK: lastComparedMainSha=$LAST_COMPARED"
+          echo "proof SHA binding OK: lastComparedMainSha=$LAST_COMPARED slice=$SLICE"
 
       - name: Warn on stale capabilities without re-proof
         if: needs.map-and-stale.outputs.stale_capabilities != '[]'
@@ -153,3 +168,4 @@ jobs:
             echo "::error::rust-parity-drift-pass failed — differential parity not proven at candidate SHA"
             exit 1
           fi
+          echo "rust-parity-drift-pass OK (list-files)"
