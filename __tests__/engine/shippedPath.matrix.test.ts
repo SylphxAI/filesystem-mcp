@@ -73,6 +73,9 @@ describe('shipped path matrix (Rust core, no legacy flags)', () => {
 		)
 		expect(envelope.status).toBe('ok')
 		expect(envelope.engine).toBe('filesystem-core')
+		expect(envelope.tool).toBe('list_files')
+		const payload = JSON.parse(envelope.result?.content?.[0]?.text ?? '[]') as string[]
+		expect(payload.some((entry) => entry.endsWith('probe.txt'))).toBe(true)
 		expect(existsSync(nodeInvokeLog)).toBe(false)
 	})
 

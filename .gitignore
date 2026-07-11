@@ -38,3 +38,7 @@ target/
 bin/native/*
 !bin/native/.gitkeep
 .filesystem-mcp/
+
+# differential harness scratch
+test/fixtures/differential-scratch*/
+/tmp/

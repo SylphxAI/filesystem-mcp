@@ -1,0 +1,21 @@
+{
+	"schemaVersion": 1,
+	"repo": "SylphxAI/filesystem-mcp",
+	"reauditRef": "rej-010",
+	"slice": "tool.list_files",
+	"differentialHarness": "scripts/run-filesystem-mcp-differential.sh",
+	"oracle": "scripts/differential/filesystem-mcp-oracle.ts",
+	"behaviorSpec": "scripts/differential/fixtures/filesystem-mcp-corpus.json",
+	"goldenFixture": "test/fixtures/golden/list_read.golden.json",
+	"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#list_files_differential_matches_ts_oracle",
+	"domains": [
+		{
+			"id": "tool/list_files",
+			"differentialTest": true,
+			"boundedSlice": "list-files",
+			"minCases": 2,
+			"fixture": "test/fixtures/golden/list_read.golden.json"
+		}
+	],
+	"notes": "tick-010 rej-010: main-bound list_files differential harness. Does not promote authority_rust or ts_deleted."
+}

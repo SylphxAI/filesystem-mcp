@@ -12,16 +12,21 @@ export type RustListEntry = {
 	stats?: FormattedStats
 }
 
-type RustListEnvelope =
-	| {
-			status: 'ok'
-			entries: RustListEntry[]
-			metrics: { entries_found: number; elapsed_ms: number; route: string }
-	  }
-	| { status: 'error'; code: string; message: string }
+type RustListOkEnvelope = {
+	status: 'ok'
+	tool?: 'list_files'
+	entries: RustListEntry[]
+	metrics: { entries_found: number; elapsed_ms: number; route: string }
+	result?: {
+		content?: Array<{ type?: string; text?: string }>
+	}
+}
+
+type RustListEnvelope = RustListOkEnvelope | { status: 'error'; code: string; message: string }
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 
+/** Opt-in Rust walk engine for the TS adapter path (FILESYSTEM_USE_RUST_WALK=1). */
 export function shouldUseRustWalkEngine(): boolean {
 	return process.env['FILESYSTEM_USE_RUST_WALK'] === '1'
 }
@@ -58,7 +63,59 @@ export function listFilesViaRustEngine(input: {
 		)
 	}
 
-	return JSON.parse(result.stdout) as RustListEnvelope
+	const envelope = JSON.parse(result.stdout) as RustListEnvelope
+	if (envelope.status === 'ok' && envelope.result?.content?.[0]?.text) {
+		const textPayload = JSON.parse(envelope.result.content[0].text) as
+			| string[]
+			| RustListEntry[]
+			| FormattedStats
+
+		if (Array.isArray(textPayload)) {
+			if (textPayload.length > 0 && typeof textPayload[0] === 'string') {
+				const paths = textPayload as string[]
+				return {
+					status: 'ok',
+					tool: 'list_files',
+					entries: paths.map((entry) => ({ path: entry })),
+					metrics: { entries_found: paths.length, elapsed_ms: 0, route: 'rust-walk' },
+				}
+			}
+			const entries = textPayload as RustListEntry[]
+			return {
+				status: 'ok',
+				tool: 'list_files',
+				entries,
+				metrics: {
+					entries_found: entries.length,
+					elapsed_ms: 0,
+					route: 'rust-walk',
+				},
+			}
+		}
+
+		const stats = textPayload as FormattedStats
+		return {
+			status: 'ok',
+			tool: 'list_files',
+			entries: [{ path: stats.path, stats }],
+			metrics: { entries_found: 1, elapsed_ms: 0, route: 'rust-walk' },
+		}
+	}
+
+	if (envelope.status === 'ok') {
+		return {
+			status: 'ok',
+			tool: 'list_files',
+			entries: envelope.entries ?? [],
+			metrics: envelope.metrics ?? {
+				entries_found: envelope.entries?.length ?? 0,
+				elapsed_ms: 0,
+				route: 'rust-walk',
+			},
+		}
+	}
+
+	return envelope
 }
 
 function resolveRustCliBinary(): string {
