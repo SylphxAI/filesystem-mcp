@@ -84,7 +84,12 @@ describe('shipped path matrix (Rust core, no legacy flags)', () => {
 		const envelope = invokeCli('search_files', { root: repoRoot, path: relative, regex: 'matrix-probe' }, fakeNodeEnv)
 		expect(envelope.status).toBe('ok')
 		expect(envelope.engine).toBe('filesystem-core')
-		expect((envelope.results ?? []).length).toBeGreaterThan(0)
+		expect(envelope.tool).toBe('search_files')
+		const payload = JSON.parse(envelope.result?.content?.[0]?.text ?? '{}') as {
+			results?: Array<{ type?: string; file?: string; match?: string }>
+		}
+		expect((payload.results ?? []).length).toBeGreaterThan(0)
+		expect(payload.results?.some((entry) => entry.type === 'match')).toBe(true)
 		expect(existsSync(nodeInvokeLog)).toBe(false)
 	})
 
