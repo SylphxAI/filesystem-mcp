@@ -17,10 +17,7 @@
 			"note": "North Star ADR on disk — pending ADR PR; ADR number will equal introducing PR number per Doctrine"
 		}
 	],
-	"inventorySource": [
-		"mcp-tools",
-		"manual"
-	],
+	"inventorySource": ["mcp-tools", "manual"],
 	"inScopeBoundary": {
 		"includeGlobs": [
 			"src/**",
@@ -31,11 +28,7 @@
 			"__tests__/**",
 			"scripts/differential/**"
 		],
-		"excludeGlobs": [
-			"node_modules/**",
-			"dist/**",
-			"coverage/**"
-		]
+		"excludeGlobs": ["node_modules/**", "dist/**", "coverage/**"]
 	},
 	"capabilities": [
 		{
@@ -427,11 +420,7 @@
 		"summaryNote": "tick-016 expand main-bound differential: list_files + read_content + write_content. rej-010 promotion_hold active; authority_rust NOT claimed; NO prod_audit_pass.",
 		"tick016_delta": {
 			"rust_impl_verified": 0,
-			"slices": [
-				"list-files",
-				"read-content",
-				"write-content"
-			],
+			"slices": ["list-files", "read-content", "write-content"],
 			"notes": "Main-bound differential allow-list expansion. Case floors: list>=2, read>=4, write>=4. Residual caps remain for search/stat/mutations/legacy tools."
 		}
 	},
@@ -454,11 +443,7 @@
 		"oracle": "scripts/differential/filesystem-mcp-oracle.ts",
 		"capabilitiesWithDifferentialHarness": 3,
 		"promotionHoldActive": true,
-		"allowList": [
-			"list_files",
-			"read_content",
-			"write_content"
-		],
+		"allowList": ["list_files", "read_content", "write_content"],
 		"notes": "tick-016 fail-closed main allow-list; other tools residual until next expansion"
 	},
 	"cycle38": {
@@ -617,23 +602,13 @@
 		"notes": "Clean successor from main; list_files only; no authority_rust/ts_deleted."
 	},
 	"tick016": {
-		"boundedSlices": [
-			"list-files",
-			"read-content",
-			"write-content"
-		],
+		"boundedSlices": ["list-files", "read-content", "write-content"],
 		"status": "harness_landed_pending_main_proof",
 		"successorOf": "tick-010 list_files-only main land (#202)",
 		"notes": "Expand main differential beyond list_files. NO authority_rust/ts_deleted/prod_audit_pass."
 	},
 	"tick022": {
-		"boundedSlices": [
-			"list-files",
-			"read-content",
-			"write-content",
-			"search-files",
-			"stat-items"
-		],
+		"boundedSlices": ["list-files", "read-content", "write-content", "search-files", "stat-items"],
 		"status": "harness_landed_pending_main_proof",
 		"successorOf": "tick-016 list/read/write main land (#205)",
 		"caseCounts": {

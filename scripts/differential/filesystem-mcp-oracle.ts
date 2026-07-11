@@ -33,12 +33,7 @@ const ALLOWED_TOOLS = new Set([
 	'search_files',
 	'stat_items',
 ] as const)
-type AllowedTool =
-	| 'list_files'
-	| 'read_content'
-	| 'write_content'
-	| 'search_files'
-	| 'stat_items'
+type AllowedTool = 'list_files' | 'read_content' | 'write_content' | 'search_files' | 'stat_items'
 
 interface ToolRouteCase {
 	id: string
@@ -301,11 +296,7 @@ async function invokeToolHandler(
 	return JSON.parse(response.content[0].text)
 }
 
-function normalizeToolPayload(
-	tool: AllowedTool,
-	payload: unknown,
-	prefix: string,
-): unknown {
+function normalizeToolPayload(tool: AllowedTool, payload: unknown, prefix: string): unknown {
 	if (tool === 'list_files') {
 		return normalizeListPayload(payload, prefix)
 	}
