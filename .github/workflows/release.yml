@@ -5,15 +5,81 @@ on:
     branches:
       - main
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
+  actions: write
   contents: write
+  id-token: write
   pull-requests: write
 
 jobs:
+  # Multi-arch native matrix (GitHub-hosted). Fail-closed: all targets required
+  # before the publish job can assemble optionalDependency packages.
+  build-natives:
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          # Both Darwin targets on macos-latest; x86_64 is cross-compiled.
+          # macos-13 Intel runners often queue indefinitely.
+          - host: macos-latest
+            target: aarch64-apple-darwin
+          - host: macos-latest
+            target: x86_64-apple-darwin
+          - host: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - host: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+
+    name: Native ${{ matrix.settings.target }}
+    runs-on: ${{ matrix.settings.host }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.settings.target }}
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: release-native-${{ matrix.settings.target }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            release-native-${{ matrix.settings.target }}-
+
+      - name: Build release natives
+        run: |
+          set -euo pipefail
+          cargo build --release -p filesystem-mcp-server --target ${{ matrix.settings.target }}
+          BIN="target/${{ matrix.settings.target }}/release/filesystem-mcp-server"
+          test -f "$BIN"
+          chmod +x "$BIN"
+          file "$BIN" || true
+          test "$(wc -c < "$BIN")" -gt 100000
+          mkdir -p native-out
+          cp "$BIN" native-out/filesystem-mcp-server
+          chmod +x native-out/filesystem-mcp-server
+
+      - name: Upload native artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: filesystem-mcp-native-${{ matrix.settings.target }}
+          path: native-out/filesystem-mcp-server
+          if-no-files-found: error
+          retention-days: 7
+
   release:
     name: Release
+    needs: build-natives
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -26,19 +92,68 @@ jobs:
         with:
           bun-version: '1.3.12'
 
+      - name: Set up Node.js (npm registry auth)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.14'
+          registry-url: 'https://registry.npmjs.org'
+
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+        env:
+          # optionalDependencies platform packages may 404 until first multi-arch publish
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Build Rust core and MCP server
+      - name: Download multi-arch native artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: filesystem-mcp-native-*
+
+      - name: Build TypeScript package
+        run: bun run build
+
+      - name: Build host Rust (release gate + cli probes)
         run: bun run build:rust
+
+      - name: Assemble multi-arch platform packages
+        run: |
+          set -euo pipefail
+          echo "== multi-arch artifacts =="
+          ls -laR artifacts || true
+          bun scripts/assemble-multiarch-natives.ts
+
+          # Stage linux x64 into bin/native as a documented linux fallback.
+          # Primary consumer path is optionalDependencies; arch-aware bin rejects wrong arch.
+          mkdir -p bin/native
+          if [ -f npm/linux-x64-gnu/filesystem-mcp-server ]; then
+            cp npm/linux-x64-gnu/filesystem-mcp-server bin/native/filesystem-mcp-server
+            chmod +x bin/native/filesystem-mcp-server
+          fi
+
+          chmod +x bin/filesystem-mcp
+          test -x bin/filesystem-mcp
+          head -n 8 bin/filesystem-mcp
+
+          # Fail-closed: every platform package must contain a runnable binary
+          for dir in npm/*/; do
+            test -f "${dir}package.json"
+            test -x "${dir}filesystem-mcp-server"
+            test "$(wc -c < "${dir}filesystem-mcp-server")" -gt 100000
+            echo "OK $(basename "$dir") $(wc -c < "${dir}filesystem-mcp-server") bytes"
+            file "${dir}filesystem-mcp-server" || true
+          done
+
+          bun scripts/sync-platform-versions.ts
 
       - name: Release gate
         run: bun run benchmark:release-gate
 
       - name: Create release PR or publish
+        id: changesets
         uses: changesets/action@v1
         with:
           version: bun run version-packages
@@ -49,3 +164,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Multi-arch npm readback
+        if: always()
+        run: bun scripts/verify-multiarch-readback.ts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

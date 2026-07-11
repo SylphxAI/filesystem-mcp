@@ -42,3 +42,7 @@ bin/native/*
 # differential harness scratch
 test/fixtures/differential-scratch*/
 /tmp/
+
+# Multi-arch assembled native binaries (built in CI or via bun run build:rust)
+npm/*/filesystem-mcp-server
+artifacts/

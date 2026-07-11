@@ -29,6 +29,12 @@
         "vitepress": "^1.6.3",
         "vitest": "^3.1.1",
       },
+      "optionalDependencies": {
+        "@sylphx/filesystem-mcp-darwin-arm64": "0.7.0",
+        "@sylphx/filesystem-mcp-darwin-x64": "0.7.0",
+        "@sylphx/filesystem-mcp-linux-arm64-gnu": "0.7.0",
+        "@sylphx/filesystem-mcp-linux-x64-gnu": "0.7.0",
+      },
     },
   },
   "packages": {
