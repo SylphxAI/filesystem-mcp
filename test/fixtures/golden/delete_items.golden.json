@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "source": "TICK029 delete_items differential expansion",
+  "corpusRoot": "test/fixtures/golden/corpus",
+  "cases": [
+    {
+      "id": "delete-file-success",
+      "tool": "delete_items",
+      "input": {
+        "paths": ["alpha.txt"]
+      },
+      "expects": {
+        "results": [
+          { "path": "alpha.txt", "success": true }
+        ]
+      }
+    },
+    {
+      "id": "delete-missing-idempotent",
+      "tool": "delete_items",
+      "input": {
+        "paths": ["does-not-exist.txt"]
+      },
+      "expects": {
+        "results": [
+          {
+            "path": "does-not-exist.txt",
+            "success": true,
+            "note": "Path not found, nothing to delete"
+          }
+        ]
+      }
+    }
+  ]
+}

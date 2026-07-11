@@ -2,7 +2,7 @@
 /**
  * TS contract oracle for filesystem-mcp differential parity (rej-010 / tick-022).
  * Frozen baseline: pure TypeScript list_files + read_content + write_content +
- * search_files + stat_items handlers on golden corpus.
+ * search_files + stat_items + delete_items handlers on golden corpus.
  * Fail-closed allow-list — no silent extra tools.
  */
 import { createHash } from 'node:crypto'
@@ -15,6 +15,7 @@ import { readContentToolDefinition } from '../../src/handlers/read-content.ts'
 import { searchFilesToolDefinition } from '../../src/handlers/search-files.ts'
 import { statItemsToolDefinition } from '../../src/handlers/stat-items.ts'
 import { writeContentToolDefinition } from '../../src/handlers/write-content.ts'
+import { deleteItemsToolDefinition } from '../../src/handlers/delete-items.ts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 // realpath avoids /tmp vs /private/tmp drift on macOS which breaks PROJECT_ROOT confinement.
@@ -32,8 +33,9 @@ const ALLOWED_TOOLS = new Set([
 	'write_content',
 	'search_files',
 	'stat_items',
+	'delete_items',
 ] as const)
-type AllowedTool = 'list_files' | 'read_content' | 'write_content' | 'search_files' | 'stat_items'
+type AllowedTool = 'list_files' | 'read_content' | 'write_content' | 'search_files' | 'stat_items' | 'delete_items'
 
 interface ToolRouteCase {
 	id: string
@@ -58,6 +60,7 @@ interface Corpus {
 	listReadGolden: string
 	writeContentGolden: string
 	searchStatGolden: string
+	deleteItemsGolden: string
 	toolRouteCases: ToolRouteCase[]
 	serverContract: {
 		name: string
@@ -79,6 +82,7 @@ const TOOL_SLICE: Record<AllowedTool, string> = {
 	write_content: 'write-content',
 	search_files: 'search-files',
 	stat_items: 'stat-items',
+	delete_items: 'delete-items',
 }
 
 const sortPaths = (paths: string[]) => [...paths].sort()
@@ -252,7 +256,7 @@ function scopeToolInput(
 				: join(relativeRoot, String(input.path)).replace(/\\/g, '/')
 		return { ...input, path: pathValue }
 	}
-	if (tool === 'read_content' || tool === 'stat_items') {
+	if (tool === 'read_content' || tool === 'stat_items' || tool === 'delete_items') {
 		return {
 			...input,
 			paths: (input.paths as string[]).map((entry) =>
@@ -291,10 +295,31 @@ async function invokeToolHandler(
 					? writeContentToolDefinition.handler
 					: tool === 'search_files'
 						? searchFilesToolDefinition.handler
-						: statItemsToolDefinition.handler
+						: tool === 'delete_items'
+							? deleteItemsToolDefinition.handler
+							: statItemsToolDefinition.handler
 	const response = await handler(scopedInput)
 	return JSON.parse(response.content[0].text)
 }
+
+
+const normalizeDeletePayload = (
+	results: Array<{ path?: string; success?: boolean; note?: string; error?: string }>,
+	prefix: string,
+) =>
+	results.map((entry) => {
+		const normalized: Record<string, unknown> = {
+			path: stripCorpusPrefix(entry.path ?? '', prefix),
+			success: entry.success,
+		}
+		if (entry.note) {
+			normalized.note = entry.note
+		}
+		if (entry.error) {
+			normalized.error = entry.error
+		}
+		return normalized
+	})
 
 function normalizeToolPayload(tool: AllowedTool, payload: unknown, prefix: string): unknown {
 	if (tool === 'list_files') {
@@ -313,6 +338,17 @@ function normalizeToolPayload(tool: AllowedTool, payload: unknown, prefix: strin
 				success?: boolean
 				operation?: string
 				code?: string
+				error?: string
+			}>,
+			prefix,
+		)
+	}
+	if (tool === 'delete_items') {
+		return normalizeDeletePayload(
+			payload as Array<{
+				path?: string
+				success?: boolean
+				note?: string
 				error?: string
 			}>,
 			prefix,
@@ -374,6 +410,9 @@ async function main(): Promise<void> {
 	) as GoldenManifest
 	const searchStatManifest = JSON.parse(
 		readFileSync(join(REPO_ROOT, corpus.searchStatGolden), 'utf8'),
+	) as GoldenManifest
+	const deleteManifest = JSON.parse(
+		readFileSync(join(REPO_ROOT, corpus.deleteItemsGolden), 'utf8'),
 	) as GoldenManifest
 
 	const cases: DifferentialCase[] = []
@@ -477,6 +516,31 @@ async function main(): Promise<void> {
 				status: 'ok',
 				engine: 'filesystem-core',
 				payload: normalizeToolPayload(testCase.tool, payload, listReadPrefix),
+			},
+		})
+	}
+
+	// delete_items mutates isolated corpus copies (same pattern as write_content).
+	for (const testCase of deleteManifest.cases) {
+		assertAllowedTool(testCase.tool, `deleteItemsGolden/${testCase.id}`)
+		const caseRoot = join(SCRATCH_ROOT, 'cases', testCase.id)
+		copyCorpus(caseRoot, corpusSource)
+		const casePrefix = corpusPrefixFor(caseRoot)
+		const payload = await invokeToolHandler(testCase.tool, caseRoot, testCase.input)
+		cases.push({
+			id: `tool-${testCase.id}`,
+			slice: TOOL_SLICE[testCase.tool],
+			domain: 'tool',
+			input: {
+				tool: testCase.tool,
+				root: caseRoot,
+				args: testCase.input,
+				isolate: true,
+			},
+			output: {
+				status: 'ok',
+				engine: 'filesystem-core',
+				payload: normalizeToolPayload(testCase.tool, payload, casePrefix),
 			},
 		})
 	}
