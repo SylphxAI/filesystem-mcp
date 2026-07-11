@@ -1,0 +1,90 @@
+{
+	"schemaVersion": 1,
+	"source": "__tests__/handlers/search-files.test.ts; __tests__/handlers/stat-items.test.ts",
+	"corpusRoot": "test/fixtures/golden/corpus",
+	"notes": "search cases stick to surfaces where pure-TS glob (non-recursive file_pattern) and Rust walk agree — top-level files, or path scoped into nested/.",
+	"cases": [
+		{
+			"id": "search-alpha-match",
+			"tool": "search_files",
+			"input": {
+				"path": ".",
+				"regex": "Alpha",
+				"file_pattern": "*"
+			},
+			"expects": {
+				"minMatches": 2
+			}
+		},
+		{
+			"id": "search-readme-heading",
+			"tool": "search_files",
+			"input": {
+				"path": ".",
+				"regex": "Golden",
+				"file_pattern": "*.md"
+			},
+			"expects": {
+				"minMatches": 1
+			}
+		},
+		{
+			"id": "search-nested-scoped",
+			"tool": "search_files",
+			"input": {
+				"path": "nested",
+				"regex": "content",
+				"file_pattern": "*.txt"
+			},
+			"expects": {
+				"minMatches": 1
+			}
+		},
+		{
+			"id": "search-no-match",
+			"tool": "search_files",
+			"input": {
+				"path": ".",
+				"regex": "ZZZ_NO_MATCH_XXX",
+				"file_pattern": "*"
+			},
+			"expects": {
+				"minMatches": 0
+			}
+		},
+		{
+			"id": "stat-single-file",
+			"tool": "stat_items",
+			"input": {
+				"paths": ["alpha.txt"]
+			},
+			"expects": {
+				"results": [{ "path": "alpha.txt", "status": "success", "isFile": true }]
+			}
+		},
+		{
+			"id": "stat-multiple-with-missing",
+			"tool": "stat_items",
+			"input": {
+				"paths": ["alpha.txt", "nested/beta.txt", "missing.txt"]
+			},
+			"expects": {
+				"results": [
+					{ "path": "alpha.txt", "status": "success" },
+					{ "path": "nested/beta.txt", "status": "success" },
+					{ "path": "missing.txt", "status": "error" }
+				]
+			}
+		},
+		{
+			"id": "stat-directory",
+			"tool": "stat_items",
+			"input": {
+				"paths": ["nested"]
+			},
+			"expects": {
+				"results": [{ "path": "nested", "status": "success", "isDirectory": true }]
+			}
+		}
+	]
+}

@@ -1,10 +1,12 @@
 //! TRUE differential parity: TS contract oracle vs native Rust MCP tool SSOT.
 //!
 //! Fail-closed — no SKIP-as-pass. Oracle subprocess must succeed before comparison.
-//! Bounded slices (rej-010 / tick-016 main expansion):
+//! Bounded slices (rej-010 / tick-022 main expansion):
 //! - `list_files_differential_matches_ts_oracle` — S1 discovery (2 cases)
 //! - `read_content_differential_matches_ts_oracle` — S1 read path (4 cases)
 //! - `write_content_differential_matches_ts_oracle` — S2 mutation path (4 cases)
+//! - `search_files_differential_matches_ts_oracle` — S1 search path (4 cases)
+//! - `stat_items_differential_matches_ts_oracle` — S1 stat path (3 cases)
 //! See scripts/run-filesystem-mcp-differential.sh.
 
 use filesystem_mcp_server::cli_bridge;
@@ -20,6 +22,8 @@ use std::sync::{Mutex, OnceLock};
 const LIST_FILES_SLICE: &str = "list-files";
 const READ_CONTENT_SLICE: &str = "read-content";
 const WRITE_CONTENT_SLICE: &str = "write-content";
+const SEARCH_FILES_SLICE: &str = "search-files";
+const STAT_ITEMS_SLICE: &str = "stat-items";
 
 /// Serialize tool cases that mutate isolated corpus trees (write_content).
 static TOOL_CASE_LOCK: Mutex<()> = Mutex::new(());
@@ -172,10 +176,101 @@ fn normalize_write_payload(payload: &Value) -> Value {
     Value::Array(entries)
 }
 
+/// Stable search payload — sort by file+line; keep type/match/context; null-fill.
+fn normalize_search_payload(payload: &Value) -> Value {
+    let results_value = payload
+        .get("results")
+        .cloned()
+        .unwrap_or_else(|| Value::Array(vec![]));
+    let mut entries = results_value
+        .as_array()
+        .expect("search_files results array")
+        .iter()
+        .map(|entry| {
+            let object = entry.as_object().expect("search result object");
+            let file = object
+                .get("file")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string();
+            let line = object.get("line").cloned().unwrap_or(Value::Null);
+            let matched = object
+                .get("match")
+                .cloned()
+                .or_else(|| object.get("matched_text").cloned())
+                .unwrap_or(Value::Null);
+            serde_json::json!({
+                "type": object.get("type").cloned().unwrap_or(Value::String("match".into())),
+                "file": file,
+                "line": line,
+                "match": matched,
+                "context": object.get("context").cloned().unwrap_or_else(|| Value::Array(vec![])),
+                "error": object.get("error").cloned().unwrap_or(Value::Null),
+            })
+        })
+        .collect::<Vec<_>>();
+
+    entries.sort_by(|a, b| {
+        let af = a.get("file").and_then(Value::as_str).unwrap_or("");
+        let bf = b.get("file").and_then(Value::as_str).unwrap_or("");
+        match af.cmp(bf) {
+            std::cmp::Ordering::Equal => {
+                let al = a.get("line").and_then(Value::as_u64).unwrap_or(0);
+                let bl = b.get("line").and_then(Value::as_u64).unwrap_or(0);
+                al.cmp(&bl)
+            }
+            other => other,
+        }
+    });
+
+    serde_json::json!({ "results": entries })
+}
+
+/// Stable stat payload — drop timestamps / uid / gid (host-volatile).
+fn normalize_stat_payload(payload: &Value) -> Value {
+    let entries = payload
+        .as_array()
+        .expect("stat_items array payload")
+        .iter()
+        .map(|entry| {
+            let object = entry.as_object().expect("stat result object");
+            let mut normalized = serde_json::Map::new();
+            normalized.insert(
+                "path".into(),
+                object.get("path").cloned().unwrap_or(Value::Null),
+            );
+            normalized.insert(
+                "status".into(),
+                object.get("status").cloned().unwrap_or(Value::Null),
+            );
+            if let Some(error) = object.get("error").filter(|value| !value.is_null()) {
+                normalized.insert("error".into(), error.clone());
+            }
+            if let Some(stats) = object.get("stats").and_then(Value::as_object) {
+                normalized.insert(
+                    "stats".into(),
+                    serde_json::json!({
+                        "path": stats.get("path").cloned().unwrap_or(Value::Null),
+                        "isFile": stats.get("isFile").cloned().unwrap_or(Value::Null),
+                        "isDirectory": stats.get("isDirectory").cloned().unwrap_or(Value::Null),
+                        "isSymbolicLink": stats.get("isSymbolicLink").cloned().unwrap_or(Value::Null),
+                        "size": stats.get("size").cloned().unwrap_or(Value::Null),
+                        "mode": stats.get("mode").cloned().unwrap_or(Value::Null),
+                    }),
+                );
+            }
+            Value::Object(normalized)
+        })
+        .collect::<Vec<_>>();
+    Value::Array(entries)
+}
+
 fn normalize_tool_payload(tool: &str, payload: Value) -> Value {
     match tool {
         "list_files" => sorted_string_array(&payload),
         "write_content" => normalize_write_payload(&payload),
+        "search_files" => normalize_search_payload(&payload),
+        "stat_items" => normalize_stat_payload(&payload),
         _ => payload,
     }
 }
@@ -296,6 +391,14 @@ fn assert_slice_metadata(case: &OracleCase) {
             assert_eq!(case.domain, "tool");
             assert_eq!(case.input["tool"].as_str(), Some("write_content"));
         }
+        SEARCH_FILES_SLICE => {
+            assert_eq!(case.domain, "tool");
+            assert_eq!(case.input["tool"].as_str(), Some("search_files"));
+        }
+        STAT_ITEMS_SLICE => {
+            assert_eq!(case.domain, "tool");
+            assert_eq!(case.input["tool"].as_str(), Some("stat_items"));
+        }
         "tool-route-contract" => assert_eq!(case.domain, "toolRouteContract"),
         "server-contract" => assert_eq!(case.domain, "serverContract"),
         other => panic!("unknown slice {other} for case {}", case.id),
@@ -350,4 +453,14 @@ fn read_content_differential_matches_ts_oracle() {
 #[test]
 fn write_content_differential_matches_ts_oracle() {
     run_bounded_slice(WRITE_CONTENT_SLICE, 4);
+}
+
+#[test]
+fn search_files_differential_matches_ts_oracle() {
+    run_bounded_slice(SEARCH_FILES_SLICE, 4);
+}
+
+#[test]
+fn stat_items_differential_matches_ts_oracle() {
+    run_bounded_slice(STAT_ITEMS_SLICE, 3);
 }
