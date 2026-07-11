@@ -10,7 +10,7 @@ use rmcp::{
 use serde_json::Value;
 
 pub const SERVER_NAME: &str = "filesystem-mcp";
-pub const SERVER_VERSION: &str = "0.6.1";
+pub const SERVER_VERSION: &str = "0.7.0";
 pub const SERVER_INSTRUCTIONS: &str =
     "Filesystem MCP server (Rust rmcp transport). All tools operate relative to the project root with Rust policy/search/walk engines when enabled.";
 

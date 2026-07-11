@@ -63,34 +63,31 @@
 			"state": "rust_impl",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: differential_green at bound SHAs \u2014 promotion_hold until prod_audit_pass",
+				"reason": "rej-010: main-bound list_files differential harness lands tick-010 \u2014 promotion_hold until prod_audit_pass",
 				"rejectionRef": "rej-010",
-				"since": "2026-07-10T10:53:32+00:00"
+				"since": "2026-07-11T00:00:00+00:00"
 			},
 			"proof": {
-				"status": "differential_green",
-				"baselineTsSha": "09773f7ecbacf1ebf0c9cc123c1be8108f9c7675",
-				"rustCandidateSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"lastComparedMainSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"mergeGroupSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"behaviorSpecHash": "d1410d8c97b2157666a7d9214c10cb380c13dc378132bc73e8e870c3a0ac8718",
-				"fixtureCorpusHash": "d1410d8c97b2157666a7d9214c10cb380c13dc378132bc73e8e870c3a0ac8718",
-				"verifiedAt": "2026-07-10T10:53:32+00:00",
-				"verificationRef": "verification/filesystem-mcp-differential-green.json",
-				"harness": "scripts/run-filesystem-mcp-differential.sh",
-				"caseCount": 36,
+				"status": "missing",
+				"harness": "scripts/run-filesystem-mcp-differential.sh --slice list-files",
 				"dependencyGlobs": [
 					"src/handlers/list-files.ts",
+					"src/engine/rust-walk.ts",
+					"crates/filesystem-core/src/walk.rs",
+					"crates/filesystem-cli/src/main.rs",
+					"crates/filesystem-mcp-server/src/cli_bridge.rs",
 					"test/fixtures/golden/list_read.golden.json",
-					"scripts/differential/**"
+					"scripts/differential/**",
+					"scripts/run-filesystem-mcp-differential.sh",
+					"crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs"
 				]
 			},
 			"tsSurface": "src/handlers/list-files.ts; src/engine/rust-walk.ts (opt-out via FILESYSTEM_USE_RUST_WALK=ts)",
 			"rustSurface": "crates/filesystem-core/src/walk.rs \u2192 crates/filesystem-cli",
 			"parityTest": "test/fixtures/golden/list_read.golden.json; __tests__/engine/listReadGoldenParity.test.ts; cargo test -p filesystem-cli --test list_read_golden_parity",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#list_files_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice list-files",
-			"branch": "feat/rust-web-mcp-http-transport",
-			"notes": "Cycle28 rej-010 bounded slice: list_files_differential_matches_ts_oracle (2 cases). cycle38: parity-slice manifest + matrix gate landed. Highest-leverage S1 discovery path. proof.status missing until differential_green at bound SHAs. authority_rust NOT claimed."
+			"branch": "feat/list-files-main-differential",
+			"notes": "tick-010: main-bound list_files differential harness + MCP-shaped CLI path. rust_impl ONLY \u2014 authority_rust NOT claimed (rej-010). TS residual via FILESYSTEM_MCP_TRANSPORT=ts / FILESYSTEM_USE_RUST_WALK not set."
 		},
 		{
 			"id": "tool/search_files",
@@ -413,7 +410,7 @@
 			"verificationRef": "verification/filesystem-mcp-cycle64-chown-items-rust-impl.json",
 			"notes": "rej-010 rust_impl ONLY \u2014 cycle64 next ts_only slice: chown-items bounded differential (2 golden cases)"
 		},
-		"summaryNote": "rej-010 \u2014 differential_green recorded for 7 MCP tool slices (36 cases); promotion_hold until prod_audit_pass; authority_rust NOT claimed"
+		"summaryNote": "tick-010 list_files main-bound differential harness land. rej-010 promotion_hold active; authority_rust NOT claimed."
 	},
 	"priorClaims": {
 		"authority_rust": 4,
@@ -476,7 +473,7 @@
 		],
 		"notes": "cycle47 rej-010: apply-diff bounded differential slice (--slice apply-diff, 5 golden cases). rust_impl only \u2014 proof.status missing until differential_green at bound SHAs."
 	},
-	"harnessPath": "scripts/run-filesystem-mcp-differential.sh",
+	"harnessPath": "scripts/run-filesystem-mcp-differential.sh --slice list-files",
 	"verificationRef": "verification/filesystem-mcp-differential-green.json",
 	"cycle50Slice": "apply-diff \u2014 bounded --slice entrypoint; bash scripts/run-filesystem-mcp-differential.sh --slice apply-diff",
 	"cycle51Slice": "list-files \u2014 bounded --slice entrypoint; bash scripts/run-filesystem-mcp-differential.sh --slice list-files",
@@ -600,5 +597,11 @@
 			"tool/replace_content",
 			"tool/write_content"
 		]
+	},
+	"tick010": {
+		"boundedSlice": "list-files",
+		"status": "harness_landed_pending_main_proof",
+		"successorOf": "PR#200 (DIRTY \u2014 not merged)",
+		"notes": "Clean successor from main; list_files only; no authority_rust/ts_deleted."
 	}
 }

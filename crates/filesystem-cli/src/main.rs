@@ -5,7 +5,7 @@ use legacy_runtime::{
 };
 use filesystem_core::audit::{WriteAuditFileRecord, WriteAuditRequestRecord};
 use filesystem_core::search::SearchMatch;
-use filesystem_core::walk::{ListEntry, ListFilesMetrics};
+use filesystem_core::walk::ListFilesResult;
 use filesystem_core::{
     append_audit_batch_with_limit, content_hash, read_content, resolve_path, stat_items,
     write_content, PolicyErrorCode, ReadContentOptions, ReadFormat, WriteItem, ENGINE_NAME,
@@ -53,14 +53,6 @@ struct SearchMetricsDto {
     elapsed_ms: u64,
 }
 
-#[derive(Debug, Serialize)]
-struct ListFilesSuccessEnvelope {
-    status: &'static str,
-    engine: &'static str,
-    version: &'static str,
-    entries: Vec<ListEntry>,
-    metrics: ListFilesMetrics,
-}
 
 #[derive(Debug, Serialize)]
 struct ContentHashSuccessEnvelope {
@@ -105,7 +97,29 @@ fn map_search_match(entry: SearchMatch) -> SearchMatchDto {
     }
 }
 
-fn handle_list_files(input: &serde_json::Value) -> Result<ListFilesSuccessEnvelope, ErrorEnvelope> {
+fn format_list_files_mcp_payload(result: &ListFilesResult, include_stats: bool) -> serde_json::Value {
+    if result.entries.len() == 1 {
+        if let Some(stats) = &result.entries[0].stats {
+            if stats.is_file && !result.entries[0].path.ends_with('/') {
+                return serde_json::to_value(stats).expect("serialize list_files file stats");
+            }
+        }
+    }
+
+    if include_stats {
+        serde_json::to_value(&result.entries).expect("serialize list_files entries")
+    } else {
+        serde_json::Value::Array(
+            result
+                .entries
+                .iter()
+                .map(|entry| serde_json::Value::String(entry.path.clone()))
+                .collect(),
+        )
+    }
+}
+
+fn handle_list_files(input: &serde_json::Value) -> Result<LegacyToolSuccessEnvelope, ErrorEnvelope> {
     let root = input
         .get("root")
         .and_then(|value| value.as_str())
@@ -128,13 +142,16 @@ fn handle_list_files(input: &serde_json::Value) -> Result<ListFilesSuccessEnvelo
         .unwrap_or(false);
 
     match filesystem_core::walk::list_files(&root, relative_path, recursive, include_stats) {
-        Ok(result) => Ok(ListFilesSuccessEnvelope {
-            status: "ok",
-            engine: ENGINE_NAME,
-            version: ENGINE_VERSION,
-            entries: result.entries,
-            metrics: result.metrics,
-        }),
+        Ok(result) => {
+            let payload = format_list_files_mcp_payload(&result, include_stats);
+            Ok(LegacyToolSuccessEnvelope {
+                status: "ok",
+                engine: ENGINE_NAME,
+                version: ENGINE_VERSION,
+                tool: "list_files".into(),
+                result: wrap_mcp_text_payload(&payload),
+            })
+        }
         Err(message) => {
             let code = if message.contains("Path traversal") || message.starts_with("INVALID_ROOT") {
                 "INVALID_REQUEST"

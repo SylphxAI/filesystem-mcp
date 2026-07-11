@@ -18,6 +18,38 @@ struct CliError {
     message: String,
 }
 
+fn cli_binary_candidates(root: &std::path::Path) -> [PathBuf; 3] {
+    [
+        root.join("target/release/filesystem-cli"),
+        root.join("target/debug/filesystem-cli"),
+        root.join("bin/native/filesystem-cli"),
+    ]
+}
+
+fn workspace_roots_to_probe() -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+
+    // Crate manifest → workspace root (crates/filesystem-mcp-server → repo root).
+    roots.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."));
+
+    if let Ok(exe) = std::env::current_exe() {
+        let mut dir = exe.parent().map(|parent| parent.to_path_buf());
+        while let Some(mut current) = dir {
+            roots.push(current.clone());
+            if !current.pop() {
+                break;
+            }
+            dir = Some(current);
+        }
+    }
+
+    if let Ok(cwd) = std::env::current_dir() {
+        roots.push(cwd);
+    }
+
+    roots
+}
+
 pub fn resolve_cli_binary() -> Option<PathBuf> {
     if let Ok(path) = std::env::var("FILESYSTEM_CLI_BIN") {
         let candidate = PathBuf::from(path);
@@ -26,28 +58,11 @@ pub fn resolve_cli_binary() -> Option<PathBuf> {
         }
     }
 
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(parent) = exe.parent() {
-            if let Some(package_root) = parent.parent() {
-                for candidate in [
-                    package_root.join("target/release/filesystem-cli"),
-                    package_root.join("target/debug/filesystem-cli"),
-                    package_root.join("bin/native/filesystem-cli"),
-                ] {
-                    if candidate.is_file() {
-                        return Some(candidate);
-                    }
-                }
+    for root in workspace_roots_to_probe() {
+        for candidate in cli_binary_candidates(&root) {
+            if candidate.is_file() {
+                return Some(candidate);
             }
-        }
-    }
-
-    for candidate in [
-        PathBuf::from("target/release/filesystem-cli"),
-        PathBuf::from("target/debug/filesystem-cli"),
-    ] {
-        if candidate.is_file() {
-            return Some(candidate);
         }
     }
 
