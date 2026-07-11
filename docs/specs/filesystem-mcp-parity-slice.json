@@ -2,12 +2,12 @@
 	"schemaVersion": 1,
 	"repo": "SylphxAI/filesystem-mcp",
 	"reauditRef": "rej-010",
-	"slice": "tool.list_files",
+	"slice": "tool.list_files|tool.read_content|tool.write_content",
 	"differentialHarness": "scripts/run-filesystem-mcp-differential.sh",
 	"oracle": "scripts/differential/filesystem-mcp-oracle.ts",
 	"behaviorSpec": "scripts/differential/fixtures/filesystem-mcp-corpus.json",
-	"goldenFixture": "test/fixtures/golden/list_read.golden.json",
-	"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#list_files_differential_matches_ts_oracle",
+	"goldenFixture": "test/fixtures/golden/list_read.golden.json; test/fixtures/golden/write_content.golden.json",
+	"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#list_files_differential_matches_ts_oracle;read_content_differential_matches_ts_oracle;write_content_differential_matches_ts_oracle",
 	"domains": [
 		{
 			"id": "tool/list_files",
@@ -15,7 +15,21 @@
 			"boundedSlice": "list-files",
 			"minCases": 2,
 			"fixture": "test/fixtures/golden/list_read.golden.json"
+		},
+		{
+			"id": "tool/read_content",
+			"differentialTest": true,
+			"boundedSlice": "read-content",
+			"minCases": 4,
+			"fixture": "test/fixtures/golden/list_read.golden.json"
+		},
+		{
+			"id": "tool/write_content",
+			"differentialTest": true,
+			"boundedSlice": "write-content",
+			"minCases": 4,
+			"fixture": "test/fixtures/golden/write_content.golden.json"
 		}
 	],
-	"notes": "tick-010 rej-010: main-bound list_files differential harness. Does not promote authority_rust or ts_deleted."
+	"notes": "tick-016 rej-010: main-bound differential expansion beyond list_files to read_content + write_content. Fail-closed allow-list. Does not promote authority_rust or ts_deleted."
 }

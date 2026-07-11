@@ -2,15 +2,26 @@
 	"corpusVersion": 1,
 	"corpusRoot": "test/fixtures/golden/corpus",
 	"listReadGolden": "test/fixtures/golden/list_read.golden.json",
+	"writeContentGolden": "test/fixtures/golden/write_content.golden.json",
 	"toolRouteCases": [
 		{
 			"id": "route-list-files",
 			"tool": "list_files",
 			"expect": "RustCore"
+		},
+		{
+			"id": "route-read-content",
+			"tool": "read_content",
+			"expect": "RustCore"
+		},
+		{
+			"id": "route-write-content",
+			"tool": "write_content",
+			"expect": "RustCore"
 		}
 	],
 	"serverContract": {
 		"name": "filesystem-mcp",
-		"tools": ["list_files"]
+		"tools": ["list_files", "read_content", "write_content"]
 	}
 }

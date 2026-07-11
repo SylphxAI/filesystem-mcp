@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"source": "__tests__/handlers/list-files.test.ts",
+	"source": "__tests__/handlers/list-files.test.ts; __tests__/handlers/read-content.test.ts",
 	"corpusRoot": "test/fixtures/golden/corpus",
 	"cases": [
 		{
@@ -25,6 +25,77 @@
 			},
 			"expects": {
 				"paths": [".hidden", "alpha.txt", "nested/", "nested/beta.txt", "readme.md"]
+			}
+		},
+		{
+			"id": "read-single-file",
+			"tool": "read_content",
+			"input": {
+				"paths": ["alpha.txt"]
+			},
+			"expects": {
+				"results": [
+					{
+						"path": "alpha.txt",
+						"content": "Alpha line one\nAlpha line two\n"
+					}
+				]
+			}
+		},
+		{
+			"id": "read-multiple-files",
+			"tool": "read_content",
+			"input": {
+				"paths": ["alpha.txt", "nested/beta.txt", "readme.md"]
+			},
+			"expects": {
+				"results": [
+					{
+						"path": "alpha.txt",
+						"content": "Alpha line one\nAlpha line two\n"
+					},
+					{
+						"path": "nested/beta.txt",
+						"content": "Beta content\n"
+					},
+					{
+						"path": "readme.md",
+						"content": "# Golden corpus\n"
+					}
+				]
+			}
+		},
+		{
+			"id": "read-line-range-raw",
+			"tool": "read_content",
+			"input": {
+				"paths": ["alpha.txt"],
+				"start_line": 2,
+				"end_line": 2,
+				"format": "raw"
+			},
+			"expects": {
+				"results": [
+					{
+						"path": "alpha.txt",
+						"content": "Alpha line two"
+					}
+				]
+			}
+		},
+		{
+			"id": "read-missing-file",
+			"tool": "read_content",
+			"input": {
+				"paths": ["missing.txt"]
+			},
+			"expects": {
+				"results": [
+					{
+						"path": "missing.txt",
+						"error_contains": "not found"
+					}
+				]
 			}
 		}
 	]

@@ -17,7 +17,10 @@
 			"note": "North Star ADR on disk \u2014 pending ADR PR; ADR number will equal introducing PR number per Doctrine"
 		}
 	],
-	"inventorySource": ["mcp-tools", "manual"],
+	"inventorySource": [
+		"mcp-tools",
+		"manual"
+	],
 	"inScopeBoundary": {
 		"includeGlobs": [
 			"src/**",
@@ -28,7 +31,11 @@
 			"__tests__/**",
 			"scripts/differential/**"
 		],
-		"excludeGlobs": ["node_modules/**", "dist/**", "coverage/**"]
+		"excludeGlobs": [
+			"node_modules/**",
+			"dist/**",
+			"coverage/**"
+		]
 	},
 	"capabilities": [
 		{
@@ -63,7 +70,7 @@
 			"state": "rust_impl",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: main-bound list_files differential harness lands tick-010 \u2014 promotion_hold until prod_audit_pass",
+				"reason": "rej-010: main-bound multi-tool differential (list/read/write) \u2014 promotion_hold until prod_audit_pass",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-11T00:00:00+00:00"
 			},
@@ -86,8 +93,8 @@
 			"rustSurface": "crates/filesystem-core/src/walk.rs \u2192 crates/filesystem-cli",
 			"parityTest": "test/fixtures/golden/list_read.golden.json; __tests__/engine/listReadGoldenParity.test.ts; cargo test -p filesystem-cli --test list_read_golden_parity",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#list_files_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice list-files",
-			"branch": "feat/list-files-main-differential",
-			"notes": "tick-010: main-bound list_files differential harness + MCP-shaped CLI path. rust_impl ONLY \u2014 authority_rust NOT claimed (rej-010). TS residual via FILESYSTEM_MCP_TRANSPORT=ts / FILESYSTEM_USE_RUST_WALK not set."
+			"branch": "feat/expand-diff-main-tick016",
+			"notes": "tick-016: main-bound differential remains list_files + expanded siblings. rust_impl ONLY \u2014 authority_rust NOT claimed (rej-010)."
 		},
 		{
 			"id": "tool/search_files",
@@ -105,34 +112,31 @@
 			"state": "rust_impl",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: differential_green at bound SHAs \u2014 promotion_hold until prod_audit_pass",
+				"reason": "rej-010: main-bound read_content differential harness (tick-016) \u2014 promotion_hold until prod_audit_pass",
 				"rejectionRef": "rej-010",
-				"since": "2026-07-10T10:53:32+00:00"
+				"since": "2026-07-11T00:00:00+00:00"
 			},
 			"proof": {
-				"status": "differential_green",
-				"baselineTsSha": "09773f7ecbacf1ebf0c9cc123c1be8108f9c7675",
-				"rustCandidateSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"lastComparedMainSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"mergeGroupSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"behaviorSpecHash": "d1410d8c97b2157666a7d9214c10cb380c13dc378132bc73e8e870c3a0ac8718",
-				"fixtureCorpusHash": "d1410d8c97b2157666a7d9214c10cb380c13dc378132bc73e8e870c3a0ac8718",
-				"verifiedAt": "2026-07-10T10:53:32+00:00",
-				"verificationRef": "verification/filesystem-mcp-differential-green.json",
-				"harness": "scripts/run-filesystem-mcp-differential.sh",
-				"caseCount": 36,
+				"status": "missing",
+				"harness": "scripts/run-filesystem-mcp-differential.sh --slice read-content",
 				"dependencyGlobs": [
 					"src/handlers/read-content.ts",
+					"src/engine/rust-content.ts",
+					"crates/filesystem-core/src/content.rs",
+					"crates/filesystem-cli/src/main.rs",
+					"crates/filesystem-mcp-server/src/cli_bridge.rs",
 					"test/fixtures/golden/list_read.golden.json",
-					"scripts/differential/**"
+					"scripts/differential/**",
+					"scripts/run-filesystem-mcp-differential.sh",
+					"crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs"
 				]
 			},
 			"tsSurface": "src/handlers/read-content.ts; src/engine/rust-content.ts (opt-out via FILESYSTEM_USE_RUST_CONTENT=ts)",
 			"rustSurface": "crates/filesystem-core/src/content.rs \u2192 crates/filesystem-cli",
 			"parityTest": "test/fixtures/golden/list_read.golden.json; __tests__/engine/listReadGoldenParity.test.ts; cargo test -p filesystem-cli --test list_read_golden_parity",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#read_content_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice read-content",
-			"branch": "feat/rust-web-mcp-http-transport",
-			"notes": "Cycle28 rej-010 bounded slice: read_content_differential_matches_ts_oracle (4 cases). cycle38: parity-slice manifest + matrix gate landed. S1 read path. proof.status missing until differential_green at bound SHAs. authority_rust NOT claimed."
+			"branch": "feat/expand-diff-main-tick016",
+			"notes": "tick-016: main-bound read_content differential (4 golden cases). rust_impl ONLY \u2014 authority_rust NOT claimed. Stale pre-main differential_green cleared."
 		},
 		{
 			"id": "tool/write_content",
@@ -141,24 +145,19 @@
 			"state": "rust_impl",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: differential_green at bound SHAs \u2014 promotion_hold until prod_audit_pass",
+				"reason": "rej-010: main-bound write_content differential harness (tick-016) \u2014 promotion_hold until prod_audit_pass",
 				"rejectionRef": "rej-010",
-				"since": "2026-07-10T10:53:32+00:00"
+				"since": "2026-07-11T00:00:00+00:00"
 			},
 			"proof": {
-				"status": "differential_green",
-				"baselineTsSha": "09773f7ecbacf1ebf0c9cc123c1be8108f9c7675",
-				"rustCandidateSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"lastComparedMainSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"mergeGroupSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"behaviorSpecHash": "d1410d8c97b2157666a7d9214c10cb380c13dc378132bc73e8e870c3a0ac8718",
-				"fixtureCorpusHash": "d1410d8c97b2157666a7d9214c10cb380c13dc378132bc73e8e870c3a0ac8718",
-				"verifiedAt": "2026-07-10T10:53:32+00:00",
-				"verificationRef": "verification/filesystem-mcp-differential-green.json",
-				"harness": "scripts/run-filesystem-mcp-differential.sh",
-				"caseCount": 36,
+				"status": "missing",
+				"harness": "scripts/run-filesystem-mcp-differential.sh --slice write-content",
 				"dependencyGlobs": [
 					"src/handlers/write-content.ts",
+					"src/engine/rust-write.ts",
+					"crates/filesystem-core/src/content.rs",
+					"crates/filesystem-cli/src/main.rs",
+					"crates/filesystem-mcp-server/src/cli_bridge.rs",
 					"test/fixtures/golden/write_content.golden.json",
 					"scripts/differential/**",
 					"scripts/run-filesystem-mcp-differential.sh",
@@ -169,8 +168,8 @@
 			"rustSurface": "crates/filesystem-core/src/content.rs \u2192 crates/filesystem-cli",
 			"parityTest": "test/fixtures/golden/write_content.golden.json; __tests__/engine/writeContentGoldenParity.test.ts; cargo test -p filesystem-cli --test write_content_golden_parity",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#write_content_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice write-content",
-			"branch": "feat/rust-web-mcp-http-transport",
-			"notes": "S2 mutation slice: golden MCP parity; cycle43 rej-010 write-content bounded differential harness. proof.status missing until differential_green. authority_rust NOT claimed."
+			"branch": "feat/expand-diff-main-tick016",
+			"notes": "tick-016: main-bound write_content differential (4 golden cases). rust_impl ONLY \u2014 authority_rust NOT claimed. Stale pre-main differential_green cleared."
 		},
 		{
 			"id": "tool/stat_items",
@@ -211,30 +210,22 @@
 				"since": "2026-07-10T10:53:32+00:00"
 			},
 			"proof": {
-				"status": "differential_green",
-				"baselineTsSha": "09773f7ecbacf1ebf0c9cc123c1be8108f9c7675",
-				"rustCandidateSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"lastComparedMainSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"mergeGroupSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"behaviorSpecHash": "d1410d8c97b2157666a7d9214c10cb380c13dc378132bc73e8e870c3a0ac8718",
-				"fixtureCorpusHash": "d1410d8c97b2157666a7d9214c10cb380c13dc378132bc73e8e870c3a0ac8718",
-				"verifiedAt": "2026-07-10T10:53:32+00:00",
-				"verificationRef": "verification/filesystem-mcp-differential-green.json",
-				"harness": "scripts/run-filesystem-mcp-differential.sh",
-				"caseCount": 36,
+				"status": "missing",
+				"harness": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#chmod_items_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice chmod-items",
 				"dependencyGlobs": [
 					"src/handlers/chmod-items.ts",
 					"crates/filesystem-core/src/chmod_items.rs",
 					"test/fixtures/golden/chmod_items.golden.json",
 					"scripts/differential/**",
 					"scripts/run-filesystem-mcp-differential.sh"
-				]
+				],
+				"note": "tick-016: stale non-main differential_green cleared; tool not in main fail-closed allow-list (list/read/write only)"
 			},
 			"tsSurface": "src/handlers/chmod-items.ts",
 			"rustSurface": "crates/filesystem-core/src/chmod_items.rs \u2192 crates/filesystem-cli",
 			"parityTest": "test/fixtures/golden/chmod_items.golden.json; __tests__/handlers/chmod-items.test.ts",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#chmod_items_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice chmod-items",
-			"notes": "Cycle63 rej-010: chmod_items rust_impl + bounded differential harness (2 golden cases). authority_rust NOT claimed."
+			"notes": "Cycle63 rej-010: chmod_items rust_impl + bounded differential harness (2 golden cases). authority_rust NOT claimed. tick-016: residual \u2014 not in main allow-list."
 		},
 		{
 			"id": "tool/chown_items",
@@ -248,30 +239,22 @@
 				"since": "2026-07-10T10:53:32+00:00"
 			},
 			"proof": {
-				"status": "differential_green",
-				"baselineTsSha": "09773f7ecbacf1ebf0c9cc123c1be8108f9c7675",
-				"rustCandidateSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"lastComparedMainSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"mergeGroupSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"behaviorSpecHash": "d1410d8c97b2157666a7d9214c10cb380c13dc378132bc73e8e870c3a0ac8718",
-				"fixtureCorpusHash": "d1410d8c97b2157666a7d9214c10cb380c13dc378132bc73e8e870c3a0ac8718",
-				"verifiedAt": "2026-07-10T10:53:32+00:00",
-				"verificationRef": "verification/filesystem-mcp-differential-green.json",
-				"harness": "scripts/run-filesystem-mcp-differential.sh",
-				"caseCount": 36,
+				"status": "missing",
+				"harness": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#chown_items_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice chown-items",
 				"dependencyGlobs": [
 					"src/handlers/chown-items.ts",
 					"crates/filesystem-core/src/chown_items.rs",
 					"test/fixtures/golden/chown_items.golden.json",
 					"scripts/differential/**",
 					"scripts/run-filesystem-mcp-differential.sh"
-				]
+				],
+				"note": "tick-016: stale non-main differential_green cleared; tool not in main fail-closed allow-list (list/read/write only)"
 			},
 			"tsSurface": "src/handlers/chown-items.ts",
 			"rustSurface": "crates/filesystem-core/src/chown_items.rs \u2192 crates/filesystem-cli",
 			"parityTest": "test/fixtures/golden/chown_items.golden.json",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#chown_items_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice chown-items",
-			"notes": "Cycle64 rej-010: chown_items rust_impl + bounded differential harness (2 golden cases). authority_rust NOT claimed."
+			"notes": "Cycle64 rej-010: chown_items rust_impl + bounded differential harness (2 golden cases). authority_rust NOT claimed. tick-016: residual \u2014 not in main allow-list."
 		},
 		{
 			"id": "tool/move_items",
@@ -303,30 +286,22 @@
 				"since": "2026-07-10T10:53:32+00:00"
 			},
 			"proof": {
-				"status": "differential_green",
-				"baselineTsSha": "09773f7ecbacf1ebf0c9cc123c1be8108f9c7675",
-				"rustCandidateSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"lastComparedMainSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"mergeGroupSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"behaviorSpecHash": "d1410d8c97b2157666a7d9214c10cb380c13dc378132bc73e8e870c3a0ac8718",
-				"fixtureCorpusHash": "d1410d8c97b2157666a7d9214c10cb380c13dc378132bc73e8e870c3a0ac8718",
-				"verifiedAt": "2026-07-10T10:53:32+00:00",
-				"verificationRef": "verification/filesystem-mcp-differential-green.json",
-				"harness": "scripts/run-filesystem-mcp-differential.sh",
-				"caseCount": 36,
+				"status": "missing",
+				"harness": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#replace_content_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice replace-content",
 				"dependencyGlobs": [
 					"src/handlers/replace-content.ts",
 					"test/fixtures/golden/replace_content.golden.json",
 					"crates/filesystem-core/src/replace_content.rs",
 					"scripts/differential/**",
 					"scripts/run-filesystem-mcp-differential.sh"
-				]
+				],
+				"note": "tick-016: stale non-main differential_green cleared; tool not in main fail-closed allow-list (list/read/write only)"
 			},
 			"tsSurface": "src/handlers/replace-content.ts",
 			"rustSurface": "crates/filesystem-core/src/replace_content.rs \u2192 crates/filesystem-cli",
 			"parityTest": "test/fixtures/golden/replace_content.golden.json; __tests__/handlers/replace-content.success.test.ts",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#replace_content_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice replace-content",
-			"notes": "Cycle62 rej-010: replace_content rust_impl + bounded differential harness (2 golden cases). authority_rust NOT claimed."
+			"notes": "Cycle62 rej-010: replace_content rust_impl + bounded differential harness (2 golden cases). authority_rust NOT claimed. tick-016: residual \u2014 not in main allow-list."
 		},
 		{
 			"id": "tool/apply_diff",
@@ -340,31 +315,23 @@
 				"since": "2026-07-10T10:53:32+00:00"
 			},
 			"proof": {
-				"status": "differential_green",
-				"baselineTsSha": "09773f7ecbacf1ebf0c9cc123c1be8108f9c7675",
-				"rustCandidateSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"lastComparedMainSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"mergeGroupSha": "8cce53822913fe9df51907004d5cd0df2b6ea3db",
-				"behaviorSpecHash": "d1410d8c97b2157666a7d9214c10cb380c13dc378132bc73e8e870c3a0ac8718",
-				"fixtureCorpusHash": "d1410d8c97b2157666a7d9214c10cb380c13dc378132bc73e8e870c3a0ac8718",
-				"verifiedAt": "2026-07-10T10:53:32+00:00",
-				"verificationRef": "verification/filesystem-mcp-differential-green.json",
-				"harness": "scripts/run-filesystem-mcp-differential.sh",
-				"caseCount": 36,
+				"status": "missing",
+				"harness": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#apply_diff_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice apply-diff",
 				"dependencyGlobs": [
 					"src/handlers/apply-diff.ts",
 					"test/fixtures/golden/apply_diff.golden.json",
 					"scripts/differential/**",
 					"scripts/run-filesystem-mcp-differential.sh",
 					"crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs"
-				]
+				],
+				"note": "tick-016: stale non-main differential_green cleared; tool not in main fail-closed allow-list (list/read/write only)"
 			},
 			"tsSurface": "src/handlers/apply-diff.ts; src/engine/rust-apply-diff.ts (opt-out via FILESYSTEM_USE_RUST_APPLY_DIFF=ts)",
 			"rustSurface": "crates/filesystem-core/src/apply_diff.rs \u2192 crates/filesystem-cli",
 			"parityTest": "test/fixtures/golden/apply_diff.golden.json; __tests__/engine/applyDiffGoldenParity.test.ts; cargo test -p filesystem-cli --test apply_diff_golden_parity",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#apply_diff_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice apply-diff",
 			"branch": "feat/rust-web-mcp-http-transport",
-			"notes": "S2 edit slice: golden MCP parity for apply_diff (edit_file). cycle47 rej-010: apply-diff bounded differential harness (5 cases). rust_impl only \u2014 authority_rust NOT claimed."
+			"notes": "S2 edit slice: golden MCP parity for apply_diff (edit_file). cycle47 rej-010: apply-diff bounded differential harness (5 cases). rust_impl only \u2014 authority_rust NOT claimed. tick-016: residual \u2014 not in main allow-list."
 		}
 	],
 	"summary": {
@@ -410,7 +377,16 @@
 			"verificationRef": "verification/filesystem-mcp-cycle64-chown-items-rust-impl.json",
 			"notes": "rej-010 rust_impl ONLY \u2014 cycle64 next ts_only slice: chown-items bounded differential (2 golden cases)"
 		},
-		"summaryNote": "tick-010 list_files main-bound differential harness land. rej-010 promotion_hold active; authority_rust NOT claimed."
+		"summaryNote": "tick-016 expand main-bound differential: list_files + read_content + write_content. rej-010 promotion_hold active; authority_rust NOT claimed; NO prod_audit_pass.",
+		"tick016_delta": {
+			"rust_impl_verified": 0,
+			"slices": [
+				"list-files",
+				"read-content",
+				"write-content"
+			],
+			"notes": "Main-bound differential allow-list expansion. Case floors: list>=2, read>=4, write>=4. Residual caps remain for search/stat/mutations/legacy tools."
+		}
 	},
 	"priorClaims": {
 		"authority_rust": 4,
@@ -421,21 +397,22 @@
 		"reason": "rej-010 promotion freeze \u2014 0 capabilities with differential_green or canary_green proof"
 	},
 	"rej010Reaudit": {
-		"appliedAt": "2026-07-10T21:30:00Z",
+		"appliedAt": "2026-07-11T12:00:00Z",
 		"harness": "scripts/run-filesystem-mcp-differential.sh",
-		"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#filesystem_mcp_differential_matches_ts_oracle",
 		"boundedSlices": {
 			"list-files": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#list_files_differential_matches_ts_oracle",
 			"read-content": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#read_content_differential_matches_ts_oracle",
-			"write-content": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#write_content_differential_matches_ts_oracle",
-			"apply-diff": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#apply_diff_differential_matches_ts_oracle",
-			"replace-content": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#replace_content_differential_matches_ts_oracle",
-			"chmod-items": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#chmod_items_differential_matches_ts_oracle",
-			"chown-items": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#chown_items_differential_matches_ts_oracle"
+			"write-content": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#write_content_differential_matches_ts_oracle"
 		},
 		"oracle": "scripts/differential/filesystem-mcp-oracle.ts",
-		"capabilitiesWithDifferentialHarness": 8,
-		"promotionHoldActive": true
+		"capabilitiesWithDifferentialHarness": 3,
+		"promotionHoldActive": true,
+		"allowList": [
+			"list_files",
+			"read_content",
+			"write_content"
+		],
+		"notes": "tick-016 fail-closed main allow-list; other tools residual until next expansion"
 	},
 	"cycle38": {
 		"boundedSlice": "tool.list_files|tool.read_content",
@@ -473,7 +450,7 @@
 		],
 		"notes": "cycle47 rej-010: apply-diff bounded differential slice (--slice apply-diff, 5 golden cases). rust_impl only \u2014 proof.status missing until differential_green at bound SHAs."
 	},
-	"harnessPath": "scripts/run-filesystem-mcp-differential.sh --slice list-files",
+	"harnessPath": "scripts/run-filesystem-mcp-differential.sh --slice all",
 	"verificationRef": "verification/filesystem-mcp-differential-green.json",
 	"cycle50Slice": "apply-diff \u2014 bounded --slice entrypoint; bash scripts/run-filesystem-mcp-differential.sh --slice apply-diff",
 	"cycle51Slice": "list-files \u2014 bounded --slice entrypoint; bash scripts/run-filesystem-mcp-differential.sh --slice list-files",
@@ -583,25 +560,23 @@
 		"since": "2026-07-10T10:53:32+00:00"
 	},
 	"differentialGreen": {
-		"status": "differential_green",
-		"verifiedAt": "2026-07-10T10:53:32+00:00",
-		"verificationRef": "verification/filesystem-mcp-differential-green.json",
-		"harnessPath": "scripts/run-filesystem-mcp-differential.sh",
-		"caseCount": 36,
-		"capabilities": [
-			"tool/apply_diff",
-			"tool/chmod_items",
-			"tool/chown_items",
-			"tool/list_files",
-			"tool/read_content",
-			"tool/replace_content",
-			"tool/write_content"
-		]
+		"status": "superseded_by_tick016_allow_list",
+		"note": "Prior 36-case multi-tool green was off dirty branch SHAs; main allow-list is list/read/write only until auditor rebinds."
 	},
 	"tick010": {
 		"boundedSlice": "list-files",
 		"status": "harness_landed_pending_main_proof",
 		"successorOf": "PR#200 (DIRTY \u2014 not merged)",
 		"notes": "Clean successor from main; list_files only; no authority_rust/ts_deleted."
+	},
+	"tick016": {
+		"boundedSlices": [
+			"list-files",
+			"read-content",
+			"write-content"
+		],
+		"status": "harness_landed_pending_main_proof",
+		"successorOf": "tick-010 list_files-only main land (#202)",
+		"notes": "Expand main differential beyond list_files. NO authority_rust/ts_deleted/prod_audit_pass."
 	}
 }
