@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 const repoRoot = path.resolve(import.meta.dirname, '..')
 
-describe('filesystem-mcp differential harness (rej-010 list-files)', () => {
+describe('filesystem-mcp differential harness (rej-010 tick-016 multi-tool)', () => {
 	it('ships fail-closed differential entrypoint and oracle artifacts', () => {
 		expect(existsSync(path.join(repoRoot, 'scripts/run-filesystem-mcp-differential.sh'))).toBe(true)
 		expect(existsSync(path.join(repoRoot, 'scripts/differential/filesystem-mcp-oracle.ts'))).toBe(true)
@@ -17,33 +17,73 @@ describe('filesystem-mcp differential harness (rej-010 list-files)', () => {
 		expect(harness).toContain('filesystem-mcp-differential')
 		expect(harness).toContain('filesystem-mcp-oracle.ts')
 		expect(harness).toContain('list_files_differential_matches_ts_oracle')
+		expect(harness).toContain('read_content_differential_matches_ts_oracle')
+		expect(harness).toContain('write_content_differential_matches_ts_oracle')
 		expect(harness).toContain('--slice')
 		expect(harness).toContain('differential_green')
+		// Fail-closed allow-list
+		expect(harness).toContain('list-files|read-content|write-content')
+		expect(harness).toContain('invalid --slice value')
 	})
 
-	it('parity slice manifest binds list_files bounded domain', () => {
+	it('parity slice manifest binds list_files + read_content + write_content', () => {
 		const slice = JSON.parse(
 			readFileSync(path.join(repoRoot, 'docs/specs/filesystem-mcp-parity-slice.json'), 'utf8'),
 		) as {
 			slice: string
 			differentialHarness: string
-			domains: Array<{ id: string; differentialTest: boolean; boundedSlice?: string }>
+			domains: Array<{ id: string; differentialTest: boolean; boundedSlice?: string; minCases?: number }>
 		}
 
 		expect(slice.slice).toContain('tool.list_files')
+		expect(slice.slice).toContain('tool.read_content')
+		expect(slice.slice).toContain('tool.write_content')
 		expect(slice.differentialHarness).toBe('scripts/run-filesystem-mcp-differential.sh')
 		expect(slice.domains.some((domain) => domain.id === 'tool/list_files')).toBe(true)
+		expect(slice.domains.some((domain) => domain.id === 'tool/read_content')).toBe(true)
+		expect(slice.domains.some((domain) => domain.id === 'tool/write_content')).toBe(true)
 		expect(slice.domains.find((domain) => domain.id === 'tool/list_files')?.boundedSlice).toBe('list-files')
+		expect(slice.domains.find((domain) => domain.id === 'tool/read_content')?.boundedSlice).toBe('read-content')
+		expect(slice.domains.find((domain) => domain.id === 'tool/write_content')?.boundedSlice).toBe('write-content')
+		expect(slice.domains.find((domain) => domain.id === 'tool/read_content')?.minCases).toBeGreaterThanOrEqual(4)
+		expect(slice.domains.find((domain) => domain.id === 'tool/write_content')?.minCases).toBeGreaterThanOrEqual(4)
 	})
 
-	it('list-read golden fixture drives bounded list_files oracle cases', () => {
-		const golden = JSON.parse(
+	it('golden fixtures drive bounded oracle cases for each expanded tool', () => {
+		const listRead = JSON.parse(
 			readFileSync(path.join(repoRoot, 'test/fixtures/golden/list_read.golden.json'), 'utf8'),
 		) as {
 			cases: Array<{ tool: string }>
 		}
+		const write = JSON.parse(
+			readFileSync(path.join(repoRoot, 'test/fixtures/golden/write_content.golden.json'), 'utf8'),
+		) as {
+			cases: Array<{ tool: string }>
+		}
 
-		const listCases = golden.cases.filter((testCase) => testCase.tool === 'list_files')
+		const listCases = listRead.cases.filter((testCase) => testCase.tool === 'list_files')
+		const readCases = listRead.cases.filter((testCase) => testCase.tool === 'read_content')
+		const writeCases = write.cases.filter((testCase) => testCase.tool === 'write_content')
 		expect(listCases.length).toBeGreaterThanOrEqual(2)
+		expect(readCases.length).toBeGreaterThanOrEqual(4)
+		expect(writeCases.length).toBeGreaterThanOrEqual(4)
+	})
+
+	it('corpus allow-list is fail-closed to expanded RustCore tools only', () => {
+		const corpus = JSON.parse(
+			readFileSync(path.join(repoRoot, 'scripts/differential/fixtures/filesystem-mcp-corpus.json'), 'utf8'),
+		) as {
+			toolRouteCases: Array<{ tool: string; expect: string }>
+			serverContract: { tools: string[] }
+		}
+
+		const allowed = new Set(['list_files', 'read_content', 'write_content'])
+		for (const route of corpus.toolRouteCases) {
+			expect(allowed.has(route.tool)).toBe(true)
+			expect(route.expect).toBe('RustCore')
+		}
+		for (const tool of corpus.serverContract.tools) {
+			expect(allowed.has(tool)).toBe(true)
+		}
 	})
 })
