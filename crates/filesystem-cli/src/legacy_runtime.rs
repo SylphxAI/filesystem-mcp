@@ -168,7 +168,7 @@ pub fn is_native_rust_engine_request(tool: &str, input: &Value) -> bool {
         | "record_write_audit"
         | "read_content"
         | "write_content"
-        | "stat_items" => true,
+        | "stat_items" | "delete_items" => true,
         _ => false,
     }
 }

@@ -7,6 +7,7 @@
 //! - `write_content_differential_matches_ts_oracle` — S2 mutation path (4 cases)
 //! - `search_files_differential_matches_ts_oracle` — S1 search path (4 cases)
 //! - `stat_items_differential_matches_ts_oracle` — S1 stat path (3 cases)
+//! - `delete_items_differential_matches_ts_oracle` — S2 delete path (2 cases)
 //! See scripts/run-filesystem-mcp-differential.sh.
 
 use filesystem_mcp_server::cli_bridge;
@@ -24,8 +25,9 @@ const READ_CONTENT_SLICE: &str = "read-content";
 const WRITE_CONTENT_SLICE: &str = "write-content";
 const SEARCH_FILES_SLICE: &str = "search-files";
 const STAT_ITEMS_SLICE: &str = "stat-items";
+const DELETE_ITEMS_SLICE: &str = "delete-items";
 
-/// Serialize tool cases that mutate isolated corpus trees (write_content).
+/// Serialize tool cases that mutate isolated corpus trees (write_content / delete_items).
 static TOOL_CASE_LOCK: Mutex<()> = Mutex::new(());
 
 fn repo_root() -> PathBuf {
@@ -265,12 +267,41 @@ fn normalize_stat_payload(payload: &Value) -> Value {
     Value::Array(entries)
 }
 
+fn normalize_delete_payload(payload: &Value) -> Value {
+    let entries = payload
+        .as_array()
+        .expect("delete_items array payload")
+        .iter()
+        .map(|entry| {
+            let object = entry.as_object().expect("delete_items result object");
+            let mut normalized = serde_json::Map::new();
+            normalized.insert(
+                "path".into(),
+                object.get("path").cloned().unwrap_or(Value::Null),
+            );
+            normalized.insert(
+                "success".into(),
+                object.get("success").cloned().unwrap_or(Value::Null),
+            );
+            if let Some(note) = object.get("note").filter(|value| !value.is_null()) {
+                normalized.insert("note".into(), note.clone());
+            }
+            if let Some(error) = object.get("error").filter(|value| !value.is_null()) {
+                normalized.insert("error".into(), error.clone());
+            }
+            Value::Object(normalized)
+        })
+        .collect::<Vec<_>>();
+    Value::Array(entries)
+}
+
 fn normalize_tool_payload(tool: &str, payload: Value) -> Value {
     match tool {
         "list_files" => sorted_string_array(&payload),
         "write_content" => normalize_write_payload(&payload),
         "search_files" => normalize_search_payload(&payload),
         "stat_items" => normalize_stat_payload(&payload),
+        "delete_items" => normalize_delete_payload(&payload),
         _ => payload,
     }
 }
@@ -399,6 +430,10 @@ fn assert_slice_metadata(case: &OracleCase) {
             assert_eq!(case.domain, "tool");
             assert_eq!(case.input["tool"].as_str(), Some("stat_items"));
         }
+        DELETE_ITEMS_SLICE => {
+            assert_eq!(case.domain, "tool");
+            assert_eq!(case.input["tool"].as_str(), Some("delete_items"));
+        }
         "tool-route-contract" => assert_eq!(case.domain, "toolRouteContract"),
         "server-contract" => assert_eq!(case.domain, "serverContract"),
         other => panic!("unknown slice {other} for case {}", case.id),
@@ -464,3 +499,9 @@ fn search_files_differential_matches_ts_oracle() {
 fn stat_items_differential_matches_ts_oracle() {
     run_bounded_slice(STAT_ITEMS_SLICE, 3);
 }
+
+#[test]
+fn delete_items_differential_matches_ts_oracle() {
+    run_bounded_slice(DELETE_ITEMS_SLICE, 2);
+}
+

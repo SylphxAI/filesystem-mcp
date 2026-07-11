@@ -20,7 +20,7 @@ SLICE_FILTER="all"
 : >"$LOG"
 
 # Fail-closed allow-list of main-bound differential slices.
-ALLOWED_SLICES="all|list-files|read-content|write-content|search-files|stat-items"
+ALLOWED_SLICES="all|list-files|read-content|write-content|search-files|stat-items|delete-items"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -36,7 +36,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "$SLICE_FILTER" in
-  all|list-files|read-content|write-content|search-files|stat-items) ;;
+  all|list-files|read-content|write-content|search-files|stat-items|delete-items) ;;
   *)
     echo "::error::invalid --slice value: $SLICE_FILTER (supported: $ALLOWED_SLICES)" | tee -a "$LOG"
     exit 1
@@ -88,17 +88,21 @@ case "$SLICE_FILTER" in
   stat-items)
     run_rust_slice_test "stat-items" stat_items_differential_matches_ts_oracle
     ;;
+  delete-items)
+    run_rust_slice_test "delete-items" delete_items_differential_matches_ts_oracle
+    ;;
   all)
     run_rust_slice_test "list-files" list_files_differential_matches_ts_oracle
     run_rust_slice_test "read-content" read_content_differential_matches_ts_oracle
     run_rust_slice_test "write-content" write_content_differential_matches_ts_oracle
     run_rust_slice_test "search-files" search_files_differential_matches_ts_oracle
     run_rust_slice_test "stat-items" stat_items_differential_matches_ts_oracle
+    run_rust_slice_test "delete-items" delete_items_differential_matches_ts_oracle
     ;;
 esac
 
 CANDIDATE_SHA="${CANDIDATE_SHA:-$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)}"
-BASELINE_TS_SHA="$(git -C "$REPO_ROOT" log -1 --format=%H -- scripts/differential src/handlers/list-files.ts src/handlers/read-content.ts src/handlers/write-content.ts src/handlers/search-files.ts src/handlers/stat-items.ts test/fixtures/golden 2>/dev/null || echo unknown)"
+BASELINE_TS_SHA="$(git -C "$REPO_ROOT" log -1 --format=%H -- scripts/differential src/handlers/list-files.ts src/handlers/read-content.ts src/handlers/write-content.ts src/handlers/search-files.ts src/handlers/stat-items.ts src/handlers/delete-items.ts test/fixtures/golden 2>/dev/null || echo unknown)"
 RUST_SHA="$CANDIDATE_SHA"
 BEHAVIOR_SPEC_HASH="$(sha256sum "$REPO_ROOT/scripts/differential/fixtures/filesystem-mcp-corpus.json" 2>/dev/null | awk '{print $1}' || shasum -a 256 "$REPO_ROOT/scripts/differential/fixtures/filesystem-mcp-corpus.json" | awk '{print $1}')"
 FIXTURE_CORPUS_HASH="$(jq -r '.fixtureCorpusHash' "$ORACLE_JSON")"
@@ -108,6 +112,7 @@ READ_CASE_COUNT="$(jq '[.cases[] | select(.slice=="read-content")] | length' "$O
 WRITE_CASE_COUNT="$(jq '[.cases[] | select(.slice=="write-content")] | length' "$ORACLE_JSON")"
 SEARCH_CASE_COUNT="$(jq '[.cases[] | select(.slice=="search-files")] | length' "$ORACLE_JSON")"
 STAT_CASE_COUNT="$(jq '[.cases[] | select(.slice=="stat-items")] | length' "$ORACLE_JSON")"
+DELETE_CASE_COUNT="$(jq '[.cases[] | select(.slice=="delete-items")] | length' "$ORACLE_JSON")"
 
 jq -n \
   --arg verifiedAt "$(date -Iseconds)" \
@@ -122,10 +127,11 @@ jq -n \
   --argjson writeCaseCount "$WRITE_CASE_COUNT" \
   --argjson searchCaseCount "$SEARCH_CASE_COUNT" \
   --argjson statCaseCount "$STAT_CASE_COUNT" \
+  --argjson deleteCaseCount "$DELETE_CASE_COUNT" \
   --arg sliceFilter "$SLICE_FILTER" \
   '{
     schemaVersion: 2,
-    slice: ("filesystem-mcp.tools.list_files|read_content|write_content|search_files|stat_items|" + $sliceFilter),
+    slice: ("filesystem-mcp.tools.list_files|read_content|write_content|search_files|stat_items|delete_items|" + $sliceFilter),
     status: "differential_green",
     verifiedAt: $verifiedAt,
     lastComparedMainSha: $candidateSha,
@@ -140,18 +146,20 @@ jq -n \
     writeContentCaseCount: $writeCaseCount,
     searchFilesCaseCount: $searchCaseCount,
     statItemsCaseCount: $statCaseCount,
+    deleteItemsCaseCount: $deleteCaseCount,
     harness: "scripts/run-filesystem-mcp-differential.sh",
-    differentialTest: "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#list_files_differential_matches_ts_oracle;read_content_differential_matches_ts_oracle;write_content_differential_matches_ts_oracle;search_files_differential_matches_ts_oracle;stat_items_differential_matches_ts_oracle",
+    differentialTest: "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#list_files_differential_matches_ts_oracle;read_content_differential_matches_ts_oracle;write_content_differential_matches_ts_oracle;search_files_differential_matches_ts_oracle;stat_items_differential_matches_ts_oracle;delete_items_differential_matches_ts_oracle",
     boundedSlices: {
       "list-files": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#list_files_differential_matches_ts_oracle",
       "read-content": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#read_content_differential_matches_ts_oracle",
       "write-content": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#write_content_differential_matches_ts_oracle",
       "search-files": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#search_files_differential_matches_ts_oracle",
-      "stat-items": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#stat_items_differential_matches_ts_oracle"
+      "stat-items": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#stat_items_differential_matches_ts_oracle",
+      "delete-items": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#delete_items_differential_matches_ts_oracle"
     },
     oracle: "scripts/differential/filesystem-mcp-oracle.ts",
     promotionPolicy: "NO_PROMOTIONS — differential_green recorded per rej-010; promotion_hold until prod_audit_pass; authority_rust NOT claimed"
   }' >"$ARTIFACT"
 
-echo "filesystem-mcp-differential: OK (slice=$SLICE_FILTER cases=$CASE_COUNT list_files=$LIST_CASE_COUNT read_content=$READ_CASE_COUNT write_content=$WRITE_CASE_COUNT search_files=$SEARCH_CASE_COUNT stat_items=$STAT_CASE_COUNT corpus=$FIXTURE_CORPUS_HASH)" | tee -a "$LOG"
+echo "filesystem-mcp-differential: OK (slice=$SLICE_FILTER cases=$CASE_COUNT list_files=$LIST_CASE_COUNT read_content=$READ_CASE_COUNT write_content=$WRITE_CASE_COUNT search_files=$SEARCH_CASE_COUNT stat_items=$STAT_CASE_COUNT delete_items=$DELETE_CASE_COUNT corpus=$FIXTURE_CORPUS_HASH)" | tee -a "$LOG"
 echo "verification artifact: $ARTIFACT" | tee -a "$LOG"

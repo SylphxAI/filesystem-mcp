@@ -8,7 +8,7 @@ use filesystem_core::search::SearchMatch;
 use filesystem_core::walk::ListFilesResult;
 use filesystem_core::{
     append_audit_batch_with_limit, content_hash, read_content, resolve_path, stat_items,
-    write_content, PolicyErrorCode, ReadContentOptions, ReadFormat, WriteItem, ENGINE_NAME,
+    delete_items, write_content, PolicyErrorCode, ReadContentOptions, ReadFormat, WriteItem, ENGINE_NAME,
     ENGINE_VERSION, DEFAULT_MAX_ROLLBACK_BYTES,
 };
 use serde::{Deserialize, Serialize};
@@ -429,6 +429,41 @@ fn handle_stat_items(
     })
 }
 
+
+fn handle_delete_items(
+    input: &serde_json::Value,
+) -> Result<LegacyToolSuccessEnvelope, ErrorEnvelope> {
+    let root = project_root_from_input(input);
+    let paths = input
+        .get("paths")
+        .and_then(|value| value.as_array())
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| item.as_str().map(str::to_string))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    if paths.is_empty() {
+        return Err(ErrorEnvelope {
+            status: "error",
+            code: "INVALID_PARAMS".into(),
+            message: "paths is required".into(),
+            next_action: "Pass a non-empty array of relative paths.".into(),
+        });
+    }
+
+    let results = delete_items(&root, &paths);
+    Ok(LegacyToolSuccessEnvelope {
+        status: "ok",
+        engine: ENGINE_NAME,
+        version: ENGINE_VERSION,
+        tool: "delete_items".into(),
+        result: wrap_mcp_text_payload(&serde_json::to_value(results).expect("serialize")),
+    })
+}
+
 fn handle_resolve_path(input: &serde_json::Value) -> Result<SuccessEnvelope, ErrorEnvelope> {
     let relative_path = input
         .get("relative_path")
@@ -517,11 +552,15 @@ fn main() {
                 Ok(success) => serde_json::to_string(&success).expect("serialize"),
                 Err(error) => serde_json::to_string(&error).expect("serialize"),
             },
+            "delete_items" => match handle_delete_items(&request.input) {
+                Ok(success) => serde_json::to_string(&success).expect("serialize"),
+                Err(error) => serde_json::to_string(&error).expect("serialize"),
+            },
             other => serde_json::to_string(&ErrorEnvelope {
                 status: "error",
                 code: "UNSUPPORTED_TOOL".into(),
                 message: format!("Unsupported native tool: {other}"),
-                next_action: "Use resolve_path, search_files, list_files, content_hash, record_write_audit, read_content, write_content, or stat_items.".into(),
+                next_action: "Use resolve_path, search_files, list_files, content_hash, record_write_audit, read_content, write_content, stat_items, or delete_items.".into(),
             })
             .expect("serialize"),
         }

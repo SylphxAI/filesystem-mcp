@@ -74,6 +74,17 @@ impl Default for ReadContentOptions {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteItemsResult {
+    pub path: String,
+    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub note: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct WriteItem {
     pub path: String,
@@ -398,3 +409,100 @@ mod tests {
         assert!(stats[0].stats.as_ref().is_some_and(|entry| entry.is_file));
     }
 }
+
+pub fn delete_items(root: &Path, paths: &[String]) -> Vec<DeleteItemsResult> {
+    paths
+        .iter()
+        .map(|relative| delete_single_path(root, relative))
+        .collect()
+}
+
+fn delete_single_path(root: &Path, relative_path: &str) -> DeleteItemsResult {
+    let path_output = normalize_display_path(relative_path);
+    let resolved = match resolve_path(relative_path, root) {
+        Ok(path) => path,
+        Err(error) => {
+            return DeleteItemsResult {
+                path: path_output,
+                success: false,
+                note: None,
+                error: Some(error.message),
+            };
+        }
+    };
+
+    if paths_equal(&resolved, root) {
+        return DeleteItemsResult {
+            path: path_output,
+            success: false,
+            note: None,
+            error: Some("Deleting the project root is not allowed.".into()),
+        };
+    }
+
+    let meta = match fs::symlink_metadata(&resolved) {
+        Ok(meta) => meta,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return DeleteItemsResult {
+                path: path_output,
+                success: true,
+                note: Some("Path not found, nothing to delete"),
+                error: None,
+            };
+        }
+        Err(error) => {
+            return delete_io_error(path_output, relative_path, error);
+        }
+    };
+
+    let result = if meta.is_dir() {
+        fs::remove_dir_all(&resolved)
+    } else {
+        fs::remove_file(&resolved)
+    };
+
+    match result {
+        Ok(()) => DeleteItemsResult {
+            path: path_output,
+            success: true,
+            note: None,
+            error: None,
+        },
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => DeleteItemsResult {
+            path: path_output,
+            success: true,
+            note: Some("Path not found, nothing to delete"),
+            error: None,
+        },
+        Err(error) => delete_io_error(path_output, relative_path, error),
+    }
+}
+
+fn paths_equal(a: &Path, b: &Path) -> bool {
+    match (fs::canonicalize(a), fs::canonicalize(b)) {
+        (Ok(left), Ok(right)) => left == right,
+        _ => a == b,
+    }
+}
+
+fn delete_io_error(path_output: String, relative_path: &str, error: std::io::Error) -> DeleteItemsResult {
+    let message = match error.kind() {
+        std::io::ErrorKind::PermissionDenied => {
+            format!("Permission denied deleting {relative_path}")
+        }
+        _ => format!(
+            "Failed to delete {relative_path}: {error} (code: {})",
+            error
+                .raw_os_error()
+                .map(|code| code.to_string())
+                .unwrap_or_else(|| "unknown".into())
+        ),
+    };
+    DeleteItemsResult {
+        path: path_output,
+        success: false,
+        note: None,
+        error: Some(message),
+    }
+}
+

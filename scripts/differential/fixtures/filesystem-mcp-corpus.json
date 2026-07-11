@@ -29,10 +29,23 @@
 			"id": "route-stat-items",
 			"tool": "stat_items",
 			"expect": "RustCore"
+		},
+		{
+			"id": "route-delete-items",
+			"tool": "delete_items",
+			"expect": "RustCore"
 		}
 	],
 	"serverContract": {
 		"name": "filesystem-mcp",
-		"tools": ["list_files", "read_content", "write_content", "search_files", "stat_items"]
-	}
+		"tools": [
+			"list_files",
+			"read_content",
+			"write_content",
+			"search_files",
+			"stat_items",
+			"delete_items"
+		]
+	},
+	"deleteItemsGolden": "test/fixtures/golden/delete_items.golden.json"
 }
