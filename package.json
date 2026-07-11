@@ -1,6 +1,6 @@
 {
 	"name": "@sylphx/filesystem-mcp",
-	"version": "0.7.1",
+	"version": "0.7.2",
 	"description": "An MCP server providing filesystem tools relative to a project root.",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -119,9 +119,9 @@
 	},
 	"packageManager": "bun@1.3.12",
 	"optionalDependencies": {
-		"@sylphx/filesystem-mcp-darwin-arm64": "0.7.1",
-		"@sylphx/filesystem-mcp-darwin-x64": "0.7.1",
-		"@sylphx/filesystem-mcp-linux-x64-gnu": "0.7.1",
-		"@sylphx/filesystem-mcp-linux-arm64-gnu": "0.7.1"
+		"@sylphx/filesystem-mcp-darwin-arm64": "0.7.2",
+		"@sylphx/filesystem-mcp-darwin-x64": "0.7.2",
+		"@sylphx/filesystem-mcp-linux-x64-gnu": "0.7.2",
+		"@sylphx/filesystem-mcp-linux-arm64-gnu": "0.7.2"
 	}
 }
