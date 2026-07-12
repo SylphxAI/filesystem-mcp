@@ -63,12 +63,12 @@
 			"state": "rust_impl",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: main-bound multi-tool differential (list/read/write) \u2014 promotion_hold until prod_audit_pass",
+				"reason": "rej-010: differential_green at tip SHA \u2014 promotion_hold until prod_audit_pass + canary_green",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-11T00:00:00+00:00"
 			},
 			"proof": {
-				"status": "missing",
+				"status": "differential_green",
 				"harness": "scripts/run-filesystem-mcp-differential.sh --slice list-files",
 				"dependencyGlobs": [
 					"src/handlers/list-files.ts",
@@ -80,7 +80,15 @@
 					"scripts/differential/**",
 					"scripts/run-filesystem-mcp-differential.sh",
 					"crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs"
-				]
+				],
+				"lastComparedMainSha": "f5d9d94138c3d5f98cd8357f1f4df6fd104d0a7a",
+				"baselineTsSha": "f5d9d94138c3d5f98cd8357f1f4df6fd104d0a7a",
+				"rustCandidateSha": "f5d9d94138c3d5f98cd8357f1f4df6fd104d0a7a",
+				"fixtureCorpusHash": "150bdc9d8ef562cbbf124cc04c7406a0b0440fada471e8642ea44ea9707b8740",
+				"verificationRef": "verification/filesystem-mcp-list-files-tip-differential-2026-07-12.json",
+				"caseCount": 2,
+				"verifiedAt": "2026-07-12T23:12:00Z",
+				"note": "local tip differential green bound to main tip; NOT main_durable CI canary; NO authority_rust"
 			},
 			"tsSurface": "src/handlers/list-files.ts; src/engine/rust-walk.ts (opt-out via FILESYSTEM_USE_RUST_WALK=ts)",
 			"rustSurface": "crates/filesystem-core/src/walk.rs \u2192 crates/filesystem-cli",
@@ -129,12 +137,12 @@
 			"state": "rust_impl",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: main-bound read_content differential harness (tick-016) \u2014 promotion_hold until prod_audit_pass",
+				"reason": "rej-010: differential_green at tip SHA \u2014 promotion_hold until prod_audit_pass + canary_green",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-11T00:00:00+00:00"
 			},
 			"proof": {
-				"status": "missing",
+				"status": "differential_green",
 				"harness": "scripts/run-filesystem-mcp-differential.sh --slice read-content",
 				"dependencyGlobs": [
 					"src/handlers/read-content.ts",
@@ -146,7 +154,15 @@
 					"scripts/differential/**",
 					"scripts/run-filesystem-mcp-differential.sh",
 					"crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs"
-				]
+				],
+				"lastComparedMainSha": "f5d9d94138c3d5f98cd8357f1f4df6fd104d0a7a",
+				"baselineTsSha": "f5d9d94138c3d5f98cd8357f1f4df6fd104d0a7a",
+				"rustCandidateSha": "f5d9d94138c3d5f98cd8357f1f4df6fd104d0a7a",
+				"fixtureCorpusHash": "150bdc9d8ef562cbbf124cc04c7406a0b0440fada471e8642ea44ea9707b8740",
+				"verificationRef": "verification/filesystem-mcp-read-content-tip-differential-2026-07-12.json",
+				"caseCount": 4,
+				"verifiedAt": "2026-07-12T23:12:00Z",
+				"note": "local tip differential green bound to main tip; NOT main_durable CI canary; NO authority_rust"
 			},
 			"tsSurface": "src/handlers/read-content.ts; src/engine/rust-content.ts (opt-out via FILESYSTEM_USE_RUST_CONTENT=ts)",
 			"rustSurface": "crates/filesystem-core/src/content.rs \u2192 crates/filesystem-cli",
@@ -230,12 +246,12 @@
 			"parityTest": "__tests__/engine/shippedPath.matrix.test.ts",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: delete_items differential harness landed tick029 \u2014 promotion_hold until prod_audit_pass",
+				"reason": "rej-010: differential_green at tip SHA \u2014 promotion_hold until prod_audit_pass + canary_green",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-11T19:00:00+00:00"
 			},
 			"proof": {
-				"status": "missing",
+				"status": "differential_green",
 				"harness": "scripts/run-filesystem-mcp-differential.sh --slice delete-items",
 				"dependencyGlobs": [
 					"src/handlers/delete-items.ts",
@@ -246,7 +262,15 @@
 					"scripts/differential/**",
 					"scripts/run-filesystem-mcp-differential.sh",
 					"crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs"
-				]
+				],
+				"lastComparedMainSha": "f5d9d94138c3d5f98cd8357f1f4df6fd104d0a7a",
+				"baselineTsSha": "f5d9d94138c3d5f98cd8357f1f4df6fd104d0a7a",
+				"rustCandidateSha": "f5d9d94138c3d5f98cd8357f1f4df6fd104d0a7a",
+				"fixtureCorpusHash": "150bdc9d8ef562cbbf124cc04c7406a0b0440fada471e8642ea44ea9707b8740",
+				"verificationRef": "verification/filesystem-mcp-delete-items-tip-differential-2026-07-12.json",
+				"caseCount": 2,
+				"verifiedAt": "2026-07-12T23:12:00Z",
+				"note": "local tip differential green bound to main tip; NOT main_durable CI canary; NO authority_rust"
 			},
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#delete_items_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice delete-items",
 			"branch": "feat/delete-items-differential-tick029",
@@ -402,13 +426,13 @@
 		"ts_only": 1,
 		"contracted": 0,
 		"rust_impl": 15,
-		"parity_proven": 7,
+		"parity_proven": 0,
 		"authority_rust": 0,
 		"ts_deleted": 0,
-		"proof_missing": 0,
+		"proof_missing": 13,
 		"completion_progress": 0.0,
 		"authority_progress": 0.0,
-		"verified_authority_progress": 0,
+		"verified_authority_progress": 0.0,
 		"weighted_progress": 0.3445,
 		"cycle50_delta": {
 			"rust_impl_verified": 1,
@@ -440,7 +464,7 @@
 			"verificationRef": "verification/filesystem-mcp-cycle64-chown-items-rust-impl.json",
 			"notes": "rej-010 rust_impl ONLY \u2014 cycle64 next ts_only slice: chown-items bounded differential (2 golden cases)"
 		},
-		"summaryNote": "tick-016 expand main-bound differential: list_files + read_content + write_content. rej-010 promotion_hold active; authority_rust NOT claimed; NO prod_audit_pass.",
+		"summaryNote": "TICK038 tip differential land: list_files/read_content/delete_items proof.status=differential_green @ f5d9d94138c3; summary.parity_proven honesty-corrected from overclaim 7\u21920 (no rows at parity_proven). NO authority_rust/ts_deleted; promotion_hold active; CI main_durable residual.",
 		"tick016_delta": {
 			"rust_impl_verified": 0,
 			"slices": ["list-files", "read-content", "write-content"],
@@ -451,6 +475,18 @@
 			"slice": "delete-items",
 			"verificationRef": "scripts/run-filesystem-mcp-differential.sh --slice delete-items",
 			"notes": "rej-010 rust_impl ONLY \u2014 TICK029 delete_items bounded differential (2 golden cases); no authority_rust/ts_deleted"
+		},
+		"proof_differential_green": 3,
+		"liveMainTip": "f5d9d94138c3d5f98cd8357f1f4df6fd104d0a7a",
+		"lastMutation": "FS-TIP-DIFF-PROOF-LAND-TICK038",
+		"updatedAt": "2026-07-12T22:40:26Z",
+		"tipDifferentialLand": {
+			"at": "2026-07-12T22:40:26Z",
+			"mainTip": "f5d9d94138c3d5f98cd8357f1f4df6fd104d0a7a",
+			"caps": ["tool/list_files", "tool/read_content", "tool/delete_items"],
+			"corpusHash": "150bdc9d8ef562cbbf124cc04c7406a0b0440fada471e8642ea44ea9707b8740",
+			"promotion": false,
+			"mainDurableCI": false
 		}
 	},
 	"priorClaims": {
