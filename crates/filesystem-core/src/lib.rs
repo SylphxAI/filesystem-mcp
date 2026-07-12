@@ -1,5 +1,6 @@
 //! Root-scoped filesystem path policy and search engine.
 
+pub mod apply_diff;
 pub mod audit;
 pub mod content;
 pub mod search;
@@ -7,6 +8,12 @@ pub mod walk;
 
 pub use walk::format_entry_stats;
 
+pub use apply_diff::{
+    apply_diffs_to_file_content, apply_indentation, apply_single_valid_diff, escape_regex,
+    get_context_around_line, get_indentation, has_valid_line_number_logic, lines_match,
+    validate_diff_block, validate_line_numbers, verify_content_match, ApplyDiffResult, DiffBlock,
+    DiffOperation, DiffResult,
+};
 pub use content::{
     delete_items, read_content, stat_items, write_content, DeleteItemsResult, ReadContentOptions,
     ReadContentResult, ReadFormat, StatItemResult, WriteContentResult, WriteItem, CONTENT_ROUTE,

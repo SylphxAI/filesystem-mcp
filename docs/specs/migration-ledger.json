@@ -397,7 +397,7 @@
 			"state": "rust_impl",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: differential_green at bound SHAs \u2014 promotion_hold until prod_audit_pass",
+				"reason": "rej-010: pure apply_diff engine on disk \u2014 promotion_hold until allow-list differential_green + prod_audit_pass",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-10T10:53:32+00:00"
 			},
@@ -406,19 +406,23 @@
 				"harness": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#apply_diff_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice apply-diff",
 				"dependencyGlobs": [
 					"src/handlers/apply-diff.ts",
+					"src/utils/apply-diff-utils.ts",
+					"src/utils/string-utils.ts",
+					"crates/filesystem-core/src/apply_diff.rs",
+					"crates/filesystem-core/fixtures/apply_diff_golden.json",
 					"test/fixtures/golden/apply_diff.golden.json",
 					"scripts/differential/**",
 					"scripts/run-filesystem-mcp-differential.sh",
 					"crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs"
 				],
-				"note": "tick-016: stale non-main differential_green cleared; tool not in main fail-closed allow-list (list/read/write only)"
+				"note": "BW2 offline pure deepen: filesystem-core apply_diff pure engine + unit tests + golden fixture; route still LegacyOptIn (TS) until CLI wire + allow-list expand; NO differential_green"
 			},
-			"tsSurface": "src/handlers/apply-diff.ts; src/engine/rust-apply-diff.ts (opt-out via FILESYSTEM_USE_RUST_APPLY_DIFF=ts)",
-			"rustSurface": "crates/filesystem-core/src/apply_diff.rs \u2192 crates/filesystem-cli",
-			"parityTest": "test/fixtures/golden/apply_diff.golden.json; __tests__/engine/applyDiffGoldenParity.test.ts; cargo test -p filesystem-cli --test apply_diff_golden_parity",
+			"tsSurface": "src/handlers/apply-diff.ts; src/utils/apply-diff-utils.ts; src/engine/rust-apply-diff.ts (opt-out via FILESYSTEM_USE_RUST_APPLY_DIFF=ts)",
+			"rustSurface": "crates/filesystem-core/src/apply_diff.rs (pure content transform; I/O residual)",
+			"parityTest": "cargo test -p filesystem-core apply_diff; crates/filesystem-core/fixtures/apply_diff_golden.json; test/fixtures/golden/apply_diff.golden.json",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#apply_diff_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice apply-diff",
-			"branch": "feat/rust-web-mcp-http-transport",
-			"notes": "S2 edit slice: golden MCP parity for apply_diff (edit_file). cycle47 rej-010: apply-diff bounded differential harness (5 cases). rust_impl only \u2014 authority_rust NOT claimed. tick-016: residual \u2014 not in main allow-list."
+			"branch": "offline/mega-bulk-bw2-filesystem-mcp",
+			"notes": "BW2 pure residual: apply_diffs_to_file_content + string helpers ported from TS utils. Tool route remains LegacyOptIn (tool_routes.rs). authority_rust/ts_deleted NOT claimed. Next: CLI invoke + fail-closed allow-list expand + tip differential."
 		}
 	],
 	"summary": {
@@ -463,6 +467,15 @@
 			"slice": "chown-items",
 			"verificationRef": "verification/filesystem-mcp-cycle64-chown-items-rust-impl.json",
 			"notes": "rej-010 rust_impl ONLY \u2014 cycle64 next ts_only slice: chown-items bounded differential (2 golden cases)"
+		},
+		"bw2_delta": {
+			"rust_impl_deepened": 1,
+			"slice": "tool/apply_diff pure core",
+			"files": [
+				"crates/filesystem-core/src/apply_diff.rs",
+				"crates/filesystem-core/fixtures/apply_diff_golden.json"
+			],
+			"notes": "BW2 offline pure residual: apply_diffs_to_file_content ported; proof_missing; route LegacyOptIn; NO authority/ts_deleted"
 		},
 		"summaryNote": "TICK038 tip differential land: list_files/read_content/delete_items proof.status=differential_green @ f5d9d94138c3; summary.parity_proven honesty-corrected from overclaim 7\u21920 (no rows at parity_proven). NO authority_rust/ts_deleted; promotion_hold active; CI main_durable residual.",
 		"tick016_delta": {
