@@ -357,4 +357,28 @@ mod tests {
         assert!(should_skip_rel(".git"));
         assert!(should_skip_rel("dist"));
     }
+
+
+    #[test]
+    fn bw8_format_timestamp_utc_month_rollover_and_leap() {
+        assert_eq!(format_timestamp_utc(30 * 86_400, 1), "1970-01-31T00:00:00.001Z");
+        assert_eq!(format_timestamp_utc(31 * 86_400, 0), "1970-02-01T00:00:00.000Z");
+        let days = 365 + 365 + 31 + 28;
+        assert_eq!(format_timestamp_utc(days * 86_400, 0), "1972-02-29T00:00:00.000Z");
+        assert!(is_leap_year(1972));
+        assert!(!is_leap_year(1970));
+        assert!(!is_leap_year(2100));
+        assert!(is_leap_year(2400));
+    }
+
+    #[test]
+    fn bw8_should_skip_and_display_path_edges() {
+        assert!(should_skip_rel("foo/target/bar"));
+        assert!(should_skip_rel("dist"));
+        assert!(!should_skip_rel("distribute/x"));
+        assert!(!should_skip_rel("mytarget/x"));
+        assert_eq!(display_path("", true), "/");
+        assert_eq!(display_path("", false), "");
+        assert_eq!(display_path(r"C:\a\b", true), "C:/a/b/");
+    }
 }

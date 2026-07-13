@@ -237,4 +237,18 @@ mod tests {
         assert!(is_absolute_user_path("/abs/path"));
         assert!(!is_absolute_user_path("rel/path"));
     }
+
+
+    #[test]
+    fn bw8_is_path_inside_sibling_and_prefix_trap() {
+        let root = PathBuf::from("/proj/app");
+        assert!(is_path_inside(Path::new("/proj/app"), &root));
+        assert!(is_path_inside(Path::new("/proj/app/src"), &root));
+        assert!(!is_path_inside(Path::new("/proj/app2"), &root));
+        assert!(!is_path_inside(Path::new("/proj"), &root));
+        assert!(looks_like_windows_absolute("E:\\\\x") || looks_like_windows_absolute("E:\\x"));
+        assert!(!looks_like_windows_absolute(":/x"));
+        assert!(!looks_like_windows_absolute(""));
+        assert!(!is_absolute_user_path(""));
+    }
 }

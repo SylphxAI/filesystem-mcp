@@ -373,4 +373,33 @@ mod tests {
         assert!(!needs_multiline(&op_regex("no-anchors", "x")));
     }
 
+
+    #[test]
+    fn bw8_build_search_pattern_escape_vs_regex() {
+        assert_eq!(build_search_pattern(&op("a+b", "x")), "a\\+b");
+        assert_eq!(build_search_pattern(&op_regex("a+b", "x")), "a+b");
+        let multi = apply_operations_to_content("Aa Aa", &[op_ci("aa", "BB")]);
+        assert!(multi.modified);
+        assert_eq!(multi.replacements_made, 2);
+        assert_eq!(multi.new_content, "BB BB");
+        let bad = ReplaceOperation {
+            search: "(unclosed".into(),
+            replace: "x".into(),
+            use_regex: true,
+            ignore_case: false,
+        };
+        let r = apply_operations_to_content("hello", &[bad]);
+        assert!(!r.modified);
+        assert_eq!(r.replacements_made, 0);
+        assert_eq!(r.new_content, "hello");
+    }
+
+    #[test]
+    fn bw8_needs_multiline_only_regex_anchors() {
+        assert!(!needs_multiline(&op("^x", "y")));
+        assert!(needs_multiline(&op_regex("^x", "y")));
+        assert!(needs_multiline(&op_regex("x$", "y")));
+        assert!(needs_multiline(&op_regex("^x$", "y")));
+        assert!(!needs_multiline(&op_regex("x", "y")));
+    }
 }

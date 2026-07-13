@@ -707,4 +707,69 @@ mod tests {
         assert_eq!(normalize_newlines("plain"), "plain");
     }
 
+
+    #[test]
+    fn bw8_validate_diff_block_insert_and_replace() {
+        let insert = DiffBlock {
+            search: String::new(),
+            replace: "new".into(),
+            start_line: 3,
+            end_line: 2,
+            operation: None,
+        };
+        assert!(insert.is_insert());
+        assert!(validate_diff_block(&insert));
+        let bad_insert = DiffBlock {
+            search: "not-empty".into(),
+            replace: "x".into(),
+            start_line: 3,
+            end_line: 2,
+            operation: None,
+        };
+        assert!(bad_insert.is_insert());
+        assert!(!validate_diff_block(&bad_insert));
+        let replace = DiffBlock {
+            search: "a".into(),
+            replace: "b".into(),
+            start_line: 1,
+            end_line: 1,
+            operation: None,
+        };
+        assert!(!replace.is_insert());
+        assert!(validate_diff_block(&replace));
+        assert!(!validate_diff_block(&DiffBlock {
+            search: "a".into(),
+            replace: "b".into(),
+            start_line: 0,
+            end_line: 1,
+            operation: None,
+        }));
+    }
+
+    #[test]
+    fn bw8_get_indentation_and_escape_all_specials() {
+        assert_eq!(get_indentation(None), "");
+        assert_eq!(get_indentation(Some("")), "");
+        assert_eq!(get_indentation(Some("\t  code")), "\t  ");
+        assert_eq!(get_indentation(Some("no-indent")), "");
+        // Full metachar set the pure residual escaper handles.
+        let specials = "$()*+.?[\\]^{|}";
+        let esc = escape_regex(specials);
+        for ch in ['$', '(', ')', '*', '+', '.', '?', '[', '\\', ']', '^', '{', '|', '}'] {
+            assert!(esc.contains(&format!("\\{ch}")), "missing escape for {ch}: {esc}");
+        }
+        assert_eq!(escape_regex("abc"), "abc");
+        assert_eq!(escape_regex("]"), "\\]");
+    }
+
+    #[test]
+    fn bw8_get_context_around_line_ellipsis_bounds() {
+        let lines: Vec<String> = (1..=10).map(|i| format!("L{i}")).collect();
+        let ctx = get_context_around_line(&lines, 5, 1);
+        assert!(ctx.contains("> 5"), "{ctx}");
+        assert!(ctx.contains("L5"), "{ctx}");
+        assert!(ctx.contains("..."), "{ctx}");
+        let ctx = get_context_around_line(&lines, 10, 2);
+        assert!(ctx.contains("> 10"), "{ctx}");
+    }
 }

@@ -354,4 +354,17 @@ mod tests {
         assert!(ledger.ends_with(".filesystem-mcp/audit.jsonl") || ledger.to_string_lossy().contains("audit"));
     }
 
+
+    #[test]
+    fn bw8_content_hash_empty_sha256_and_paths() {
+        assert_eq!(
+            content_hash(""),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+        assert_ne!(content_hash("A"), content_hash("a"));
+        let snap = rollback_snapshot_path(Path::new("/r"), "op-99", "nested/x.ts");
+        let s = snap.to_string_lossy();
+        assert!(s.contains("op-99"), "{s}");
+        assert!(s.contains("nested") || s.contains("x.ts"), "{s}");
+    }
 }

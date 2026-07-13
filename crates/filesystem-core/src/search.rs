@@ -258,4 +258,20 @@ mod tests {
         assert!(!matches_file_pattern("app.test.ts", "*.js"));
     }
 
+
+    #[test]
+    fn bw8_compile_search_regex_m_flag_and_invalid() {
+        let re = compile_search_regex("/^foo$/m").expect("m");
+        assert!(re.is_match("foo"));
+        assert!(re.is_match("x\nfoo\ny"));
+        let err = compile_search_regex("/[unterminated/").unwrap_err();
+        assert!(err.contains("INVALID_REGEX") || err.contains("regex"), "{err}");
+        let (body, flags) = parse_regex_literal("//i");
+        assert_eq!(body, "");
+        assert_eq!(flags, "i");
+        assert!(matches_file_pattern("file", "*") || matches_file_pattern("file", "file"));
+        assert!(!should_skip_dir("src/lib"));
+        assert!(should_skip_dir("a/dist/b"));
+        assert!(should_skip_dir("target"));
+    }
 }
