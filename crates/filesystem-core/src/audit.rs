@@ -318,4 +318,25 @@ mod tests {
             .unwrap_or("")
             .contains("snapshot_exceeds_max_bytes"));
     }
+
+
+    #[test]
+    fn content_hash_is_stable_sha256_hex() {
+        let a = content_hash("hello");
+        let b = content_hash("hello");
+        let c = content_hash("hello!");
+        assert_eq!(a, b);
+        assert_ne!(a, c);
+        assert_eq!(a.len(), 64);
+        assert!(a.chars().all(|ch| ch.is_ascii_hexdigit()));
+        let path = audit_ledger_path(Path::new("/tmp/proj"));
+        let path_s = path.to_string_lossy();
+        assert!(
+            path_s.contains("audit") || path_s.contains("ledger") || path.extension().is_some(),
+            "unexpected ledger path {path_s}"
+        );
+        let snap = rollback_snapshot_path(Path::new("/tmp/proj"), "op1", "src/a.ts");
+        let snap_s = snap.to_string_lossy();
+        assert!(snap_s.contains("op1"), "{snap_s}");
+    }
 }

@@ -200,4 +200,22 @@ mod tests {
         let err = search_files(temp.path(), ".", "[invalid", "*", None, None).unwrap_err();
         assert!(err.starts_with("INVALID_REGEX"));
     }
+
+
+    #[test]
+    fn compile_search_regex_supports_literal_flags_and_file_patterns() {
+        let re = compile_search_regex("/foo/i").expect("slash flags");
+        assert!(re.is_match("FOO"));
+        let re = compile_search_regex("bar").expect("plain");
+        assert!(re.is_match("bar"));
+        assert!(!re.is_match("BAR"));
+        assert!(matches_file_pattern("auth.ts", "*.ts"));
+        assert!(matches_file_pattern("readme.md", "*"));
+        assert!(matches_file_pattern("app.config.js", "*.js"));
+        assert!(!matches_file_pattern("auth.ts", "*.js"));
+        assert!(matches_file_pattern("exact.txt", "exact.txt"));
+        assert!(should_skip_dir("src/node_modules/pkg"));
+        assert!(should_skip_dir("target/debug"));
+        assert!(!should_skip_dir("src/lib"));
+    }
 }

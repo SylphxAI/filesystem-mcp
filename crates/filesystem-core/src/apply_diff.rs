@@ -597,4 +597,55 @@ mod tests {
             }
         }
     }
+
+
+    #[test]
+    fn validate_diff_block_insert_and_line_logic() {
+        assert!(!has_valid_line_number_logic(0, 1));
+        assert!(!has_valid_line_number_logic(2, 1));
+        assert!(has_valid_line_number_logic(1, 1));
+        assert!(has_valid_line_number_logic(1, 3));
+
+        let insert_ok = DiffBlock {
+            search: String::new(),
+            replace: "x".into(),
+            start_line: 2,
+            end_line: 1,
+            operation: Some(DiffOperation::Insert),
+        };
+        assert!(validate_diff_block(&insert_ok));
+        let insert_bad = DiffBlock {
+            search: "not-empty".into(),
+            replace: "x".into(),
+            start_line: 2,
+            end_line: 1,
+            operation: Some(DiffOperation::Insert),
+        };
+        assert!(!validate_diff_block(&insert_bad));
+        let replace_ok = DiffBlock {
+            search: "a".into(),
+            replace: "b".into(),
+            start_line: 1,
+            end_line: 1,
+            operation: None,
+        };
+        assert!(validate_diff_block(&replace_ok));
+        let replace_bad_start = DiffBlock {
+            search: "a".into(),
+            replace: "b".into(),
+            start_line: 0,
+            end_line: 1,
+            operation: None,
+        };
+        assert!(!validate_diff_block(&replace_bad_start));
+    }
+
+    #[test]
+    fn escape_regex_covers_remaining_specials() {
+        for ch in ['$', '(', ')', '*', '+', '.', '?', '[', '\\', ']', '^', '{', '|', '}'] {
+            let escaped = escape_regex(&ch.to_string());
+            assert_eq!(escaped, format!("\\{ch}"));
+        }
+        assert_eq!(escape_regex("plain"), "plain");
+    }
 }
