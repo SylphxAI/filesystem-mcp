@@ -4,6 +4,7 @@ pub mod apply_diff;
 pub mod audit;
 pub mod content;
 pub mod mutations;
+pub mod replace_content;
 pub mod search;
 pub mod walk;
 
@@ -22,6 +23,10 @@ pub use content::{
 pub use mutations::{
     copy_items, create_directories, move_items, CreateDirResult, TransferOp, TransferResult,
     MUTATIONS_ROUTE,
+};
+pub use replace_content::{
+    apply_operations_to_content, apply_replace_operation, build_search_pattern, create_search_regex,
+    needs_multiline, ApplyReplaceResult, ReplaceOperation, REPLACE_CONTENT_ROUTE,
 };
 pub use audit::{
     append_audit_batch, append_audit_batch_with_limit, content_hash, generate_operation_id,
