@@ -1,71 +1,71 @@
 {
-  "schema": "filesystem-core/apply_diff_golden/v1",
-  "source": "src/utils/apply-diff-utils.ts + src/utils/string-utils.ts",
-  "note": "BW2 offline pure residual deepen — proof_missing until tip differential allow-list expansion",
-  "cases": [
-    {
-      "id": "replace-version-line",
-      "original": "export const version = '1.0.0';\n",
-      "diffs": [
-        {
-          "search": "export const version = '1.0.0';",
-          "replace": "export const version = '1.0.1';",
-          "start_line": 1,
-          "end_line": 1,
-          "operation": "replace"
-        }
-      ],
-      "expectSuccess": true,
-      "expectNewContent": "export const version = '1.0.1';\n"
-    },
-    {
-      "id": "content-mismatch",
-      "original": "aaa\nbbb\nccc\n",
-      "diffs": [
-        {
-          "search": "xxx",
-          "replace": "yyy",
-          "start_line": 2,
-          "end_line": 2
-        }
-      ],
-      "expectSuccess": false,
-      "errorContains": "Content mismatch"
-    },
-    {
-      "id": "insert-middle",
-      "original": "a\nc\n",
-      "diffs": [
-        {
-          "search": "",
-          "replace": "b",
-          "start_line": 2,
-          "end_line": 1,
-          "operation": "insert"
-        }
-      ],
-      "expectSuccess": true,
-      "expectNewContent": "a\nb\nc\n"
-    },
-    {
-      "id": "multi-bottom-up",
-      "original": "one\ntwo\nthree\n",
-      "diffs": [
-        {
-          "search": "one",
-          "replace": "1",
-          "start_line": 1,
-          "end_line": 1
-        },
-        {
-          "search": "three",
-          "replace": "3",
-          "start_line": 3,
-          "end_line": 3
-        }
-      ],
-      "expectSuccess": true,
-      "expectNewContent": "1\ntwo\n3\n"
-    }
-  ]
+	"schema": "filesystem-core/apply_diff_golden/v1",
+	"source": "src/utils/apply-diff-utils.ts + src/utils/string-utils.ts",
+	"note": "BW2 offline pure residual deepen — proof_missing until tip differential allow-list expansion",
+	"cases": [
+		{
+			"id": "replace-version-line",
+			"original": "export const version = '1.0.0';\n",
+			"diffs": [
+				{
+					"search": "export const version = '1.0.0';",
+					"replace": "export const version = '1.0.1';",
+					"start_line": 1,
+					"end_line": 1,
+					"operation": "replace"
+				}
+			],
+			"expectSuccess": true,
+			"expectNewContent": "export const version = '1.0.1';\n"
+		},
+		{
+			"id": "content-mismatch",
+			"original": "aaa\nbbb\nccc\n",
+			"diffs": [
+				{
+					"search": "xxx",
+					"replace": "yyy",
+					"start_line": 2,
+					"end_line": 2
+				}
+			],
+			"expectSuccess": false,
+			"errorContains": "Content mismatch"
+		},
+		{
+			"id": "insert-middle",
+			"original": "a\nc\n",
+			"diffs": [
+				{
+					"search": "",
+					"replace": "b",
+					"start_line": 2,
+					"end_line": 1,
+					"operation": "insert"
+				}
+			],
+			"expectSuccess": true,
+			"expectNewContent": "a\nb\nc\n"
+		},
+		{
+			"id": "multi-bottom-up",
+			"original": "one\ntwo\nthree\n",
+			"diffs": [
+				{
+					"search": "one",
+					"replace": "1",
+					"start_line": 1,
+					"end_line": 1
+				},
+				{
+					"search": "three",
+					"replace": "3",
+					"start_line": 3,
+					"end_line": 3
+				}
+			],
+			"expectSuccess": true,
+			"expectNewContent": "1\ntwo\n3\n"
+		}
+	]
 }
