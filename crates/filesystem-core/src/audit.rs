@@ -339,4 +339,19 @@ mod tests {
         let snap_s = snap.to_string_lossy();
         assert!(snap_s.contains("op1"), "{snap_s}");
     }
+
+    #[test]
+    fn bw7_content_hash_empty_and_differs() {
+        let empty = content_hash("");
+        assert_eq!(empty.len(), 64);
+        assert_eq!(content_hash(""), empty);
+        assert_ne!(content_hash("a"), content_hash("b"));
+        assert_eq!(
+            content_hash("hello"),
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+        );
+        let ledger = audit_ledger_path(Path::new("/tmp/root"));
+        assert!(ledger.ends_with(".filesystem-mcp/audit.jsonl") || ledger.to_string_lossy().contains("audit"));
+    }
+
 }

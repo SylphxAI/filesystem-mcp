@@ -341,4 +341,20 @@ mod tests {
         assert_eq!(display_path(r"src\a", false), "src/a");
     }
 
+
+
+    #[test]
+    fn bw7_format_timestamp_utc_time_of_day_and_millis() {
+        let secs = 12 * 3600 + 34 * 60 + 56;
+        assert_eq!(format_timestamp_utc(secs, 789), "1970-01-01T12:34:56.789Z");
+        assert!(!is_leap_year(2100));
+        assert!(is_leap_year(2000));
+        assert_eq!(display_path("a/b/", true), "a/b/");
+        assert_eq!(display_path(r"a\b", false), "a/b");
+        assert_eq!(display_path(r"a\b", true), "a/b/");
+        assert!(!should_skip_rel("my_node_modules_backup/x"));
+        assert!(should_skip_rel("a/node_modules/b"));
+        assert!(should_skip_rel(".git"));
+        assert!(should_skip_rel("dist"));
+    }
 }

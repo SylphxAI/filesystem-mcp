@@ -238,4 +238,24 @@ mod tests {
         assert!(!matches_file_pattern("exact", "other"));
     }
 
+
+    #[test]
+    fn bw7_compile_search_regex_flags_and_file_pattern_edges() {
+        let re = compile_search_regex("/foo/i").expect("i");
+        assert!(re.is_match("FOO"));
+        let re = compile_search_regex("/foo.bar/s").expect("s");
+        // with s flag, . matches newline
+        assert!(re.is_match("foo\nbar"));
+        assert!(matches_file_pattern("README.md", "*md"));
+        assert!(!matches_file_pattern("README.txt", "*md"));
+        assert!(should_skip_dir("a/.git/b"));
+        assert!(should_skip_dir("node_modules"));
+        assert!(!should_skip_dir("src"));
+        let (body, flags) = parse_regex_literal("/x/g");
+        assert_eq!(body, "x");
+        assert_eq!(flags, "g");
+        assert!(matches_file_pattern("app.test.ts", "*.ts"));
+        assert!(!matches_file_pattern("app.test.ts", "*.js"));
+    }
+
 }

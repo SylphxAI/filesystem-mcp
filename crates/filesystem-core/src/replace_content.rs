@@ -344,4 +344,33 @@ mod tests {
         assert!(create_search_regex(&bad).is_none());
     }
 
+
+    #[test]
+    fn bw7_create_search_regex_and_ignore_case() {
+        let lit = op("a+b", "x");
+        let re = create_search_regex(&lit).expect("lit");
+        assert!(re.is_match("a+b"));
+        assert!(!re.is_match("aab"));
+        let ci = ReplaceOperation {
+            search: "Foo".into(),
+            replace: "bar".into(),
+            use_regex: false,
+            ignore_case: true,
+        };
+        let re = create_search_regex(&ci).expect("ci");
+        assert!(re.is_match("foo"));
+        assert!(re.is_match("FOO"));
+        let bad = ReplaceOperation {
+            search: "[unterminated".into(),
+            replace: "x".into(),
+            use_regex: true,
+            ignore_case: false,
+        };
+        assert!(create_search_regex(&bad).is_none());
+        assert!(!needs_multiline(&op("plain", "x")));
+        assert!(needs_multiline(&op_regex("^line", "x")));
+        assert!(needs_multiline(&op_regex("end$", "x")));
+        assert!(!needs_multiline(&op_regex("no-anchors", "x")));
+    }
+
 }

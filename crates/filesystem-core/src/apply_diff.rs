@@ -677,4 +677,34 @@ mod tests {
         assert_eq!(normalize_newlines("plain"), "plain");
     }
 
+
+    #[test]
+    fn bw7_lines_match_and_context_edges() {
+        // ignore_leading_whitespace uses trim_start on both sides
+        assert!(lines_match(Some("  alpha"), Some("alpha"), true));
+        assert!(lines_match(Some("alpha"), Some("  alpha"), true));
+        assert!(!lines_match(Some("  alpha"), Some("alpha"), false));
+        assert!(!lines_match(Some("alpha"), Some("ALPHA"), false));
+        // None pair always false (not both Some)
+        assert!(!lines_match(None, None, false));
+        assert!(!lines_match(Some("a"), None, true));
+        let lines = vec!["L1".into(), "L2".into(), "L3".into()];
+        let bad = get_context_around_line(&lines, 0, 1);
+        assert!(bad.contains("Invalid line number"), "{bad}");
+        let ctx = get_context_around_line(&lines, 1, 0);
+        assert!(ctx.contains("L1"), "{ctx}");
+        let multi = apply_indentation("x\ny", "--");
+        assert_eq!(multi, vec!["--x".to_string(), "--y".to_string()]);
+        assert!(has_valid_line_number_logic(5, 5));
+        assert!(!has_valid_line_number_logic(5, 4));
+    }
+
+    #[test]
+    fn bw7_escape_regex_and_normalize_newlines_matrix() {
+        assert_eq!(escape_regex("a.b*c"), "a\\.b\\*c");
+        assert_eq!(normalize_newlines("a\r\nb\rc"), "a\nb\nc");
+        assert_eq!(normalize_newlines("\r\n"), "\n");
+        assert_eq!(normalize_newlines("plain"), "plain");
+    }
+
 }

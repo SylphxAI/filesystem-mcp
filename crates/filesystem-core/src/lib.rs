@@ -221,4 +221,20 @@ mod tests {
         assert!(!is_absolute_user_path("rel"));
     }
 
+
+
+    #[test]
+    fn bw7_path_inside_and_windows_absolute_edges() {
+        let root = PathBuf::from("/mock/project/root");
+        assert!(is_path_inside(&root, &root));
+        assert!(is_path_inside(&root.join("x"), &root));
+        assert!(!is_path_inside(Path::new("/mock/project/root2"), &root));
+        assert!(looks_like_windows_absolute("D:/x"));
+        assert!(looks_like_windows_absolute("Z:\\"));
+        assert!(!looks_like_windows_absolute("C"));
+        assert!(!looks_like_windows_absolute("1:\\nope"));
+        assert!(is_absolute_user_path("/"));
+        assert!(is_absolute_user_path("/abs/path"));
+        assert!(!is_absolute_user_path("rel/path"));
+    }
 }
