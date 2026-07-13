@@ -596,4 +596,143 @@ mod tests {
         assert!(results[0].success, "{:?}", results[0].error);
         assert_eq!(fs::read_to_string(root.join("dst.txt")).unwrap(), "new");
     }
+
+    /// Pure residual (BW4): bind `mutations_golden.json` via include_str!.
+    /// Fixture-driven create/move/copy under temp root. NO CLI wire / route flip.
+    #[test]
+    fn mutations_golden_fixture_cases() {
+        #[derive(Debug, serde::Deserialize)]
+        struct MutationsGoldenFixture {
+            cases: Vec<MutationGoldenCase>,
+        }
+
+        #[derive(Debug, serde::Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct MutationGoldenCase {
+            id: String,
+            op: String,
+            #[serde(default)]
+            paths: Vec<String>,
+            #[serde(default)]
+            seed_files: std::collections::HashMap<String, String>,
+            #[serde(default)]
+            operations: Vec<GoldenTransferOp>,
+            #[serde(default)]
+            expect_success: Vec<bool>,
+            #[serde(default)]
+            expect_exists_dirs: Vec<String>,
+            #[serde(default)]
+            expect_exists_files: std::collections::HashMap<String, String>,
+            #[serde(default)]
+            expect_missing: Vec<String>,
+            #[serde(default)]
+            error_contains: Vec<String>,
+        }
+
+        #[derive(Debug, serde::Deserialize)]
+        struct GoldenTransferOp {
+            source: String,
+            destination: String,
+        }
+
+        let raw = include_str!("../fixtures/mutations_golden.json");
+        let fixture: MutationsGoldenFixture =
+            serde_json::from_str(raw).expect("parse mutations_golden.json");
+        assert_eq!(fixture.cases.len(), 5, "expected 5 golden cases");
+
+        for case in fixture.cases {
+            let temp = tempfile::tempdir().expect("tempdir");
+            let root = temp.path();
+            for (rel, content) in &case.seed_files {
+                let path = root.join(rel);
+                if let Some(parent) = path.parent() {
+                    fs::create_dir_all(parent).expect("seed parent");
+                }
+                fs::write(&path, content).expect("seed file");
+            }
+
+            match case.op.as_str() {
+                "create_directories" => {
+                    let results = create_directories(root, &case.paths);
+                    assert_eq!(
+                        results.len(),
+                        case.expect_success.len(),
+                        "case {} result count",
+                        case.id
+                    );
+                    for (i, (result, expect_ok)) in
+                        results.iter().zip(case.expect_success.iter()).enumerate()
+                    {
+                        assert_eq!(
+                            result.success, *expect_ok,
+                            "case {}[{}] success={:?} err={:?}",
+                            case.id, i, result.success, result.error
+                        );
+                        if !case.error_contains.is_empty() && !*expect_ok {
+                            let err = result.error.as_deref().unwrap_or("");
+                            assert!(
+                                case.error_contains.iter().any(|n| err.contains(n)),
+                                "case {} error {err:?} missing any of {:?}",
+                                case.id,
+                                case.error_contains
+                            );
+                        }
+                    }
+                    for dir in &case.expect_exists_dirs {
+                        assert!(
+                            root.join(dir).is_dir(),
+                            "case {} expected dir {}",
+                            case.id,
+                            dir
+                        );
+                    }
+                }
+                "move_items" | "copy_items" => {
+                    let ops: Vec<TransferOp> = case
+                        .operations
+                        .iter()
+                        .map(|op| TransferOp {
+                            source: op.source.clone(),
+                            destination: op.destination.clone(),
+                        })
+                        .collect();
+                    let results = if case.op == "move_items" {
+                        move_items(root, &ops)
+                    } else {
+                        copy_items(root, &ops)
+                    };
+                    assert_eq!(
+                        results.len(),
+                        case.expect_success.len(),
+                        "case {} result count",
+                        case.id
+                    );
+                    for (i, (result, expect_ok)) in
+                        results.iter().zip(case.expect_success.iter()).enumerate()
+                    {
+                        assert_eq!(
+                            result.success, *expect_ok,
+                            "case {}[{}] success={:?} err={:?}",
+                            case.id, i, result.success, result.error
+                        );
+                    }
+                    for (rel, content) in &case.expect_exists_files {
+                        let got = fs::read_to_string(root.join(rel))
+                            .unwrap_or_else(|e| panic!("case {} read {}: {e}", case.id, rel));
+                        assert_eq!(&got, content, "case {} file {}", case.id, rel);
+                    }
+                    for rel in &case.expect_missing {
+                        assert!(
+                            !root.join(rel).exists(),
+                            "case {} expected missing {}",
+                            case.id,
+                            rel
+                        );
+                    }
+                }
+                other => panic!("case {} unknown op {other}", case.id),
+            }
+        }
+    }
+
 }
