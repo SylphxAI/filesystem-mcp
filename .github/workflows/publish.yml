@@ -15,7 +15,10 @@ on:
 jobs:
   validate:
     name: Validate Code Quality
-    runs-on: [self-hosted, sylphx, linux, standard]
+    # GitHub-hosted: repo runner group currently has 0 online agents with
+    # labels [self-hosted, sylphx, linux, standard], which left required PR
+    # checks queued indefinitely. ubuntu-latest matches .github/workflows/ci.yml.
+    runs-on: ubuntu-latest
     permissions: # Added permissions
       actions: read
       contents: read
