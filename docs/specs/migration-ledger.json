@@ -281,9 +281,27 @@
 			"domain": "mcp-tools",
 			"weight": 3,
 			"state": "rust_impl",
+			"promotionHold": {
+				"active": true,
+				"reason": "rej-010: pure mutations core on disk \u2014 promotion_hold until CLI wire + allow-list differential_green + prod_audit_pass",
+				"rejectionRef": "rej-010",
+				"since": "2026-07-13T00:00:00+00:00"
+			},
+			"proof": {
+				"status": "missing",
+				"harness": "cargo test -p filesystem-core mutations; crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs (create_directories residual)",
+				"dependencyGlobs": [
+					"src/handlers/create-directories.ts",
+					"crates/filesystem-core/src/mutations.rs",
+					"crates/filesystem-core/fixtures/mutations_golden.json"
+				],
+				"note": "BW2 offline pure deepen: create_directories in filesystem-core mutations.rs + unit tests; route still LegacyOptIn; NO differential_green"
+			},
 			"tsSurface": "src/handlers/create-directories.ts",
-			"rustSurface": "crates/filesystem-core/src/mutations.rs \u2192 crates/filesystem-cli",
-			"parityTest": "__tests__/engine/shippedPath.matrix.test.ts"
+			"rustSurface": "crates/filesystem-core/src/mutations.rs#create_directories (I/O under resolve_path; CLI/route residual)",
+			"parityTest": "cargo test -p filesystem-core mutations; crates/filesystem-core/fixtures/mutations_golden.json; __tests__/engine/shippedPath.matrix.test.ts",
+			"branch": "offline/mega-bulk-bw2-filesystem-mcp",
+			"notes": "BW2 pure residual: create_directories ported under root policy. Tool route remains LegacyOptIn (tool_routes.rs). authority_rust/ts_deleted NOT claimed. Next: CLI invoke + tip differential."
 		},
 		{
 			"id": "tool/chmod_items",
@@ -348,18 +366,54 @@
 			"domain": "mcp-tools",
 			"weight": 3,
 			"state": "rust_impl",
+			"promotionHold": {
+				"active": true,
+				"reason": "rej-010: pure mutations core on disk \u2014 promotion_hold until CLI wire + allow-list differential_green + prod_audit_pass",
+				"rejectionRef": "rej-010",
+				"since": "2026-07-13T00:00:00+00:00"
+			},
+			"proof": {
+				"status": "missing",
+				"harness": "cargo test -p filesystem-core mutations; crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs (move_items residual)",
+				"dependencyGlobs": [
+					"src/handlers/move-items.ts",
+					"crates/filesystem-core/src/mutations.rs",
+					"crates/filesystem-core/fixtures/mutations_golden.json"
+				],
+				"note": "BW2 offline pure deepen: move_items in filesystem-core mutations.rs + unit tests; route still LegacyOptIn; NO differential_green"
+			},
 			"tsSurface": "src/handlers/move-items.ts",
-			"rustSurface": "crates/filesystem-core/src/mutations.rs \u2192 crates/filesystem-cli",
-			"parityTest": "__tests__/engine/shippedPath.matrix.test.ts"
+			"rustSurface": "crates/filesystem-core/src/mutations.rs#move_items (I/O under resolve_path; CLI/route residual)",
+			"parityTest": "cargo test -p filesystem-core mutations; crates/filesystem-core/fixtures/mutations_golden.json; __tests__/engine/shippedPath.matrix.test.ts",
+			"branch": "offline/mega-bulk-bw2-filesystem-mcp",
+			"notes": "BW2 pure residual: move_items ported under root policy. Tool route remains LegacyOptIn. authority_rust/ts_deleted NOT claimed."
 		},
 		{
 			"id": "tool/copy_items",
 			"domain": "mcp-tools",
 			"weight": 3,
 			"state": "rust_impl",
+			"promotionHold": {
+				"active": true,
+				"reason": "rej-010: pure mutations core on disk \u2014 promotion_hold until CLI wire + allow-list differential_green + prod_audit_pass",
+				"rejectionRef": "rej-010",
+				"since": "2026-07-13T00:00:00+00:00"
+			},
+			"proof": {
+				"status": "missing",
+				"harness": "cargo test -p filesystem-core mutations; crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs (copy_items residual)",
+				"dependencyGlobs": [
+					"src/handlers/copy-items.ts",
+					"crates/filesystem-core/src/mutations.rs",
+					"crates/filesystem-core/fixtures/mutations_golden.json"
+				],
+				"note": "BW2 offline pure deepen: copy_items (recursive) in filesystem-core mutations.rs + unit tests; route still LegacyOptIn; NO differential_green"
+			},
 			"tsSurface": "src/handlers/copy-items.ts",
-			"rustSurface": "crates/filesystem-core/src/mutations.rs \u2192 crates/filesystem-cli",
-			"parityTest": "__tests__/engine/shippedPath.matrix.test.ts"
+			"rustSurface": "crates/filesystem-core/src/mutations.rs#copy_items (I/O under resolve_path; CLI/route residual)",
+			"parityTest": "cargo test -p filesystem-core mutations; crates/filesystem-core/fixtures/mutations_golden.json; __tests__/engine/shippedPath.matrix.test.ts",
+			"branch": "offline/mega-bulk-bw2-filesystem-mcp",
+			"notes": "BW2 pure residual: copy_items recursive port under root policy. Tool route remains LegacyOptIn. authority_rust/ts_deleted NOT claimed."
 		},
 		{
 			"id": "tool/replace_content",
@@ -469,13 +523,20 @@
 			"notes": "rej-010 rust_impl ONLY \u2014 cycle64 next ts_only slice: chown-items bounded differential (2 golden cases)"
 		},
 		"bw2_delta": {
-			"rust_impl_deepened": 1,
-			"slice": "tool/apply_diff pure core",
+			"rust_impl_deepened": 4,
+			"slices": [
+				"tool/apply_diff pure core",
+				"tool/create_directories",
+				"tool/move_items",
+				"tool/copy_items"
+			],
 			"files": [
 				"crates/filesystem-core/src/apply_diff.rs",
-				"crates/filesystem-core/fixtures/apply_diff_golden.json"
+				"crates/filesystem-core/fixtures/apply_diff_golden.json",
+				"crates/filesystem-core/src/mutations.rs",
+				"crates/filesystem-core/fixtures/mutations_golden.json"
 			],
-			"notes": "BW2 offline pure residual: apply_diffs_to_file_content ported; proof_missing; route LegacyOptIn; NO authority/ts_deleted"
+			"notes": "BW2 offline pure residual stack: apply_diff + mutations (create/move/copy) ported; proof_missing; route LegacyOptIn; NO authority/ts_deleted/CLI wire"
 		},
 		"summaryNote": "TICK038 tip differential land: list_files/read_content/delete_items proof.status=differential_green @ f5d9d94138c3; summary.parity_proven honesty-corrected from overclaim 7\u21920 (no rows at parity_proven). NO authority_rust/ts_deleted; promotion_hold active; CI main_durable residual.",
 		"tick016_delta": {

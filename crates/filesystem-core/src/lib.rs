@@ -3,6 +3,7 @@
 pub mod apply_diff;
 pub mod audit;
 pub mod content;
+pub mod mutations;
 pub mod search;
 pub mod walk;
 
@@ -17,6 +18,10 @@ pub use apply_diff::{
 pub use content::{
     delete_items, read_content, stat_items, write_content, DeleteItemsResult, ReadContentOptions,
     ReadContentResult, ReadFormat, StatItemResult, WriteContentResult, WriteItem, CONTENT_ROUTE,
+};
+pub use mutations::{
+    copy_items, create_directories, move_items, CreateDirResult, TransferOp, TransferResult,
+    MUTATIONS_ROUTE,
 };
 pub use audit::{
     append_audit_batch, append_audit_batch_with_limit, content_hash, generate_operation_id,
