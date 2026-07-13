@@ -262,4 +262,50 @@ mod tests {
             "a+b"
         );
     }
+
+    #[derive(Debug, serde::Deserialize)]
+    struct ReplaceContentGoldenFixture {
+        cases: Vec<ReplaceContentGoldenCase>,
+    }
+
+    #[derive(Debug, serde::Deserialize)]
+    struct ReplaceContentGoldenCase {
+        id: String,
+        original: String,
+        operations: Vec<ReplaceOperation>,
+        #[serde(rename = "expectModified")]
+        expect_modified: bool,
+        #[serde(rename = "expectReplacements")]
+        expect_replacements: usize,
+        #[serde(rename = "expectNewContent")]
+        expect_new_content: String,
+    }
+
+    /// Pure residual (BW3): bind `replace_content_golden.json` via include_str!.
+    /// No CLI wire / route flip / authority (rej-010).
+    #[test]
+    fn replace_content_golden_fixture_cases() {
+        let raw = include_str!("../fixtures/replace_content_golden.json");
+        let fixture: ReplaceContentGoldenFixture =
+            serde_json::from_str(raw).expect("parse replace_content_golden.json");
+        assert!(!fixture.cases.is_empty());
+        for case in fixture.cases {
+            let result = apply_operations_to_content(&case.original, &case.operations);
+            assert_eq!(
+                result.modified, case.expect_modified,
+                "case {} modified",
+                case.id
+            );
+            assert_eq!(
+                result.replacements_made, case.expect_replacements,
+                "case {} replacements",
+                case.id
+            );
+            assert_eq!(
+                result.new_content, case.expect_new_content,
+                "case {} content",
+                case.id
+            );
+        }
+    }
 }

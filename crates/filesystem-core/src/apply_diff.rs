@@ -545,4 +545,56 @@ mod tests {
         assert!(result.success, "{:?}", result.error);
         assert_eq!(result.new_content.as_deref(), Some("1\ntwo\n3\n"));
     }
+
+    #[derive(Debug, serde::Deserialize)]
+    struct ApplyDiffGoldenFixture {
+        cases: Vec<ApplyDiffGoldenCase>,
+    }
+
+    #[derive(Debug, serde::Deserialize)]
+    struct ApplyDiffGoldenCase {
+        id: String,
+        original: String,
+        diffs: Vec<DiffBlock>,
+        #[serde(rename = "expectSuccess")]
+        expect_success: bool,
+        #[serde(default, rename = "expectNewContent")]
+        expect_new_content: Option<String>,
+        #[serde(default, rename = "errorContains")]
+        error_contains: Option<String>,
+    }
+
+    /// Pure residual (BW3): bind `apply_diff_golden.json` via include_str! so
+    /// fixture drift fails cargo test. No CLI wire / route flip / authority.
+    #[test]
+    fn apply_diff_golden_fixture_cases() {
+        let raw = include_str!("../fixtures/apply_diff_golden.json");
+        let fixture: ApplyDiffGoldenFixture =
+            serde_json::from_str(raw).expect("parse apply_diff_golden.json");
+        assert!(!fixture.cases.is_empty(), "golden fixture must have cases");
+        for case in fixture.cases {
+            let result = apply_diffs_to_file_content(&case.original, &case.diffs);
+            assert_eq!(
+                result.success, case.expect_success,
+                "case {} success mismatch: {:?}",
+                case.id, result.error
+            );
+            if let Some(expected) = case.expect_new_content.as_deref() {
+                assert_eq!(
+                    result.new_content.as_deref(),
+                    Some(expected),
+                    "case {} content",
+                    case.id
+                );
+            }
+            if let Some(needle) = case.error_contains.as_deref() {
+                let err = result.error.as_deref().unwrap_or("");
+                assert!(
+                    err.contains(needle),
+                    "case {} expected error containing {needle:?}, got {err:?}",
+                    case.id
+                );
+            }
+        }
+    }
 }
