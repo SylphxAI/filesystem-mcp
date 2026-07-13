@@ -226,4 +226,51 @@ mod tests {
         let bad = evaluate_chown_gate("x", -1, 0, false);
         assert!(!bad.allowed);
     }
+
+    #[test]
+    fn residual_mode_ownership_edges() {
+        // length bounds: only 3–4 digits
+        assert!(!is_valid_octal_mode_string(""));
+        assert!(!is_valid_octal_mode_string("12"));
+        assert!(!is_valid_octal_mode_string("12345"));
+        assert!(is_valid_octal_mode_string("000"));
+        assert!(is_valid_octal_mode_string("0777"));
+        // digit class 0–7 only; no whitespace
+        assert!(!is_valid_octal_mode_string(" 755"));
+        assert!(!is_valid_octal_mode_string("755 "));
+        assert!(!is_valid_octal_mode_string("78a"));
+        assert!(!is_valid_octal_mode_string("089"));
+        assert_eq!(parse_octal_mode(""), None);
+        assert_eq!(parse_octal_mode("xyz"), None);
+        assert_eq!(parse_octal_mode("0777"), Some(0o777));
+        // format: mask to 9 bits; zero pad
+        assert_eq!(format_mode_octal(0), "000");
+        assert_eq!(format_mode_octal(0o7777), "777");
+        // ownership: negative / ok
+        assert!(!is_valid_ownership_id(-1));
+        assert!(is_valid_ownership_id(0));
+        assert!(is_valid_ownership_id(i64::MAX));
+        assert!(!is_valid_ownership(-1, 0));
+        assert!(!is_valid_ownership(0, -1));
+        assert!(is_valid_ownership(0, 0));
+        // display path: backslash → forward slash only (no empty→dot)
+        assert_eq!(normalize_display_path(""), "");
+        let four_bs: String = std::iter::repeat('\\').take(4).collect();
+        assert_eq!(normalize_display_path(&four_bs), "////");
+        let a_bs_b: String = ['a', '\\', '\\', 'b'].into_iter().collect();
+        assert_eq!(normalize_display_path(&a_bs_b), "a//b");
+        // project root equality (not canonicalize)
+        let root = Path::new("/proj");
+        assert!(is_project_root_path(root, root));
+        assert!(!is_project_root_path(Path::new("/other"), root));
+        assert!(!is_project_root_path(Path::new("/proj/src"), root));
+        // chmod gate: 4-digit leading zero allowed
+        let ok4 = evaluate_chmod_gate("f", "0644", false);
+        assert!(ok4.allowed);
+        assert_eq!(ok4.mode, Some(0o644));
+        // chown gate root still denied even with valid ids
+        let denied = evaluate_chown_gate(".", 0, 0, true);
+        assert!(!denied.allowed);
+        assert_eq!(denied.error.as_deref(), Some(CHOWN_ROOT_DENIED));
+    }
 }
