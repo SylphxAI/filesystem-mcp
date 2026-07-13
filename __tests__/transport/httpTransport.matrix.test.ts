@@ -17,10 +17,7 @@ describe('web MCP HTTP transport routing', () => {
 			path.join(repoRoot, 'crates/filesystem-mcp-server/src/http_transport.rs'),
 			'utf8',
 		)
-		const mainRs = readFileSync(
-			path.join(repoRoot, 'crates/filesystem-mcp-server/src/main.rs'),
-			'utf8',
-		)
+		const mainRs = readFileSync(path.join(repoRoot, 'crates/filesystem-mcp-server/src/main.rs'), 'utf8')
 		expect(httpTransport).toContain('StreamableHttpService')
 		expect(httpTransport).toContain('health_check')
 		expect(mainRs).toContain('http_transport::serve_http')
