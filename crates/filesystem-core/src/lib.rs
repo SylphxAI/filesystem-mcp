@@ -3,12 +3,18 @@
 pub mod apply_diff;
 pub mod audit;
 pub mod content;
+pub mod mode_policy;
 pub mod mutations;
 pub mod replace_content;
 pub mod search;
 pub mod walk;
 
 pub use walk::format_entry_stats;
+pub use mode_policy::{
+    evaluate_chmod_gate, evaluate_chown_gate, format_mode_octal, is_project_root_path,
+    is_valid_octal_mode_string, is_valid_ownership, normalize_display_path, parse_octal_mode,
+    ModePolicyDecision, CHMOD_ROOT_DENIED, CHOWN_ROOT_DENIED,
+};
 
 pub use apply_diff::{
     apply_diffs_to_file_content, apply_indentation, apply_single_valid_diff, escape_regex,
