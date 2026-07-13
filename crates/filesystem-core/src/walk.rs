@@ -311,4 +311,34 @@ mod tests {
         assert_eq!(result.entries[0].path, "solo.txt");
         assert!(result.entries[0].stats.as_ref().expect("stats").is_file);
     }
+
+    #[test]
+    fn format_timestamp_utc_epoch_and_leap_day() {
+        assert_eq!(format_timestamp_utc(0, 0), "1970-01-01T00:00:00.000Z");
+        assert_eq!(format_timestamp_utc(1, 1), "1970-01-01T00:00:01.001Z");
+        // 2000-03-01 00:00:00 UTC = 951868800
+        assert_eq!(format_timestamp_utc(951_868_800, 0), "2000-03-01T00:00:00.000Z");
+        // leap day 2000-02-29
+        assert_eq!(format_timestamp_utc(951_782_400, 0), "2000-02-29T00:00:00.000Z");
+        assert!(is_leap_year(2000));
+        assert!(is_leap_year(2004));
+        assert!(!is_leap_year(1900));
+        assert!(!is_leap_year(2001));
+        assert!(is_leap_year(2400));
+    }
+
+    #[test]
+    fn should_skip_rel_and_display_path_pure() {
+        assert!(should_skip_rel("node_modules/x"));
+        assert!(should_skip_rel("src/.git/config"));
+        assert!(should_skip_rel("pkg/dist/out"));
+        assert!(should_skip_rel("a/target/b"));
+        assert!(!should_skip_rel("src/lib"));
+        assert!(!should_skip_rel(""));
+        assert_eq!(display_path("src/a", false), "src/a");
+        assert_eq!(display_path("src/a", true), "src/a/");
+        assert_eq!(display_path("src/a/", true), "src/a/");
+        assert_eq!(display_path(r"src\a", false), "src/a");
+    }
+
 }

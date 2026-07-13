@@ -218,4 +218,24 @@ mod tests {
         assert!(should_skip_dir("target/debug"));
         assert!(!should_skip_dir("src/lib"));
     }
+
+    #[test]
+    fn parse_regex_literal_and_suffix_file_patterns() {
+        let (body, flags) = parse_regex_literal("/ab+c/im");
+        assert_eq!(body, "ab+c");
+        assert_eq!(flags, "im");
+        let (body, flags) = parse_regex_literal("no-slash");
+        assert_eq!(body, "no-slash");
+        assert_eq!(flags, "");
+        // incomplete slash form treated as plain
+        let (body, flags) = parse_regex_literal("/only-open");
+        assert_eq!(body, "/only-open");
+        assert_eq!(flags, "");
+        assert!(matches_file_pattern("readme.md", "*md"));
+        assert!(matches_file_pattern("app.test.ts", "*.ts"));
+        assert!(!matches_file_pattern("app.test.ts", "*.js"));
+        assert!(matches_file_pattern("exact", "exact"));
+        assert!(!matches_file_pattern("exact", "other"));
+    }
+
 }

@@ -209,4 +209,16 @@ mod tests {
         let result = resolve_path("escape-link/secret.txt", &root);
         assert_eq!(result.unwrap_err().code, PolicyErrorCode::InvalidRequest);
     }
+
+    #[test]
+    fn looks_like_windows_absolute_and_absolute_user_path() {
+        assert!(looks_like_windows_absolute("C:\\Users\\x"));
+        assert!(looks_like_windows_absolute("c:/Users/x"));
+        assert!(!looks_like_windows_absolute("/usr/bin"));
+        assert!(!looks_like_windows_absolute("relative/path"));
+        assert!(is_absolute_user_path("/abs"));
+        assert!(is_absolute_user_path("C:\\abs"));
+        assert!(!is_absolute_user_path("rel"));
+    }
+
 }

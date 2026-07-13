@@ -648,4 +648,33 @@ mod tests {
         }
         assert_eq!(escape_regex("plain"), "plain");
     }
+
+    #[test]
+    fn indentation_and_line_number_logic_pure() {
+        assert_eq!(get_indentation(Some("    foo")), "    ");
+        assert_eq!(get_indentation(Some("\tbar")), "\t");
+        assert_eq!(get_indentation(Some("baz")), "");
+        assert_eq!(get_indentation(None), "");
+        let lines = apply_indentation("a\nb", "  ");
+        assert_eq!(lines, vec!["  a".to_string(), "  b".to_string()]);
+        assert!(has_valid_line_number_logic(1, 1));
+        assert!(has_valid_line_number_logic(1, 3));
+        assert!(!has_valid_line_number_logic(0, 1));
+        assert!(!has_valid_line_number_logic(3, 1));
+        assert!(!has_valid_line_number_logic(-1, 2));
+        assert!(lines_match(Some("alpha"), Some("alpha"), false));
+        assert!(!lines_match(Some("alpha"), Some("ALPHA"), false));
+        assert!(lines_match(Some("  alpha"), Some("alpha"), true));
+        assert!(!lines_match(None, Some("x"), false));
+        let hay = vec!["alpha".into(), "beta".into(), "gamma".into()];
+        let ctx = get_context_around_line(&hay, 2, 1);
+        assert!(ctx.contains("alpha") || ctx.contains("beta") || ctx.contains("gamma"));
+    }
+
+    #[test]
+    fn normalize_newlines_crlf_to_lf() {
+        assert_eq!(normalize_newlines("a\r\nb\rc"), "a\nb\nc");
+        assert_eq!(normalize_newlines("plain"), "plain");
+    }
+
 }

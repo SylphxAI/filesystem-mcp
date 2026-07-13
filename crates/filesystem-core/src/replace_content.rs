@@ -308,4 +308,40 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn build_search_pattern_and_needs_multiline_pure() {
+        let lit = ReplaceOperation {
+            search: "a.b".into(),
+            replace: "x".into(),
+            use_regex: false,
+            ignore_case: false,
+        };
+        assert_eq!(build_search_pattern(&lit), "a\\.b");
+        assert!(!needs_multiline(&lit));
+        let re = ReplaceOperation {
+            search: "^foo$".into(),
+            replace: "bar".into(),
+            use_regex: true,
+            ignore_case: true,
+        };
+        assert_eq!(build_search_pattern(&re), "^foo$");
+        assert!(needs_multiline(&re));
+        let re2 = ReplaceOperation {
+            search: "plain".into(),
+            replace: "x".into(),
+            use_regex: true,
+            ignore_case: false,
+        };
+        assert!(!needs_multiline(&re2));
+        assert!(create_search_regex(&lit).is_some());
+        let bad = ReplaceOperation {
+            search: "[invalid".into(),
+            replace: "x".into(),
+            use_regex: true,
+            ignore_case: false,
+        };
+        assert!(create_search_regex(&bad).is_none());
+    }
+
 }
