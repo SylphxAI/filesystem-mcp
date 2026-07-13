@@ -111,6 +111,21 @@ export function buildReleaseGateReport(artifactDir: string): ReleaseGateReport {
 			binWrapper.includes('use_ts_transport'),
 		'Default npm bin launches the Rust rmcp MCP server; TypeScript adapter is opt-in only',
 	)
+
+	const httpTransportSource = readFileSync(
+		path.join(repoRoot, 'crates/filesystem-mcp-server/src/http_transport.rs'),
+		'utf8',
+	)
+	addCheck(
+		checks,
+		'mcp:rust_web_http_transport',
+		httpTransportSource.includes('StreamableHttpService') &&
+			httpTransportSource.includes('/mcp/health') &&
+			binWrapper.includes('resolve_transport') &&
+			binWrapper.includes('MCP_TRANSPORT=http'),
+		'Rust rmcp streamable HTTP Web MCP transport is wired; npm bin routes MCP_TRANSPORT=http to Rust',
+	)
+
 	const matrixProbe = spawnSync('bun', ['test', '__tests__/engine/shippedPath.matrix.test.ts'], {
 		cwd: repoRoot,
 		encoding: 'utf8',
