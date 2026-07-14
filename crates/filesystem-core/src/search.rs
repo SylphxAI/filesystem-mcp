@@ -200,4 +200,78 @@ mod tests {
         let err = search_files(temp.path(), ".", "[invalid", "*", None, None).unwrap_err();
         assert!(err.starts_with("INVALID_REGEX"));
     }
+
+
+    #[test]
+    fn compile_search_regex_supports_literal_flags_and_file_patterns() {
+        let re = compile_search_regex("/foo/i").expect("slash flags");
+        assert!(re.is_match("FOO"));
+        let re = compile_search_regex("bar").expect("plain");
+        assert!(re.is_match("bar"));
+        assert!(!re.is_match("BAR"));
+        assert!(matches_file_pattern("auth.ts", "*.ts"));
+        assert!(matches_file_pattern("readme.md", "*"));
+        assert!(matches_file_pattern("app.config.js", "*.js"));
+        assert!(!matches_file_pattern("auth.ts", "*.js"));
+        assert!(matches_file_pattern("exact.txt", "exact.txt"));
+        assert!(should_skip_dir("src/node_modules/pkg"));
+        assert!(should_skip_dir("target/debug"));
+        assert!(!should_skip_dir("src/lib"));
+    }
+
+    #[test]
+    fn parse_regex_literal_and_suffix_file_patterns() {
+        let (body, flags) = parse_regex_literal("/ab+c/im");
+        assert_eq!(body, "ab+c");
+        assert_eq!(flags, "im");
+        let (body, flags) = parse_regex_literal("no-slash");
+        assert_eq!(body, "no-slash");
+        assert_eq!(flags, "");
+        // incomplete slash form treated as plain
+        let (body, flags) = parse_regex_literal("/only-open");
+        assert_eq!(body, "/only-open");
+        assert_eq!(flags, "");
+        assert!(matches_file_pattern("readme.md", "*md"));
+        assert!(matches_file_pattern("app.test.ts", "*.ts"));
+        assert!(!matches_file_pattern("app.test.ts", "*.js"));
+        assert!(matches_file_pattern("exact", "exact"));
+        assert!(!matches_file_pattern("exact", "other"));
+    }
+
+
+    #[test]
+    fn bw7_compile_search_regex_flags_and_file_pattern_edges() {
+        let re = compile_search_regex("/foo/i").expect("i");
+        assert!(re.is_match("FOO"));
+        let re = compile_search_regex("/foo.bar/s").expect("s");
+        // with s flag, . matches newline
+        assert!(re.is_match("foo\nbar"));
+        assert!(matches_file_pattern("README.md", "*md"));
+        assert!(!matches_file_pattern("README.txt", "*md"));
+        assert!(should_skip_dir("a/.git/b"));
+        assert!(should_skip_dir("node_modules"));
+        assert!(!should_skip_dir("src"));
+        let (body, flags) = parse_regex_literal("/x/g");
+        assert_eq!(body, "x");
+        assert_eq!(flags, "g");
+        assert!(matches_file_pattern("app.test.ts", "*.ts"));
+        assert!(!matches_file_pattern("app.test.ts", "*.js"));
+    }
+
+
+    #[test]
+    fn bw8_compile_search_regex_m_flag_and_invalid() {
+        let re = compile_search_regex("/^foo$/m").expect("m");
+        assert!(re.is_match("foo"));
+        assert!(re.is_match("x\nfoo\ny"));
+        let err = compile_search_regex("/[unterminated/").unwrap_err();
+        assert!(err.contains("INVALID_REGEX") || err.contains("regex"), "{err}");
+        let (body, flags) = parse_regex_literal("//i");
+        assert_eq!(body, "");
+        assert_eq!(flags, "i");
+        assert!(matches_file_pattern("file", "*") || matches_file_pattern("file", "file"));
+        assert!(!should_skip_dir("src/lib"));
+        assert!(should_skip_dir("a/dist/b"));
+        assert!(should_skip_dir("target"));
+    }
 }

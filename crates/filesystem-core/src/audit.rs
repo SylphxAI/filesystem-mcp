@@ -318,4 +318,53 @@ mod tests {
             .unwrap_or("")
             .contains("snapshot_exceeds_max_bytes"));
     }
+
+
+    #[test]
+    fn content_hash_is_stable_sha256_hex() {
+        let a = content_hash("hello");
+        let b = content_hash("hello");
+        let c = content_hash("hello!");
+        assert_eq!(a, b);
+        assert_ne!(a, c);
+        assert_eq!(a.len(), 64);
+        assert!(a.chars().all(|ch| ch.is_ascii_hexdigit()));
+        let path = audit_ledger_path(Path::new("/tmp/proj"));
+        let path_s = path.to_string_lossy();
+        assert!(
+            path_s.contains("audit") || path_s.contains("ledger") || path.extension().is_some(),
+            "unexpected ledger path {path_s}"
+        );
+        let snap = rollback_snapshot_path(Path::new("/tmp/proj"), "op1", "src/a.ts");
+        let snap_s = snap.to_string_lossy();
+        assert!(snap_s.contains("op1"), "{snap_s}");
+    }
+
+    #[test]
+    fn bw7_content_hash_empty_and_differs() {
+        let empty = content_hash("");
+        assert_eq!(empty.len(), 64);
+        assert_eq!(content_hash(""), empty);
+        assert_ne!(content_hash("a"), content_hash("b"));
+        assert_eq!(
+            content_hash("hello"),
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+        );
+        let ledger = audit_ledger_path(Path::new("/tmp/root"));
+        assert!(ledger.ends_with(".filesystem-mcp/audit.jsonl") || ledger.to_string_lossy().contains("audit"));
+    }
+
+
+    #[test]
+    fn bw8_content_hash_empty_sha256_and_paths() {
+        assert_eq!(
+            content_hash(""),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+        assert_ne!(content_hash("A"), content_hash("a"));
+        let snap = rollback_snapshot_path(Path::new("/r"), "op-99", "nested/x.ts");
+        let s = snap.to_string_lossy();
+        assert!(s.contains("op-99"), "{s}");
+        assert!(s.contains("nested") || s.contains("x.ts"), "{s}");
+    }
 }

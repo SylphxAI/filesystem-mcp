@@ -311,4 +311,74 @@ mod tests {
         assert_eq!(result.entries[0].path, "solo.txt");
         assert!(result.entries[0].stats.as_ref().expect("stats").is_file);
     }
+
+    #[test]
+    fn format_timestamp_utc_epoch_and_leap_day() {
+        assert_eq!(format_timestamp_utc(0, 0), "1970-01-01T00:00:00.000Z");
+        assert_eq!(format_timestamp_utc(1, 1), "1970-01-01T00:00:01.001Z");
+        // 2000-03-01 00:00:00 UTC = 951868800
+        assert_eq!(format_timestamp_utc(951_868_800, 0), "2000-03-01T00:00:00.000Z");
+        // leap day 2000-02-29
+        assert_eq!(format_timestamp_utc(951_782_400, 0), "2000-02-29T00:00:00.000Z");
+        assert!(is_leap_year(2000));
+        assert!(is_leap_year(2004));
+        assert!(!is_leap_year(1900));
+        assert!(!is_leap_year(2001));
+        assert!(is_leap_year(2400));
+    }
+
+    #[test]
+    fn should_skip_rel_and_display_path_pure() {
+        assert!(should_skip_rel("node_modules/x"));
+        assert!(should_skip_rel("src/.git/config"));
+        assert!(should_skip_rel("pkg/dist/out"));
+        assert!(should_skip_rel("a/target/b"));
+        assert!(!should_skip_rel("src/lib"));
+        assert!(!should_skip_rel(""));
+        assert_eq!(display_path("src/a", false), "src/a");
+        assert_eq!(display_path("src/a", true), "src/a/");
+        assert_eq!(display_path("src/a/", true), "src/a/");
+        assert_eq!(display_path(r"src\a", false), "src/a");
+    }
+
+
+
+    #[test]
+    fn bw7_format_timestamp_utc_time_of_day_and_millis() {
+        let secs = 12 * 3600 + 34 * 60 + 56;
+        assert_eq!(format_timestamp_utc(secs, 789), "1970-01-01T12:34:56.789Z");
+        assert!(!is_leap_year(2100));
+        assert!(is_leap_year(2000));
+        assert_eq!(display_path("a/b/", true), "a/b/");
+        assert_eq!(display_path(r"a\b", false), "a/b");
+        assert_eq!(display_path(r"a\b", true), "a/b/");
+        assert!(!should_skip_rel("my_node_modules_backup/x"));
+        assert!(should_skip_rel("a/node_modules/b"));
+        assert!(should_skip_rel(".git"));
+        assert!(should_skip_rel("dist"));
+    }
+
+
+    #[test]
+    fn bw8_format_timestamp_utc_month_rollover_and_leap() {
+        assert_eq!(format_timestamp_utc(30 * 86_400, 1), "1970-01-31T00:00:00.001Z");
+        assert_eq!(format_timestamp_utc(31 * 86_400, 0), "1970-02-01T00:00:00.000Z");
+        let days = 365 + 365 + 31 + 28;
+        assert_eq!(format_timestamp_utc(days * 86_400, 0), "1972-02-29T00:00:00.000Z");
+        assert!(is_leap_year(1972));
+        assert!(!is_leap_year(1970));
+        assert!(!is_leap_year(2100));
+        assert!(is_leap_year(2400));
+    }
+
+    #[test]
+    fn bw8_should_skip_and_display_path_edges() {
+        assert!(should_skip_rel("foo/target/bar"));
+        assert!(should_skip_rel("dist"));
+        assert!(!should_skip_rel("distribute/x"));
+        assert!(!should_skip_rel("mytarget/x"));
+        assert_eq!(display_path("", true), "/");
+        assert_eq!(display_path("", false), "");
+        assert_eq!(display_path(r"C:\a\b", true), "C:/a/b/");
+    }
 }
