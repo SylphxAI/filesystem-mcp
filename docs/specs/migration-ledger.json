@@ -281,9 +281,27 @@
 			"domain": "mcp-tools",
 			"weight": 3,
 			"state": "rust_impl",
+			"promotionHold": {
+				"active": true,
+				"reason": "rej-010: pure mutations core on disk \u2014 promotion_hold until CLI wire + allow-list differential_green + prod_audit_pass",
+				"rejectionRef": "rej-010",
+				"since": "2026-07-13T00:00:00+00:00"
+			},
+			"proof": {
+				"status": "missing",
+				"harness": "cargo test -p filesystem-core mutations; crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs (create_directories residual)",
+				"dependencyGlobs": [
+					"src/handlers/create-directories.ts",
+					"crates/filesystem-core/src/mutations.rs",
+					"crates/filesystem-core/fixtures/mutations_golden.json"
+				],
+				"note": "BW2 offline pure deepen: create_directories in filesystem-core mutations.rs + unit tests; route still LegacyOptIn; NO differential_green"
+			},
 			"tsSurface": "src/handlers/create-directories.ts",
-			"rustSurface": "crates/filesystem-core/src/mutations.rs \u2192 crates/filesystem-cli",
-			"parityTest": "__tests__/engine/shippedPath.matrix.test.ts"
+			"rustSurface": "crates/filesystem-core/src/mutations.rs#create_directories (I/O under resolve_path; CLI/route residual)",
+			"parityTest": "cargo test -p filesystem-core mutations; crates/filesystem-core/fixtures/mutations_golden.json; __tests__/engine/shippedPath.matrix.test.ts",
+			"branch": "offline/mega-bulk-bw2-filesystem-mcp",
+			"notes": "BW2 pure residual: create_directories ported under root policy. Tool route remains LegacyOptIn (tool_routes.rs). authority_rust/ts_deleted NOT claimed. Next: CLI invoke + tip differential."
 		},
 		{
 			"id": "tool/chmod_items",
@@ -348,18 +366,54 @@
 			"domain": "mcp-tools",
 			"weight": 3,
 			"state": "rust_impl",
+			"promotionHold": {
+				"active": true,
+				"reason": "rej-010: pure mutations core on disk \u2014 promotion_hold until CLI wire + allow-list differential_green + prod_audit_pass",
+				"rejectionRef": "rej-010",
+				"since": "2026-07-13T00:00:00+00:00"
+			},
+			"proof": {
+				"status": "missing",
+				"harness": "cargo test -p filesystem-core mutations; crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs (move_items residual)",
+				"dependencyGlobs": [
+					"src/handlers/move-items.ts",
+					"crates/filesystem-core/src/mutations.rs",
+					"crates/filesystem-core/fixtures/mutations_golden.json"
+				],
+				"note": "BW2 offline pure deepen: move_items in filesystem-core mutations.rs + unit tests; route still LegacyOptIn; NO differential_green"
+			},
 			"tsSurface": "src/handlers/move-items.ts",
-			"rustSurface": "crates/filesystem-core/src/mutations.rs \u2192 crates/filesystem-cli",
-			"parityTest": "__tests__/engine/shippedPath.matrix.test.ts"
+			"rustSurface": "crates/filesystem-core/src/mutations.rs#move_items (I/O under resolve_path; CLI/route residual)",
+			"parityTest": "cargo test -p filesystem-core mutations; crates/filesystem-core/fixtures/mutations_golden.json; __tests__/engine/shippedPath.matrix.test.ts",
+			"branch": "offline/mega-bulk-bw2-filesystem-mcp",
+			"notes": "BW2 pure residual: move_items ported under root policy. Tool route remains LegacyOptIn. authority_rust/ts_deleted NOT claimed."
 		},
 		{
 			"id": "tool/copy_items",
 			"domain": "mcp-tools",
 			"weight": 3,
 			"state": "rust_impl",
+			"promotionHold": {
+				"active": true,
+				"reason": "rej-010: pure mutations core on disk \u2014 promotion_hold until CLI wire + allow-list differential_green + prod_audit_pass",
+				"rejectionRef": "rej-010",
+				"since": "2026-07-13T00:00:00+00:00"
+			},
+			"proof": {
+				"status": "missing",
+				"harness": "cargo test -p filesystem-core mutations; crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs (copy_items residual)",
+				"dependencyGlobs": [
+					"src/handlers/copy-items.ts",
+					"crates/filesystem-core/src/mutations.rs",
+					"crates/filesystem-core/fixtures/mutations_golden.json"
+				],
+				"note": "BW2 offline pure deepen: copy_items (recursive) in filesystem-core mutations.rs + unit tests; route still LegacyOptIn; NO differential_green"
+			},
 			"tsSurface": "src/handlers/copy-items.ts",
-			"rustSurface": "crates/filesystem-core/src/mutations.rs \u2192 crates/filesystem-cli",
-			"parityTest": "__tests__/engine/shippedPath.matrix.test.ts"
+			"rustSurface": "crates/filesystem-core/src/mutations.rs#copy_items (I/O under resolve_path; CLI/route residual)",
+			"parityTest": "cargo test -p filesystem-core mutations; crates/filesystem-core/fixtures/mutations_golden.json; __tests__/engine/shippedPath.matrix.test.ts",
+			"branch": "offline/mega-bulk-bw2-filesystem-mcp",
+			"notes": "BW2 pure residual: copy_items recursive port under root policy. Tool route remains LegacyOptIn. authority_rust/ts_deleted NOT claimed."
 		},
 		{
 			"id": "tool/replace_content",
@@ -368,27 +422,28 @@
 			"state": "rust_impl",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: differential_green at bound SHAs \u2014 promotion_hold until prod_audit_pass",
+				"reason": "rej-010: pure replace_content engine on disk \u2014 promotion_hold until CLI wire + allow-list differential_green + prod_audit_pass",
 				"rejectionRef": "rej-010",
-				"since": "2026-07-10T10:53:32+00:00"
+				"since": "2026-07-13T00:00:00+00:00"
 			},
 			"proof": {
 				"status": "missing",
-				"harness": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#replace_content_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice replace-content",
+				"harness": "cargo test -p filesystem-core replace_content; crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#replace_content residual",
 				"dependencyGlobs": [
 					"src/handlers/replace-content.ts",
-					"test/fixtures/golden/replace_content.golden.json",
 					"crates/filesystem-core/src/replace_content.rs",
+					"crates/filesystem-core/fixtures/replace_content_golden.json",
 					"scripts/differential/**",
 					"scripts/run-filesystem-mcp-differential.sh"
 				],
-				"note": "tick-016: stale non-main differential_green cleared; tool not in main fail-closed allow-list (list/read/write only)"
+				"note": "BW2 offline pure deepen: filesystem-core replace_content pure engine + unit tests + golden fixture; route still LegacyOptIn (TS) until CLI wire + allow-list expand; NO differential_green"
 			},
 			"tsSurface": "src/handlers/replace-content.ts",
-			"rustSurface": "crates/filesystem-core/src/replace_content.rs \u2192 crates/filesystem-cli",
-			"parityTest": "test/fixtures/golden/replace_content.golden.json; __tests__/handlers/replace-content.success.test.ts",
+			"rustSurface": "crates/filesystem-core/src/replace_content.rs (pure content transform; I/O residual)",
+			"parityTest": "cargo test -p filesystem-core replace_content; crates/filesystem-core/fixtures/replace_content_golden.json; __tests__/handlers/replace-content.success.test.ts",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#replace_content_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice replace-content",
-			"notes": "Cycle62 rej-010: replace_content rust_impl + bounded differential harness (2 golden cases). authority_rust NOT claimed. tick-016: residual \u2014 not in main allow-list."
+			"branch": "offline/mega-bulk-bw2-filesystem-mcp",
+			"notes": "BW2 pure residual: apply_operations_to_content + create_search_regex ported from TS handler helpers. Tool route remains LegacyOptIn (tool_routes.rs). authority_rust/ts_deleted NOT claimed. Next: CLI invoke + fail-closed allow-list expand + tip differential."
 		},
 		{
 			"id": "tool/apply_diff",
@@ -397,7 +452,7 @@
 			"state": "rust_impl",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: differential_green at bound SHAs \u2014 promotion_hold until prod_audit_pass",
+				"reason": "rej-010: pure apply_diff engine on disk \u2014 promotion_hold until allow-list differential_green + prod_audit_pass",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-10T10:53:32+00:00"
 			},
@@ -406,19 +461,23 @@
 				"harness": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#apply_diff_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice apply-diff",
 				"dependencyGlobs": [
 					"src/handlers/apply-diff.ts",
+					"src/utils/apply-diff-utils.ts",
+					"src/utils/string-utils.ts",
+					"crates/filesystem-core/src/apply_diff.rs",
+					"crates/filesystem-core/fixtures/apply_diff_golden.json",
 					"test/fixtures/golden/apply_diff.golden.json",
 					"scripts/differential/**",
 					"scripts/run-filesystem-mcp-differential.sh",
 					"crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs"
 				],
-				"note": "tick-016: stale non-main differential_green cleared; tool not in main fail-closed allow-list (list/read/write only)"
+				"note": "BW2 offline pure deepen: filesystem-core apply_diff pure engine + unit tests + golden fixture; route still LegacyOptIn (TS) until CLI wire + allow-list expand; NO differential_green"
 			},
-			"tsSurface": "src/handlers/apply-diff.ts; src/engine/rust-apply-diff.ts (opt-out via FILESYSTEM_USE_RUST_APPLY_DIFF=ts)",
-			"rustSurface": "crates/filesystem-core/src/apply_diff.rs \u2192 crates/filesystem-cli",
-			"parityTest": "test/fixtures/golden/apply_diff.golden.json; __tests__/engine/applyDiffGoldenParity.test.ts; cargo test -p filesystem-cli --test apply_diff_golden_parity",
+			"tsSurface": "src/handlers/apply-diff.ts; src/utils/apply-diff-utils.ts; src/engine/rust-apply-diff.ts (opt-out via FILESYSTEM_USE_RUST_APPLY_DIFF=ts)",
+			"rustSurface": "crates/filesystem-core/src/apply_diff.rs (pure content transform; I/O residual)",
+			"parityTest": "cargo test -p filesystem-core apply_diff; crates/filesystem-core/fixtures/apply_diff_golden.json; test/fixtures/golden/apply_diff.golden.json",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#apply_diff_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice apply-diff",
-			"branch": "feat/rust-web-mcp-http-transport",
-			"notes": "S2 edit slice: golden MCP parity for apply_diff (edit_file). cycle47 rej-010: apply-diff bounded differential harness (5 cases). rust_impl only \u2014 authority_rust NOT claimed. tick-016: residual \u2014 not in main allow-list."
+			"branch": "offline/mega-bulk-bw2-filesystem-mcp",
+			"notes": "BW2 pure residual: apply_diffs_to_file_content + string helpers ported from TS utils. Tool route remains LegacyOptIn (tool_routes.rs). authority_rust/ts_deleted NOT claimed. Next: CLI invoke + fail-closed allow-list expand + tip differential."
 		}
 	],
 	"summary": {
@@ -463,6 +522,25 @@
 			"slice": "chown-items",
 			"verificationRef": "verification/filesystem-mcp-cycle64-chown-items-rust-impl.json",
 			"notes": "rej-010 rust_impl ONLY \u2014 cycle64 next ts_only slice: chown-items bounded differential (2 golden cases)"
+		},
+		"bw2_delta": {
+			"rust_impl_deepened": 5,
+			"slices": [
+				"tool/apply_diff pure core",
+				"tool/create_directories",
+				"tool/move_items",
+				"tool/copy_items",
+				"tool/replace_content pure core"
+			],
+			"files": [
+				"crates/filesystem-core/src/apply_diff.rs",
+				"crates/filesystem-core/fixtures/apply_diff_golden.json",
+				"crates/filesystem-core/src/mutations.rs",
+				"crates/filesystem-core/fixtures/mutations_golden.json",
+				"crates/filesystem-core/src/replace_content.rs",
+				"crates/filesystem-core/fixtures/replace_content_golden.json"
+			],
+			"notes": "BW2 offline pure residual stack: apply_diff + mutations (create/move/copy) + replace_content pure core; proof_missing; route LegacyOptIn; NO authority/ts_deleted/CLI wire"
 		},
 		"summaryNote": "TICK038 tip differential land: list_files/read_content/delete_items proof.status=differential_green @ f5d9d94138c3; summary.parity_proven honesty-corrected from overclaim 7\u21920 (no rows at parity_proven). NO authority_rust/ts_deleted; promotion_hold active; CI main_durable residual.",
 		"tick016_delta": {

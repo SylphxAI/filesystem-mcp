@@ -1,0 +1,103 @@
+{
+	"schema": "filesystem-core/replace_content_golden/v1",
+	"source": "src/handlers/replace-content.ts (applyReplaceOperation + createSearchRegex)",
+	"note": "BW2 offline pure residual deepen — proof_missing until CLI wire + tip differential allow-list expansion; route LegacyOptIn",
+	"cases": [
+		{
+			"id": "simple-literal-multi",
+			"original": "Hello world, world!",
+			"operations": [
+				{
+					"search": "world",
+					"replace": "planet",
+					"use_regex": false,
+					"ignore_case": false
+				}
+			],
+			"expectModified": true,
+			"expectReplacements": 2,
+			"expectNewContent": "Hello planet, planet!"
+		},
+		{
+			"id": "sequential-ops",
+			"original": "Hello world, world!",
+			"operations": [
+				{
+					"search": "world",
+					"replace": "galaxy",
+					"use_regex": false,
+					"ignore_case": false
+				},
+				{
+					"search": "galaxy",
+					"replace": "universe",
+					"use_regex": false,
+					"ignore_case": false
+				}
+			],
+			"expectModified": true,
+			"expectReplacements": 4,
+			"expectNewContent": "Hello universe, universe!"
+		},
+		{
+			"id": "regex-capture-multiline-anchor",
+			"original": "Error: world not found.\nWarning: world might be deprecated.",
+			"operations": [
+				{
+					"search": "^(Error|Warning):",
+					"replace": "Log[$1]:",
+					"use_regex": true,
+					"ignore_case": false
+				}
+			],
+			"expectModified": true,
+			"expectReplacements": 2,
+			"expectNewContent": "Log[Error]: world not found.\nLog[Warning]: world might be deprecated."
+		},
+		{
+			"id": "case-insensitive",
+			"original": "Hello world, world!",
+			"operations": [
+				{
+					"search": "hello",
+					"replace": "Greetings",
+					"use_regex": false,
+					"ignore_case": true
+				}
+			],
+			"expectModified": true,
+			"expectReplacements": 1,
+			"expectNewContent": "Greetings world, world!"
+		},
+		{
+			"id": "no-match",
+			"original": "Nothing to see here.",
+			"operations": [
+				{
+					"search": "world",
+					"replace": "planet",
+					"use_regex": false,
+					"ignore_case": false
+				}
+			],
+			"expectModified": false,
+			"expectReplacements": 0,
+			"expectNewContent": "Nothing to see here."
+		},
+		{
+			"id": "invalid-regex-noop",
+			"original": "abc",
+			"operations": [
+				{
+					"search": "[unterminated",
+					"replace": "x",
+					"use_regex": true,
+					"ignore_case": false
+				}
+			],
+			"expectModified": false,
+			"expectReplacements": 0,
+			"expectNewContent": "abc"
+		}
+	]
+}

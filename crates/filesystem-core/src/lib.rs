@@ -1,15 +1,38 @@
 //! Root-scoped filesystem path policy and search engine.
 
+pub mod apply_diff;
 pub mod audit;
 pub mod content;
+pub mod mode_policy;
+pub mod mutations;
+pub mod replace_content;
 pub mod search;
 pub mod walk;
 
 pub use walk::format_entry_stats;
+pub use mode_policy::{
+    evaluate_chmod_gate, evaluate_chown_gate, format_mode_octal, is_project_root_path,
+    is_valid_octal_mode_string, is_valid_ownership, normalize_display_path, parse_octal_mode,
+    ModePolicyDecision, CHMOD_ROOT_DENIED, CHOWN_ROOT_DENIED,
+};
 
+pub use apply_diff::{
+    apply_diffs_to_file_content, apply_indentation, apply_single_valid_diff, escape_regex,
+    get_context_around_line, get_indentation, has_valid_line_number_logic, lines_match,
+    validate_diff_block, validate_line_numbers, verify_content_match, ApplyDiffResult, DiffBlock,
+    DiffOperation, DiffResult,
+};
 pub use content::{
     delete_items, read_content, stat_items, write_content, DeleteItemsResult, ReadContentOptions,
     ReadContentResult, ReadFormat, StatItemResult, WriteContentResult, WriteItem, CONTENT_ROUTE,
+};
+pub use mutations::{
+    copy_items, create_directories, move_items, CreateDirResult, TransferOp, TransferResult,
+    MUTATIONS_ROUTE,
+};
+pub use replace_content::{
+    apply_operations_to_content, apply_replace_operation, build_search_pattern, create_search_regex,
+    needs_multiline, ApplyReplaceResult, ReplaceOperation, REPLACE_CONTENT_ROUTE,
 };
 pub use audit::{
     append_audit_batch, append_audit_batch_with_limit, content_hash, generate_operation_id,
@@ -191,5 +214,47 @@ mod tests {
 
         let result = resolve_path("escape-link/secret.txt", &root);
         assert_eq!(result.unwrap_err().code, PolicyErrorCode::InvalidRequest);
+    }
+
+    #[test]
+    fn looks_like_windows_absolute_and_absolute_user_path() {
+        assert!(looks_like_windows_absolute("C:\\Users\\x"));
+        assert!(looks_like_windows_absolute("c:/Users/x"));
+        assert!(!looks_like_windows_absolute("/usr/bin"));
+        assert!(!looks_like_windows_absolute("relative/path"));
+        assert!(is_absolute_user_path("/abs"));
+        assert!(is_absolute_user_path("C:\\abs"));
+        assert!(!is_absolute_user_path("rel"));
+    }
+
+
+
+    #[test]
+    fn bw7_path_inside_and_windows_absolute_edges() {
+        let root = PathBuf::from("/mock/project/root");
+        assert!(is_path_inside(&root, &root));
+        assert!(is_path_inside(&root.join("x"), &root));
+        assert!(!is_path_inside(Path::new("/mock/project/root2"), &root));
+        assert!(looks_like_windows_absolute("D:/x"));
+        assert!(looks_like_windows_absolute("Z:\\"));
+        assert!(!looks_like_windows_absolute("C"));
+        assert!(!looks_like_windows_absolute("1:\\nope"));
+        assert!(is_absolute_user_path("/"));
+        assert!(is_absolute_user_path("/abs/path"));
+        assert!(!is_absolute_user_path("rel/path"));
+    }
+
+
+    #[test]
+    fn bw8_is_path_inside_sibling_and_prefix_trap() {
+        let root = PathBuf::from("/proj/app");
+        assert!(is_path_inside(Path::new("/proj/app"), &root));
+        assert!(is_path_inside(Path::new("/proj/app/src"), &root));
+        assert!(!is_path_inside(Path::new("/proj/app2"), &root));
+        assert!(!is_path_inside(Path::new("/proj"), &root));
+        assert!(looks_like_windows_absolute("E:\\\\x") || looks_like_windows_absolute("E:\\x"));
+        assert!(!looks_like_windows_absolute(":/x"));
+        assert!(!looks_like_windows_absolute(""));
+        assert!(!is_absolute_user_path(""));
     }
 }
