@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0
+
+### Minor Changes
+
+- 55fa473: Ship Rust streamable HTTP Web MCP transport on `/mcp` and `/mcp/health`. Route `MCP_TRANSPORT=http` through the npm bin to the Rust rmcp server.
+
 ## 0.7.2
 
 ### Patch Changes
