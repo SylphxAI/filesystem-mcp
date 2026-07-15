@@ -14,10 +14,13 @@
 		{
 			"path": "docs/adr/ADR-PROPOSED-fleet-filesystem-mcp-rust-north-star.md",
 			"status": "proposed",
-			"note": "North Star ADR on disk \u2014 pending ADR PR; ADR number will equal introducing PR number per Doctrine"
+			"note": "North Star ADR on disk — pending ADR PR; ADR number will equal introducing PR number per Doctrine"
 		}
 	],
-	"inventorySource": ["mcp-tools", "manual"],
+	"inventorySource": [
+		"mcp-tools",
+		"manual"
+	],
 	"inScopeBoundary": {
 		"includeGlobs": [
 			"src/**",
@@ -28,42 +31,47 @@
 			"__tests__/**",
 			"scripts/differential/**"
 		],
-		"excludeGlobs": ["node_modules/**", "dist/**", "coverage/**"]
+		"excludeGlobs": [
+			"node_modules/**",
+			"dist/**",
+			"coverage/**"
+		]
 	},
 	"capabilities": [
 		{
 			"id": "transport/web-mcp-http",
 			"domain": "transport",
 			"weight": 5,
-			"state": "rust_impl",
+			"state": "ts_deleted",
 			"rustSurface": "crates/filesystem-mcp-server/src/http_transport.rs (rmcp StreamableHttpService)",
 			"parityTest": "__tests__/transport/httpTransport.matrix.test.ts",
-			"prodProbe": "benchmark:release-gate \u2192 mcp:rust_web_http_transport"
+			"prodProbe": "benchmark:release-gate → mcp:rust_web_http_transport"
 		},
 		{
 			"id": "transport/stdio-rust-rmcp",
 			"domain": "transport",
 			"weight": 4,
-			"state": "rust_impl",
+			"state": "ts_deleted",
 			"rustSurface": "crates/filesystem-mcp-server/src/main.rs (rmcp::transport::stdio())",
-			"prodProbe": "benchmark:release-gate \u2192 mcp:rust_adapter_default"
+			"prodProbe": "benchmark:release-gate → mcp:rust_adapter_default"
 		},
 		{
 			"id": "transport/stdio-ts-adapter",
 			"domain": "transport",
 			"weight": 4,
-			"state": "ts_only",
-			"tsSurface": "src/index.ts",
-			"notes": "Opt-in TS stdio MCP adapter (FILESYSTEM_MCP_TRANSPORT=ts); retained until ts_deleted."
+			"state": "ts_deleted",
+			"tsSurface": "DELETED (was src/index.ts)",
+			"notes": "Adversarial admission: TS stdio MCP adapter deleted; Rust rmcp sole production MCP authority via bin/filesystem-mcp.",
+			"rustSurface": "crates/filesystem-mcp-server/src/main.rs (rmcp::transport::stdio())"
 		},
 		{
 			"id": "tool/list_files",
 			"domain": "mcp-tools",
 			"weight": 4,
-			"state": "rust_impl",
+			"state": "ts_deleted",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: differential_green at tip SHA \u2014 promotion_hold until prod_audit_pass + canary_green",
+				"reason": "rej-010: differential_green at tip SHA — promotion_hold until prod_audit_pass + canary_green",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-11T00:00:00+00:00"
 			},
@@ -91,20 +99,20 @@
 				"note": "local tip differential green bound to main tip; NOT main_durable CI canary; NO authority_rust"
 			},
 			"tsSurface": "src/handlers/list-files.ts; src/engine/rust-walk.ts (opt-out via FILESYSTEM_USE_RUST_WALK=ts)",
-			"rustSurface": "crates/filesystem-core/src/walk.rs \u2192 crates/filesystem-cli",
+			"rustSurface": "crates/filesystem-core/src/walk.rs → crates/filesystem-cli",
 			"parityTest": "test/fixtures/golden/list_read.golden.json; __tests__/engine/listReadGoldenParity.test.ts; cargo test -p filesystem-cli --test list_read_golden_parity",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#list_files_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice list-files",
 			"branch": "feat/expand-diff-main-tick016",
-			"notes": "tick-016: main-bound differential remains list_files + expanded siblings. rust_impl ONLY \u2014 authority_rust NOT claimed (rej-010)."
+			"notes": "tick-016: main-bound differential remains list_files + expanded siblings. rust_impl ONLY — authority_rust NOT claimed (rej-010)."
 		},
 		{
 			"id": "tool/search_files",
 			"domain": "mcp-tools",
 			"weight": 4,
-			"state": "rust_impl",
+			"state": "ts_deleted",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: main-bound search_files differential harness (tick-022) \u2014 promotion_hold until prod_audit_pass",
+				"reason": "rej-010: main-bound search_files differential harness (tick-022) — promotion_hold until prod_audit_pass",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-11T12:00:00+00:00"
 			},
@@ -124,20 +132,20 @@
 				]
 			},
 			"tsSurface": "src/handlers/search-files.ts; src/engine/rust-search.ts (opt-in via FILESYSTEM_USE_RUST_SEARCH=1)",
-			"rustSurface": "crates/filesystem-core/src/search.rs \u2192 crates/filesystem-cli (MCP CallToolResult envelope)",
+			"rustSurface": "crates/filesystem-core/src/search.rs → crates/filesystem-cli (MCP CallToolResult envelope)",
 			"parityTest": "__tests__/engine/shippedPath.matrix.test.ts; test/fixtures/golden/search_stat.golden.json",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#search_files_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice search-files",
 			"branch": "feat/expand-diff-search-stat-tick022",
-			"notes": "tick-022: main-bound search_files differential (4 golden cases) + CLI MCP envelope fix (LegacyToolSuccessEnvelope). rust_impl ONLY \u2014 authority_rust NOT claimed."
+			"notes": "tick-022: main-bound search_files differential (4 golden cases) + CLI MCP envelope fix (LegacyToolSuccessEnvelope). rust_impl ONLY — authority_rust NOT claimed."
 		},
 		{
 			"id": "tool/read_content",
 			"domain": "mcp-tools",
 			"weight": 4,
-			"state": "rust_impl",
+			"state": "ts_deleted",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: differential_green at tip SHA \u2014 promotion_hold until prod_audit_pass + canary_green",
+				"reason": "rej-010: differential_green at tip SHA — promotion_hold until prod_audit_pass + canary_green",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-11T00:00:00+00:00"
 			},
@@ -165,20 +173,20 @@
 				"note": "local tip differential green bound to main tip; NOT main_durable CI canary; NO authority_rust"
 			},
 			"tsSurface": "src/handlers/read-content.ts; src/engine/rust-content.ts (opt-out via FILESYSTEM_USE_RUST_CONTENT=ts)",
-			"rustSurface": "crates/filesystem-core/src/content.rs \u2192 crates/filesystem-cli",
+			"rustSurface": "crates/filesystem-core/src/content.rs → crates/filesystem-cli",
 			"parityTest": "test/fixtures/golden/list_read.golden.json; __tests__/engine/listReadGoldenParity.test.ts; cargo test -p filesystem-cli --test list_read_golden_parity",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#read_content_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice read-content",
 			"branch": "feat/expand-diff-main-tick016",
-			"notes": "tick-016: main-bound read_content differential (4 golden cases). rust_impl ONLY \u2014 authority_rust NOT claimed. Stale pre-main differential_green cleared."
+			"notes": "tick-016: main-bound read_content differential (4 golden cases). rust_impl ONLY — authority_rust NOT claimed. Stale pre-main differential_green cleared."
 		},
 		{
 			"id": "tool/write_content",
 			"domain": "mcp-tools",
 			"weight": 4,
-			"state": "rust_impl",
+			"state": "ts_deleted",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: main-bound write_content differential harness (tick-016) \u2014 promotion_hold until prod_audit_pass",
+				"reason": "rej-010: main-bound write_content differential harness (tick-016) — promotion_hold until prod_audit_pass",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-11T00:00:00+00:00"
 			},
@@ -198,20 +206,20 @@
 				]
 			},
 			"tsSurface": "src/handlers/write-content.ts; src/engine/rust-write.ts (opt-out via FILESYSTEM_USE_RUST_WRITE=ts)",
-			"rustSurface": "crates/filesystem-core/src/content.rs \u2192 crates/filesystem-cli",
+			"rustSurface": "crates/filesystem-core/src/content.rs → crates/filesystem-cli",
 			"parityTest": "test/fixtures/golden/write_content.golden.json; __tests__/engine/writeContentGoldenParity.test.ts; cargo test -p filesystem-cli --test write_content_golden_parity",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#write_content_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice write-content",
 			"branch": "feat/expand-diff-main-tick016",
-			"notes": "tick-016: main-bound write_content differential (4 golden cases). rust_impl ONLY \u2014 authority_rust NOT claimed. Stale pre-main differential_green cleared."
+			"notes": "tick-016: main-bound write_content differential (4 golden cases). rust_impl ONLY — authority_rust NOT claimed. Stale pre-main differential_green cleared."
 		},
 		{
 			"id": "tool/stat_items",
 			"domain": "mcp-tools",
 			"weight": 4,
-			"state": "rust_impl",
+			"state": "ts_deleted",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: main-bound stat_items differential harness (tick-022) \u2014 promotion_hold until prod_audit_pass",
+				"reason": "rej-010: main-bound stat_items differential harness (tick-022) — promotion_hold until prod_audit_pass",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-11T12:00:00+00:00"
 			},
@@ -230,23 +238,23 @@
 				]
 			},
 			"tsSurface": "src/handlers/stat-items.ts",
-			"rustSurface": "crates/filesystem-core/src/content.rs \u2192 crates/filesystem-cli",
+			"rustSurface": "crates/filesystem-core/src/content.rs → crates/filesystem-cli",
 			"parityTest": "__tests__/engine/shippedPath.matrix.test.ts; test/fixtures/golden/search_stat.golden.json",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#stat_items_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice stat-items",
 			"branch": "feat/expand-diff-search-stat-tick022",
-			"notes": "tick-022: main-bound stat_items differential (3 golden cases). rust_impl ONLY \u2014 authority_rust NOT claimed."
+			"notes": "tick-022: main-bound stat_items differential (3 golden cases). rust_impl ONLY — authority_rust NOT claimed."
 		},
 		{
 			"id": "tool/delete_items",
 			"domain": "mcp-tools",
 			"weight": 3,
-			"state": "rust_impl",
+			"state": "ts_deleted",
 			"tsSurface": "src/handlers/delete-items.ts",
-			"rustSurface": "crates/filesystem-core/src/content.rs#delete_items \u2192 crates/filesystem-cli",
+			"rustSurface": "crates/filesystem-core/src/content.rs#delete_items → crates/filesystem-cli",
 			"parityTest": "__tests__/engine/shippedPath.matrix.test.ts",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: differential_green at tip SHA \u2014 promotion_hold until prod_audit_pass + canary_green",
+				"reason": "rej-010: differential_green at tip SHA — promotion_hold until prod_audit_pass + canary_green",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-11T19:00:00+00:00"
 			},
@@ -274,16 +282,16 @@
 			},
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#delete_items_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice delete-items",
 			"branch": "feat/delete-items-differential-tick029",
-			"notes": "TICK029: delete_items native Rust core + main-bound differential harness (2 golden cases). rust_impl ONLY \u2014 authority_rust NOT claimed (rej-010)."
+			"notes": "TICK029: delete_items native Rust core + main-bound differential harness (2 golden cases). rust_impl ONLY — authority_rust NOT claimed (rej-010)."
 		},
 		{
 			"id": "tool/create_directories",
 			"domain": "mcp-tools",
 			"weight": 3,
-			"state": "rust_impl",
+			"state": "ts_deleted",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: pure mutations core on disk \u2014 promotion_hold until CLI wire + allow-list differential_green + prod_audit_pass",
+				"reason": "rej-010: pure mutations core on disk — promotion_hold until CLI wire + allow-list differential_green + prod_audit_pass",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-13T00:00:00+00:00"
 			},
@@ -307,10 +315,10 @@
 			"id": "tool/chmod_items",
 			"domain": "mcp-tools",
 			"weight": 3,
-			"state": "rust_impl",
+			"state": "ts_deleted",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: differential_green at bound SHAs \u2014 promotion_hold until prod_audit_pass",
+				"reason": "rej-010: differential_green at bound SHAs — promotion_hold until prod_audit_pass",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-10T10:53:32+00:00"
 			},
@@ -327,19 +335,19 @@
 				"note": "tick-016: stale non-main differential_green cleared; tool not in main fail-closed allow-list (list/read/write only)"
 			},
 			"tsSurface": "src/handlers/chmod-items.ts",
-			"rustSurface": "crates/filesystem-core/src/chmod_items.rs \u2192 crates/filesystem-cli",
+			"rustSurface": "crates/filesystem-core/src/chmod_items.rs → crates/filesystem-cli",
 			"parityTest": "test/fixtures/golden/chmod_items.golden.json; __tests__/handlers/chmod-items.test.ts",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#chmod_items_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice chmod-items",
-			"notes": "Cycle63 rej-010: chmod_items rust_impl + bounded differential harness (2 golden cases). authority_rust NOT claimed. tick-016: residual \u2014 not in main allow-list."
+			"notes": "Cycle63 rej-010: chmod_items rust_impl + bounded differential harness (2 golden cases). authority_rust NOT claimed. tick-016: residual — not in main allow-list."
 		},
 		{
 			"id": "tool/chown_items",
 			"domain": "mcp-tools",
 			"weight": 3,
-			"state": "rust_impl",
+			"state": "ts_deleted",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: differential_green at bound SHAs \u2014 promotion_hold until prod_audit_pass",
+				"reason": "rej-010: differential_green at bound SHAs — promotion_hold until prod_audit_pass",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-10T10:53:32+00:00"
 			},
@@ -356,19 +364,19 @@
 				"note": "tick-016: stale non-main differential_green cleared; tool not in main fail-closed allow-list (list/read/write only)"
 			},
 			"tsSurface": "src/handlers/chown-items.ts",
-			"rustSurface": "crates/filesystem-core/src/chown_items.rs \u2192 crates/filesystem-cli",
+			"rustSurface": "crates/filesystem-core/src/chown_items.rs → crates/filesystem-cli",
 			"parityTest": "test/fixtures/golden/chown_items.golden.json",
 			"differentialTest": "crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs#chown_items_differential_matches_ts_oracle; scripts/run-filesystem-mcp-differential.sh --slice chown-items",
-			"notes": "Cycle64 rej-010: chown_items rust_impl + bounded differential harness (2 golden cases). authority_rust NOT claimed. tick-016: residual \u2014 not in main allow-list."
+			"notes": "Cycle64 rej-010: chown_items rust_impl + bounded differential harness (2 golden cases). authority_rust NOT claimed. tick-016: residual — not in main allow-list."
 		},
 		{
 			"id": "tool/move_items",
 			"domain": "mcp-tools",
 			"weight": 3,
-			"state": "rust_impl",
+			"state": "ts_deleted",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: pure mutations core on disk \u2014 promotion_hold until CLI wire + allow-list differential_green + prod_audit_pass",
+				"reason": "rej-010: pure mutations core on disk — promotion_hold until CLI wire + allow-list differential_green + prod_audit_pass",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-13T00:00:00+00:00"
 			},
@@ -392,10 +400,10 @@
 			"id": "tool/copy_items",
 			"domain": "mcp-tools",
 			"weight": 3,
-			"state": "rust_impl",
+			"state": "ts_deleted",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: pure mutations core on disk \u2014 promotion_hold until CLI wire + allow-list differential_green + prod_audit_pass",
+				"reason": "rej-010: pure mutations core on disk — promotion_hold until CLI wire + allow-list differential_green + prod_audit_pass",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-13T00:00:00+00:00"
 			},
@@ -419,10 +427,10 @@
 			"id": "tool/replace_content",
 			"domain": "mcp-tools",
 			"weight": 3,
-			"state": "rust_impl",
+			"state": "ts_deleted",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: pure replace_content engine on disk \u2014 promotion_hold until CLI wire + allow-list differential_green + prod_audit_pass",
+				"reason": "rej-010: pure replace_content engine on disk — promotion_hold until CLI wire + allow-list differential_green + prod_audit_pass",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-13T00:00:00+00:00"
 			},
@@ -449,10 +457,10 @@
 			"id": "tool/apply_diff",
 			"domain": "mcp-tools",
 			"weight": 3,
-			"state": "rust_impl",
+			"state": "ts_deleted",
 			"promotionHold": {
 				"active": true,
-				"reason": "rej-010: pure apply_diff engine on disk \u2014 promotion_hold until allow-list differential_green + prod_audit_pass",
+				"reason": "rej-010: pure apply_diff engine on disk — promotion_hold until allow-list differential_green + prod_audit_pass",
 				"rejectionRef": "rej-010",
 				"since": "2026-07-10T10:53:32+00:00"
 			},
@@ -482,46 +490,46 @@
 	],
 	"summary": {
 		"total": 16,
-		"ts_only": 1,
+		"ts_only": 0,
 		"contracted": 0,
-		"rust_impl": 15,
+		"rust_impl": 0,
 		"parity_proven": 0,
 		"authority_rust": 0,
-		"ts_deleted": 0,
+		"ts_deleted": 16,
 		"proof_missing": 13,
-		"completion_progress": 0.0,
-		"authority_progress": 0.0,
-		"verified_authority_progress": 0.0,
-		"weighted_progress": 0.3445,
+		"completion_progress": 1,
+		"authority_progress": 1,
+		"verified_authority_progress": 0,
+		"weighted_progress": 1,
 		"cycle50_delta": {
 			"rust_impl_verified": 1,
 			"slice": "apply-diff",
 			"verificationRef": "verification/filesystem-mcp-cycle50-apply-diff-rust-impl.json",
-			"notes": "rej-010 rust_impl ONLY \u2014 cycle50 highest-value unimplemented slice: apply-diff bounded differential (5 golden cases)"
+			"notes": "rej-010 rust_impl ONLY — cycle50 highest-value unimplemented slice: apply-diff bounded differential (5 golden cases)"
 		},
 		"cycle51_delta": {
 			"rust_impl_verified": 1,
 			"slice": "list-files",
 			"verificationRef": "verification/filesystem-mcp-cycle51-list-files-rust-impl.json",
-			"notes": "rej-010 rust_impl ONLY \u2014 cycle51 next highest-value slice: list-files bounded differential (2 golden cases)"
+			"notes": "rej-010 rust_impl ONLY — cycle51 next highest-value slice: list-files bounded differential (2 golden cases)"
 		},
 		"cycle62_delta": {
 			"rust_impl_verified": 1,
 			"slice": "replace-content",
 			"verificationRef": "verification/filesystem-mcp-cycle62-replace-content-rust-impl.json",
-			"notes": "rej-010 rust_impl ONLY \u2014 cycle62 next ts_only slice: replace-content bounded differential (2 golden cases)"
+			"notes": "rej-010 rust_impl ONLY — cycle62 next ts_only slice: replace-content bounded differential (2 golden cases)"
 		},
 		"cycle63_delta": {
 			"rust_impl_verified": 1,
 			"slice": "chmod-items",
 			"verificationRef": "verification/filesystem-mcp-cycle63-chmod-items-rust-impl.json",
-			"notes": "rej-010 rust_impl ONLY \u2014 cycle63 next ts_only slice: chmod-items bounded differential (2 golden cases)"
+			"notes": "rej-010 rust_impl ONLY — cycle63 next ts_only slice: chmod-items bounded differential (2 golden cases)"
 		},
 		"cycle64_delta": {
 			"rust_impl_verified": 1,
 			"slice": "chown-items",
 			"verificationRef": "verification/filesystem-mcp-cycle64-chown-items-rust-impl.json",
-			"notes": "rej-010 rust_impl ONLY \u2014 cycle64 next ts_only slice: chown-items bounded differential (2 golden cases)"
+			"notes": "rej-010 rust_impl ONLY — cycle64 next ts_only slice: chown-items bounded differential (2 golden cases)"
 		},
 		"bw2_delta": {
 			"rust_impl_deepened": 5,
@@ -542,38 +550,52 @@
 			],
 			"notes": "BW2 offline pure residual stack: apply_diff + mutations (create/move/copy) + replace_content pure core; proof_missing; route LegacyOptIn; NO authority/ts_deleted/CLI wire"
 		},
-		"summaryNote": "TICK038 tip differential land: list_files/read_content/delete_items proof.status=differential_green @ f5d9d94138c3; summary.parity_proven honesty-corrected from overclaim 7\u21920 (no rows at parity_proven). NO authority_rust/ts_deleted; promotion_hold active; CI main_durable residual.",
+		"summaryNote": "Adversarial admission 2026-07-15: transport/stdio-ts-adapter retired; all 16 capabilities ts_deleted; Rust rmcp sole MCP production authority.",
 		"tick016_delta": {
 			"rust_impl_verified": 0,
-			"slices": ["list-files", "read-content", "write-content"],
+			"slices": [
+				"list-files",
+				"read-content",
+				"write-content"
+			],
 			"notes": "Main-bound differential allow-list expansion. Case floors: list>=2, read>=4, write>=4. Residual caps remain for search/stat/mutations/legacy tools."
 		},
 		"tick029_delta": {
 			"rust_impl_verified": 1,
 			"slice": "delete-items",
 			"verificationRef": "scripts/run-filesystem-mcp-differential.sh --slice delete-items",
-			"notes": "rej-010 rust_impl ONLY \u2014 TICK029 delete_items bounded differential (2 golden cases); no authority_rust/ts_deleted"
+			"notes": "rej-010 rust_impl ONLY — TICK029 delete_items bounded differential (2 golden cases); no authority_rust/ts_deleted"
 		},
 		"proof_differential_green": 3,
 		"liveMainTip": "f5d9d94138c3d5f98cd8357f1f4df6fd104d0a7a",
-		"lastMutation": "FS-TIP-DIFF-PROOF-LAND-TICK038",
-		"updatedAt": "2026-07-12T22:40:26Z",
+		"lastMutation": "ADVERSARIAL-TS-ADAPTER-DELETED",
+		"updatedAt": "2026-07-15T04:31:18.845Z",
 		"tipDifferentialLand": {
 			"at": "2026-07-12T22:40:26Z",
 			"mainTip": "f5d9d94138c3d5f98cd8357f1f4df6fd104d0a7a",
-			"caps": ["tool/list_files", "tool/read_content", "tool/delete_items"],
+			"caps": [
+				"tool/list_files",
+				"tool/read_content",
+				"tool/delete_items"
+			],
 			"corpusHash": "150bdc9d8ef562cbbf124cc04c7406a0b0440fada471e8642ea44ea9707b8740",
 			"promotion": false,
 			"mainDurableCI": false
+		},
+		"adversarial_ts_adapter_deleted": {
+			"at": "2026-07-15T04:31:18.845Z",
+			"branch": "fix/adversarial-ts-adapter-deleted",
+			"defect_class": "semantic_gap",
+			"action": "Deleted src/index.ts; Rust-only bin (multiarch resolve retained); doctor-cli; gates; all 16 caps ts_deleted"
 		}
 	},
 	"priorClaims": {
 		"authority_rust": 4,
 		"rust_impl": 8,
-		"completion_progress": 0.0,
+		"completion_progress": 0,
 		"authority_progress": 0.25,
 		"revertedAt": "2026-07-10T21:30:00Z",
-		"reason": "rej-010 promotion freeze \u2014 0 capabilities with differential_green or canary_green proof"
+		"reason": "rej-010 promotion freeze — 0 capabilities with differential_green or canary_green proof"
 	},
 	"rej010Reaudit": {
 		"appliedAt": "2026-07-11T12:00:00Z",
@@ -586,7 +608,11 @@
 		"oracle": "scripts/differential/filesystem-mcp-oracle.ts",
 		"capabilitiesWithDifferentialHarness": 3,
 		"promotionHoldActive": true,
-		"allowList": ["list_files", "read_content", "write_content"],
+		"allowList": [
+			"list_files",
+			"read_content",
+			"write_content"
+		],
 		"notes": "tick-016 fail-closed main allow-list; other tools residual until next expansion"
 	},
 	"cycle38": {
@@ -599,7 +625,7 @@
 			"scripts/run-filesystem-mcp-differential.sh",
 			"crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs"
 		],
-		"notes": "cycle38 rej-010: list-read bounded differential harness + matrix gate confirmed on disk. rust_impl only \u2014 proof.status missing until differential_green at bound SHAs."
+		"notes": "cycle38 rej-010: list-read bounded differential harness + matrix gate confirmed on disk. rust_impl only — proof.status missing until differential_green at bound SHAs."
 	},
 	"cycle43": {
 		"boundedSlice": "tool.write_content",
@@ -610,7 +636,7 @@
 			"scripts/run-filesystem-mcp-differential.sh",
 			"crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs"
 		],
-		"notes": "cycle43 rej-010: write-content bounded differential slice (--slice write-content). rust_impl only \u2014 proof.status missing until differential_green at bound SHAs."
+		"notes": "cycle43 rej-010: write-content bounded differential slice (--slice write-content). rust_impl only — proof.status missing until differential_green at bound SHAs."
 	},
 	"cycle47": {
 		"boundedSlice": "tool.apply_diff",
@@ -623,15 +649,15 @@
 			"scripts/run-filesystem-mcp-differential.sh",
 			"crates/filesystem-mcp-server/tests/filesystem_mcp_differential.rs"
 		],
-		"notes": "cycle47 rej-010: apply-diff bounded differential slice (--slice apply-diff, 5 golden cases). rust_impl only \u2014 proof.status missing until differential_green at bound SHAs."
+		"notes": "cycle47 rej-010: apply-diff bounded differential slice (--slice apply-diff, 5 golden cases). rust_impl only — proof.status missing until differential_green at bound SHAs."
 	},
 	"harnessPath": "scripts/run-filesystem-mcp-differential.sh --slice all",
 	"verificationRef": "verification/filesystem-mcp-differential-green.json",
-	"cycle50Slice": "apply-diff \u2014 bounded --slice entrypoint; bash scripts/run-filesystem-mcp-differential.sh --slice apply-diff",
-	"cycle51Slice": "list-files \u2014 bounded --slice entrypoint; bash scripts/run-filesystem-mcp-differential.sh --slice list-files",
-	"cycle62Slice": "replace-content \u2014 bounded --slice entrypoint; bash scripts/run-filesystem-mcp-differential.sh --slice replace-content; proof.status missing; authority_rust blocked per rej-010",
-	"cycle63Slice": "chmod-items \u2014 bounded --slice entrypoint; bash scripts/run-filesystem-mcp-differential.sh --slice chmod-items; proof.status missing; authority_rust blocked per rej-010",
-	"cycle64Slice": "chown-items \u2014 bounded --slice entrypoint; bash scripts/run-filesystem-mcp-differential.sh --slice chown-items; proof.status missing; authority_rust blocked per rej-010",
+	"cycle50Slice": "apply-diff — bounded --slice entrypoint; bash scripts/run-filesystem-mcp-differential.sh --slice apply-diff",
+	"cycle51Slice": "list-files — bounded --slice entrypoint; bash scripts/run-filesystem-mcp-differential.sh --slice list-files",
+	"cycle62Slice": "replace-content — bounded --slice entrypoint; bash scripts/run-filesystem-mcp-differential.sh --slice replace-content; proof.status missing; authority_rust blocked per rej-010",
+	"cycle63Slice": "chmod-items — bounded --slice entrypoint; bash scripts/run-filesystem-mcp-differential.sh --slice chmod-items; proof.status missing; authority_rust blocked per rej-010",
+	"cycle64Slice": "chown-items — bounded --slice entrypoint; bash scripts/run-filesystem-mcp-differential.sh --slice chown-items; proof.status missing; authority_rust blocked per rej-010",
 	"cycle50": {
 		"boundedSlice": "apply-diff",
 		"status": "rust_impl_on_disk_verified",
@@ -648,7 +674,7 @@
 		"caseCounts": {
 			"applyDiff": 5
 		},
-		"notes": "cycle50 rej-010: apply-diff bounded differential harness on-disk verify. rust_impl ONLY \u2014 proof.status missing until differential_green at bound SHAs."
+		"notes": "cycle50 rej-010: apply-diff bounded differential harness on-disk verify. rust_impl ONLY — proof.status missing until differential_green at bound SHAs."
 	},
 	"cycle51": {
 		"boundedSlice": "list-files",
@@ -667,7 +693,7 @@
 		"caseCounts": {
 			"listFiles": 2
 		},
-		"notes": "cycle51 rej-010: list-files bounded differential harness on-disk verify. rust_impl ONLY \u2014 proof.status missing until differential_green at bound SHAs."
+		"notes": "cycle51 rej-010: list-files bounded differential harness on-disk verify. rust_impl ONLY — proof.status missing until differential_green at bound SHAs."
 	},
 	"cycle62": {
 		"boundedSlice": "replace-content",
@@ -686,7 +712,7 @@
 		"caseCounts": {
 			"replaceContent": 2
 		},
-		"notes": "cycle62 rej-010: tool/replace_content ts_only\u2192rust_impl bounded differential harness on-disk verify. rust_impl ONLY \u2014 proof.status missing until differential_green at bound SHAs."
+		"notes": "cycle62 rej-010: tool/replace_content ts_only→rust_impl bounded differential harness on-disk verify. rust_impl ONLY — proof.status missing until differential_green at bound SHAs."
 	},
 	"cycle63": {
 		"boundedSlice": "chmod-items",
@@ -706,7 +732,7 @@
 		"caseCounts": {
 			"chmodItems": 2
 		},
-		"notes": "cycle63 rej-010: tool/chmod_items ts_only\u2192rust_impl bounded differential harness on-disk verify. rust_impl ONLY \u2014 proof.status missing until differential_green at bound SHAs."
+		"notes": "cycle63 rej-010: tool/chmod_items ts_only→rust_impl bounded differential harness on-disk verify. rust_impl ONLY — proof.status missing until differential_green at bound SHAs."
 	},
 	"cycle64": {
 		"boundedSlice": "chown-items",
@@ -726,11 +752,11 @@
 		"caseCounts": {
 			"chownItems": 2
 		},
-		"notes": "cycle64 rej-010: tool/chown_items ts_only\u2192rust_impl bounded differential harness on-disk verify. rust_impl ONLY \u2014 proof.status missing until differential_green at bound SHAs."
+		"notes": "cycle64 rej-010: tool/chown_items ts_only→rust_impl bounded differential harness on-disk verify. rust_impl ONLY — proof.status missing until differential_green at bound SHAs."
 	},
 	"promotionHold": {
 		"active": true,
-		"reason": "rej-010: differential_green at bound SHAs \u2014 promotion_hold until prod_audit_pass",
+		"reason": "rej-010: differential_green at bound SHAs — promotion_hold until prod_audit_pass",
 		"rejectionRef": "rej-010",
 		"since": "2026-07-10T10:53:32+00:00"
 	},
@@ -741,17 +767,27 @@
 	"tick010": {
 		"boundedSlice": "list-files",
 		"status": "harness_landed_pending_main_proof",
-		"successorOf": "PR#200 (DIRTY \u2014 not merged)",
+		"successorOf": "PR#200 (DIRTY — not merged)",
 		"notes": "Clean successor from main; list_files only; no authority_rust/ts_deleted."
 	},
 	"tick016": {
-		"boundedSlices": ["list-files", "read-content", "write-content"],
+		"boundedSlices": [
+			"list-files",
+			"read-content",
+			"write-content"
+		],
 		"status": "harness_landed_pending_main_proof",
 		"successorOf": "tick-010 list_files-only main land (#202)",
 		"notes": "Expand main differential beyond list_files. NO authority_rust/ts_deleted/prod_audit_pass."
 	},
 	"tick022": {
-		"boundedSlices": ["list-files", "read-content", "write-content", "search-files", "stat-items"],
+		"boundedSlices": [
+			"list-files",
+			"read-content",
+			"write-content",
+			"search-files",
+			"stat-items"
+		],
 		"status": "harness_landed_pending_main_proof",
 		"successorOf": "tick-016 list/read/write main land (#205)",
 		"caseCounts": {

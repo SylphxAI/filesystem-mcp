@@ -18,7 +18,6 @@ export default defineConfig({
 			include: ['src/**/*.ts'], // Restored include
 			exclude: [
 				// Restored and adjusted exclude
-				'src/index.ts', // Often just exports
 				'src/types/**', // Assuming types might be added later
 				'**/*.d.ts',
 				'**/*.config.ts',
