@@ -1,28 +1,27 @@
-# Agent Instructions
+# filesystem-mcp — local agent notes only
 
-Engineering doctrine: https://github.com/SylphxAI/doctrine
+Doctrine and fleet delivery law live in the **host always-on constitution**
+(`~/.grok/AGENTS.md` / Doctrine template). This file must **not** restate,
+weaken, or fork that law (including PR-vs-direct-trunk delivery).
 
-Before changing behavior, read `PROJECT.md`, `.doctrine/project.json`, the
-central doctrine entry points, and triggered doctrine standards. This file is a
-thin runtime adapter; keep enterprise policy in doctrine.
+Local truth: `PROJECT.md`, `.doctrine/project.json` when present.
 
-## Local Commands
+## Boundary hazards
+
+- This is a security-sensitive MCP filesystem server. Path confinement, batch
+- Release workflows publish npm, Docker Hub images, GitHub releases, and docs.
+- Do not mix package/image publishing changes with docs/control-plane changes.
+
+## Local commands
 
 - `pnpm install --frozen-lockfile` - install dependencies.
 - `pnpm run validate` - formatting, lint, typecheck, and tests.
 - `pnpm run build` - build package artifacts.
 - `pnpm run docs:build` - build documentation.
+- Prefer the **narrowest** affected check before full workspace runs.
+- Report layers honestly: local diff · trunk FF · deploy · prod proof (do not collapse).
 
-## Local Hazards
+## Validation notes
 
-- This is a security-sensitive MCP filesystem server. Path confinement, batch
-  write/edit behavior, chmod/chown, and delete/copy/move tools are public safety
-  contracts.
-- Release workflows publish npm, Docker Hub images, GitHub releases, and docs.
-  Published artifacts are forward-fix-only.
-- Do not mix package/image publishing changes with docs/control-plane changes.
-
-## Reporting
-
-Separate local diff, PR state, CI state, merge state, package/image release
-state, and runtime/MCP proof.
+- Prefer the **narrowest** affected check before full workspace runs.
+- Report layers honestly: local diff · trunk FF · deploy · prod proof (do not collapse).
