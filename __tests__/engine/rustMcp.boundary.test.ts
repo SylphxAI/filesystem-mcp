@@ -7,7 +7,6 @@ const repoRoot = path.resolve(import.meta.dirname, '../..')
 const rustServerBin = path.join(repoRoot, 'target/release/filesystem-mcp-server')
 const rustCliBin = path.join(repoRoot, 'target/release/filesystem-cli')
 const stagedRustBin = path.join(repoRoot, 'bin/native/filesystem-mcp-server')
-const tsEntry = path.join(repoRoot, 'dist/index.js')
 const binWrapper = path.join(repoRoot, 'bin/filesystem-mcp')
 
 describe('MCP transport boundary', () => {
@@ -16,12 +15,14 @@ describe('MCP transport boundary', () => {
 		execSync('bun run build', { cwd: repoRoot, stdio: 'pipe', timeout: 180_000 })
 	}, 300_000)
 
-	it('defaults the published bin wrapper to the Rust rmcp MCP server', () => {
+	it('defaults the published bin wrapper to the Rust rmcp MCP server only', () => {
 		const script = readFileSync(binWrapper, 'utf8')
 		expect(script).toContain('filesystem-mcp-server')
 		expect(script).toContain('resolve_rust_bin')
-		expect(script).toContain('use_ts_transport')
-		// Default path execs the resolved native bin; TS is only via use_ts_transport opt-in.
+		expect(script).not.toContain('use_ts_transport')
+		expect(script).not.toContain('exec node')
+		expect(script).not.toContain('dist/index.js')
+		// Default path execs the resolved native bin.
 		expect(script).toContain('exec "$bin"')
 		expect(script).toMatch(/if bin="\$\(resolve_rust_bin\)"; then[\s\S]*exec "\$bin"/)
 		// Arch-aware resolution (optionalDependencies) must be present for multi-arch npm.
@@ -53,9 +54,11 @@ describe('MCP transport boundary', () => {
 		expect(existsSync(rustCliBin)).toBe(true)
 	})
 
-	it('does not ship a TypeScript engine-invoke bridge on the default MCP path', () => {
+	it('does not ship a TypeScript MCP stdio adapter or engine-invoke bridge', () => {
 		expect(existsSync(path.join(repoRoot, 'src/engine-invoke.ts'))).toBe(false)
-		expect(existsSync(tsEntry)).toBe(true)
+		expect(existsSync(path.join(repoRoot, 'src/index.ts'))).toBe(false)
+		expect(existsSync(path.join(repoRoot, 'dist/index.js'))).toBe(false)
+		expect(existsSync(path.join(repoRoot, 'src/doctor-cli.ts'))).toBe(true)
 	})
 
 	it('delegates Rust core engine work through filesystem-cli JSON boundary', () => {
@@ -70,11 +73,25 @@ describe('MCP transport boundary', () => {
 		expect(cliEnvelope.hash?.length).toBe(64)
 	})
 
-	it('allows opt-in TypeScript MCP transport via FILESYSTEM_MCP_TRANSPORT=ts', () => {
+	it('rejects retired TypeScript MCP transport opt-in (FILESYSTEM_MCP_TRANSPORT=ts)', () => {
 		const script = readFileSync(binWrapper, 'utf8')
 		expect(script).toContain('FILESYSTEM_MCP_TRANSPORT')
-		expect(script).toContain('use_ts_transport')
-		expect(script).toContain('dist/index.js')
+		expect(script).toContain('is retired')
+		expect(script).not.toContain('use_ts_transport')
+		expect(script).not.toContain('dist/index.js')
+
+		const result = spawnSync(binWrapper, ['doctor'], {
+			cwd: repoRoot,
+			encoding: 'utf8',
+			env: {
+				...process.env,
+				FILESYSTEM_MCP_TRANSPORT: 'ts',
+			},
+			timeout: 30_000,
+		})
+		const output = `${result.stdout ?? ''}${result.stderr ?? ''}`
+		expect(result.status).not.toBe(0)
+		expect(output).toMatch(/retired|sole MCP authority/i)
 	})
 
 	it('reports doctor diagnostics from the default Rust MCP entrypoint', () => {

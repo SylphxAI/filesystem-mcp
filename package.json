@@ -3,17 +3,13 @@
 	"version": "0.7.2",
 	"description": "An MCP server providing filesystem tools relative to a project root.",
 	"type": "module",
-	"main": "./dist/index.js",
-	"module": "./dist/index.js",
-	"types": "./dist/index.d.ts",
+	"main": "./dist/doctor-cli.js",
+	"module": "./dist/doctor-cli.js",
 	"bin": {
 		"filesystem-mcp": "./bin/filesystem-mcp"
 	},
 	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
-		},
+		".": "./dist/doctor-cli.js",
 		"./package.json": "./package.json"
 	},
 	"files": [
@@ -26,10 +22,10 @@
 		"node": "22.14"
 	},
 	"scripts": {
-		"build": "bunx bunup && bun build src/legacy-engine-runtime.ts --outdir dist --target node",
+		"build": "bun build src/doctor-cli.ts src/legacy-engine-runtime.ts --outdir dist --target node",
 		"build:rust": "cargo build --release -p filesystem-core -p filesystem-cli -p filesystem-mcp-server && bun scripts/stage-rust-mcp.ts",
 		"watch": "tsc --watch",
-		"inspector": "npx @modelcontextprotocol/inspector dist/index.js",
+		"inspector": "npx @modelcontextprotocol/inspector ./bin/filesystem-mcp",
 		"test": "vitest run",
 		"test:watch": "vitest watch",
 		"test:cov": "vitest run --coverage --reporter=junit --outputFile=test-report.junit.xml --exclude __tests__/release-gate.test.ts",
@@ -37,14 +33,16 @@
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write .",
 		"check-format": "biome format .",
-		"validate": "biome check . && bun run typecheck && bun run test",
+		"check:ts-adapter-deleted": "bash scripts/check-ts-adapter-deletion-ready.sh",
+		"check:no-ts-stdio-mcp": "bash scripts/check-no-ts-stdio-mcp.sh",
+		"validate": "biome check . && bun run typecheck && bun run test && bun run check:ts-adapter-deleted && bun run check:no-ts-stdio-mcp",
 		"docs:dev": "vitepress dev docs",
 		"docs:build": "bun run docs:api && vitepress build docs",
 		"docs:preview": "vitepress preview docs",
-		"start": "node dist/index.js",
+		"start": "./bin/filesystem-mcp",
 		"typecheck": "tsc --noEmit",
 		"benchmark": "vitest bench --run",
-		"doctor": "bun run src/index.ts doctor",
+		"doctor": "bun run src/doctor-cli.ts",
 		"benchmark:release-gate": "bun scripts/release-gate.ts",
 		"audit:shipped": "bun scripts/audit-shipped-deps.ts",
 		"test:rust-policy": "cargo test && vitest run __tests__/engine/rust-policy.boundary.test.ts",

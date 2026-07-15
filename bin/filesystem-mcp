@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# Filesystem MCP launcher — default Rust rmcp; TypeScript transport is explicit opt-in.
+# Filesystem MCP launcher — Rust rmcp only (fail-closed, no TS stdio fallback).
 # Resolves platform-matched native via optionalDependencies, staged bin/native, or local cargo target.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-TS_ENTRY="$ROOT/dist/index.js"
 
 host_platform_key() {
 	local os arch
@@ -135,10 +134,6 @@ resolve_rust_bin() {
 	return 1
 }
 
-use_ts_transport() {
-	[[ "${FILESYSTEM_MCP_TRANSPORT:-}" == "ts" ]] || [[ "${1:-}" == "ts" ]]
-}
-
 resolve_transport() {
 	if [[ -n "${FILESYSTEM_MCP_TRANSPORT:-}" ]]; then
 		printf '%s\n' "${FILESYSTEM_MCP_TRANSPORT}"
@@ -151,18 +146,14 @@ resolve_transport() {
 	printf '%s\n' "stdio"
 }
 
-if use_ts_transport "$@"; then
-	if [[ "${1:-}" == "ts" ]]; then
-		shift
-	fi
-	exec node "$TS_ENTRY" "$@"
-fi
-
 if bin="$(resolve_rust_bin)"; then
 	transport="$(resolve_transport)"
 	if [[ "$transport" == "http" ]]; then
 		export MCP_TRANSPORT=http
 		export FILESYSTEM_MCP_TRANSPORT=http
+	elif [[ "$transport" == "ts" ]]; then
+		echo "[filesystem-mcp] FILESYSTEM_MCP_TRANSPORT=ts is retired; Rust rmcp is the sole MCP authority." >&2
+		exit 1
 	fi
 	exec "$bin" "$@"
 fi
