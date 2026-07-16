@@ -2,6 +2,11 @@
 
 # Filesystem MCP
 
+<p align="center">
+  <img src="docs/banner.png" alt="filesystem-mcp banner" width="100%" />
+</p>
+
+
 ### Your agent touched the repo. **Did it stay in the project?**
 
 Secure, token-optimized filesystem operations for AI agents — batch reads, surgical edits, and
