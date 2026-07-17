@@ -3,9 +3,8 @@
 # Filesystem MCP
 
 <p align="center">
-  <img src="docs/banner.png" alt="filesystem-mcp banner" width="100%" />
+  <img src="https://mark.sylphx.com/api/v1/banner?type=mesh&theme=tokyonight&text=filesystem+mcp&desc=%F0%9F%93%81+Secure%2C+efficient+MCP+filesystem+server+-+token-saving+batch+operations+with+&height=200&animation=rise&credit=0" alt="filesystem-mcp — Sylphx Mark banner" width="100%" />
 </p>
-
 
 ### Your agent touched the repo. **Did it stay in the project?**
 
