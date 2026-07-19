@@ -6,28 +6,16 @@
 		{
 			"id": "create-nested-dirs",
 			"op": "create_directories",
-			"paths": [
-				"a/b/c"
-			],
-			"expectSuccess": [
-				true
-			],
-			"expectExistsDirs": [
-				"a/b/c"
-			]
+			"paths": ["a/b/c"],
+			"expectSuccess": [true],
+			"expectExistsDirs": ["a/b/c"]
 		},
 		{
 			"id": "create-rejects-root",
 			"op": "create_directories",
-			"paths": [
-				""
-			],
-			"expectSuccess": [
-				false
-			],
-			"errorContains": [
-				"project root"
-			]
+			"paths": [""],
+			"expectSuccess": [false],
+			"errorContains": ["project root"]
 		},
 		{
 			"id": "move-file",
@@ -41,15 +29,11 @@
 					"destination": "dst/b.txt"
 				}
 			],
-			"expectSuccess": [
-				true
-			],
+			"expectSuccess": [true],
 			"expectExistsFiles": {
 				"dst/b.txt": "hello"
 			},
-			"expectMissing": [
-				"src/a.txt"
-			]
+			"expectMissing": ["src/a.txt"]
 		},
 		{
 			"id": "copy-file-preserves-source",
@@ -63,9 +47,7 @@
 					"destination": "copy-solo.txt"
 				}
 			],
-			"expectSuccess": [
-				true
-			],
+			"expectSuccess": [true],
 			"expectExistsFiles": {
 				"solo.txt": "solo",
 				"copy-solo.txt": "solo"
@@ -83,9 +65,7 @@
 					"destination": "tree-copy"
 				}
 			],
-			"expectSuccess": [
-				true
-			],
+			"expectSuccess": [true],
 			"expectExistsFiles": {
 				"tree/nested/leaf.txt": "leaf",
 				"tree-copy/nested/leaf.txt": "leaf"

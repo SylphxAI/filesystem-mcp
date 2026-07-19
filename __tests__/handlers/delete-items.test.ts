@@ -388,7 +388,7 @@ describe('handleDeleteItems Integration Tests', () => {
 			expect.objectContaining({
 				name: 'McpError',
 				code: ErrorCode.InvalidParams,
-				message: expect.stringContaining('paths (Expected array, received string)'),
+				message: expect.stringContaining('paths (Invalid input: expected array, received string)'),
 			}),
 		)
 	})

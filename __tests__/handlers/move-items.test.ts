@@ -358,7 +358,7 @@ describe('handleMoveItems Core Logic Tests', () => {
 		const args = { operations: [{ src: 'a.txt', dest: 'b.txt' }] } // Incorrect keys
 		await expect(handleMoveItemsFuncCore(args, mockDependencies)).rejects.toThrow(McpError)
 		await expect(handleMoveItemsFuncCore(args, mockDependencies)).rejects.toThrow(
-			/Invalid arguments: operations.0.source \(Required\), operations.0.destination \(Required\)/,
+			/Invalid arguments: operations\.0\.source \(Invalid input: expected string, received undefined\)/,
 		)
 	})
 

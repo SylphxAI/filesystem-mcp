@@ -14,6 +14,7 @@ import {
 } from '../utils/path-utils.js'
 import type { FormattedStats } from '../utils/stats-utils.js'
 import { formatStats as formatStatsUtil } from '../utils/stats-utils.js'
+import { mcpErrorFromZod } from '../utils/zod-utils.js'
 
 // Define Zod schema
 export const ListFilesArgsSchema = z
@@ -99,13 +100,7 @@ function parseAndValidateArgs(args: unknown): ListFilesArgs {
 	try {
 		return ListFilesArgsSchema.parse(args)
 	} catch (error) {
-		if (error instanceof z.ZodError) {
-			throw new McpError(
-				ErrorCode.InvalidParams,
-				`Invalid arguments: ${error.errors.map((e) => `${e.path.join('.')} (${e.message})`).join(', ')}`,
-			)
-		}
-		throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed')
+		mcpErrorFromZod(error)
 	}
 }
 

@@ -1,8 +1,9 @@
 // src/handlers/chownItems.ts
 import { promises as fs } from 'node:fs'
-import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js'
+import { McpError } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import { PROJECT_ROOT, resolvePath } from '../utils/path-utils.js'
+import { mcpErrorFromZod } from '../utils/zod-utils.js'
 
 // --- Types ---
 
@@ -38,13 +39,7 @@ function parseAndValidateArgs(args: unknown): ChownItemsArgs {
 	try {
 		return ChownItemsArgsSchema.parse(args)
 	} catch (error) {
-		if (error instanceof z.ZodError) {
-			throw new McpError(
-				ErrorCode.InvalidParams,
-				`Invalid arguments: ${error.errors.map((e) => `${e.path.join('.')} (${e.message})`).join(', ')}`,
-			)
-		}
-		throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed')
+		mcpErrorFromZod(error)
 	}
 }
 

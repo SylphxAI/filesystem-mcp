@@ -1,13 +1,14 @@
 // src/handlers/replaceContent.ts
 import { promises as fs, type PathLike, type Stats } from 'node:fs' // Import necessary types
 // Import SDK Error/Code from dist, local types for Request/Response
-import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js'
+import { McpError } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 // Import centralized types
 import type { McpToolResponse } from '../types/mcp-types.js'
 import { hashUtf8Content } from '../utils/content-hash.js'
 import { resolvePath } from '../utils/path-utils.js'
 import { escapeRegex } from '../utils/string-utils.js' // Import escapeRegex
+import { mcpErrorFromZod } from '../utils/zod-utils.js'
 
 // --- Types ---
 
@@ -67,32 +68,7 @@ function parseAndValidateArgs(args: unknown): ReplaceContentArgs {
 	try {
 		return ReplaceContentArgsSchema.parse(args)
 	} catch (error) {
-		if (error instanceof z.ZodError) {
-			// Assign errors to a typed variable first
-			const zodErrors: z.ZodIssue[] = error.errors
-			throw new McpError(
-				// Disable unsafe call for McpError constructor
-				ErrorCode.InvalidParams,
-				`Invalid arguments: ${zodErrors.map((e) => `${e.path.join('.')} (${e.message})`).join(', ')}`,
-			)
-		}
-		// Determine error message more safely
-		let failureMessage = 'Unknown validation error'
-		if (error instanceof Error) {
-			failureMessage = error.message
-		} else {
-			// Attempt to stringify non-Error objects, fallback to String()
-			try {
-				failureMessage = JSON.stringify(error)
-			} catch {
-				failureMessage = String(error)
-			}
-		}
-		throw new McpError(
-			// Disable unsafe call for McpError constructor
-			ErrorCode.InvalidParams,
-			`Argument validation failed: ${failureMessage}`,
-		)
+		mcpErrorFromZod(error)
 	}
 }
 

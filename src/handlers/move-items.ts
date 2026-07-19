@@ -1,9 +1,10 @@
 // src/handlers/moveItems.ts
 import fsPromises from 'node:fs/promises' // Use default import
 import path from 'node:path'
-import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js'
+import { McpError } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import * as pathUtils from '../utils/path-utils.js' // Import namespace
+import { mcpErrorFromZod } from '../utils/zod-utils.js'
 
 // --- Dependency Injection Interface ---
 interface MoveItemsDependencies {
@@ -64,13 +65,7 @@ function parseAndValidateArgs(args: unknown): MoveItemsArgs {
 	try {
 		return MoveItemsArgsSchema.parse(args)
 	} catch (error) {
-		if (error instanceof z.ZodError) {
-			throw new McpError(
-				ErrorCode.InvalidParams,
-				`Invalid arguments: ${error.errors.map((e) => `${e.path.join('.')} (${e.message})`).join(', ')}`,
-			)
-		}
-		throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed')
+		mcpErrorFromZod(error)
 	}
 }
 

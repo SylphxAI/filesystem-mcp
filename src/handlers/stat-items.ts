@@ -1,12 +1,13 @@
 // src/handlers/statItems.ts
 import { promises as fs, type Stats } from 'node:fs' // Import Stats
-import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js'
+import { McpError } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 // --- Types ---
 import type { McpToolResponse } from '../types/mcp-types.js'
 import { resolvePath } from '../utils/path-utils.js'
 import type { FormattedStats } from '../utils/stats-utils.js' // Import type
 import { formatStats } from '../utils/stats-utils.js'
+import { mcpErrorFromZod } from '../utils/zod-utils.js'
 
 export const StatItemsArgsSchema = z
 	.object({
@@ -33,13 +34,7 @@ function parseAndValidateArgs(args: unknown): StatItemsArgs {
 	try {
 		return StatItemsArgsSchema.parse(args)
 	} catch (error) {
-		if (error instanceof z.ZodError) {
-			throw new McpError(
-				ErrorCode.InvalidParams,
-				`Invalid arguments: ${error.errors.map((e) => `${e.path.join('.')} (${e.message})`).join(', ')}`,
-			)
-		}
-		throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed')
+		mcpErrorFromZod(error)
 	}
 }
 
