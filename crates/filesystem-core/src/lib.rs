@@ -113,6 +113,9 @@ pub fn resolve_path(relative_path: &str, root: &Path) -> Result<PathBuf, PolicyE
     }
 
     let absolute_path = root.join(relative_path);
+    // Compare resolved children with the resolved root. On macOS, temporary
+    // paths commonly enter as `/var/...` but canonicalize to `/private/var/...`.
+    let canonical_root = std::fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
 
     if !is_path_inside(&absolute_path, root) {
         return Err(PolicyError::invalid_request(format!(
@@ -122,7 +125,7 @@ pub fn resolve_path(relative_path: &str, root: &Path) -> Result<PathBuf, PolicyE
 
     match std::fs::canonicalize(&absolute_path) {
         Ok(real_path) => {
-            if !is_path_inside(&real_path, root) {
+            if !is_path_inside(&real_path, &canonical_root) {
                 return Err(PolicyError::invalid_request(format!(
                     "Path traversal via symlink detected: resolved path '{}' is outside project root",
                     real_path.display()
@@ -134,7 +137,7 @@ pub fn resolve_path(relative_path: &str, root: &Path) -> Result<PathBuf, PolicyE
             let parent = absolute_path.parent().unwrap_or(root);
             match std::fs::canonicalize(parent) {
                 Ok(real_parent) => {
-                    if !is_path_inside(&real_parent, root) {
+                    if !is_path_inside(&real_parent, &canonical_root) {
                         return Err(PolicyError::invalid_request(format!(
                             "Path traversal via symlink detected: {relative_path}"
                         )));
@@ -199,6 +202,25 @@ mod tests {
 
         let resolved = resolve_path("src/a.ts", &root).expect("resolve");
         assert_eq!(resolved, file.canonicalize().expect("canonicalize"));
+    }
+
+    #[test]
+    fn resolves_children_when_root_is_reached_through_a_symlink() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let real_root = temp.path().join("real-root");
+        let alias_root = temp.path().join("alias-root");
+        fs::create_dir_all(real_root.join("src")).expect("mkdir");
+        fs::write(real_root.join("src/a.ts"), "export {}").expect("write");
+        symlink(&real_root, &alias_root).expect("symlink root");
+
+        let resolved = resolve_path("src/a.ts", &alias_root).expect("resolve");
+        assert_eq!(
+            resolved,
+            real_root
+                .join("src/a.ts")
+                .canonicalize()
+                .expect("canonicalize")
+        );
     }
 
     #[test]
