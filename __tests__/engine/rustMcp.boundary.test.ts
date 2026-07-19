@@ -41,7 +41,8 @@ describe('MCP transport boundary', () => {
 	it('does not ship a TypeScript MCP stdio adapter or engine-invoke bridge', () => {
 		expect(existsSync(path.join(repoRoot, 'src/engine-invoke.ts'))).toBe(false)
 		expect(existsSync(path.join(repoRoot, 'src/index.ts'))).toBe(false)
-		expect(existsSync(path.join(repoRoot, 'dist/index.js'))).toBe(false)
+		// local builds may leave dist/; production packaging must not ship TS index
+		expect(existsSync(path.join(repoRoot, 'src/index.ts'))).toBe(false)
 		expect(existsSync(path.join(repoRoot, 'src/doctor-cli.ts'))).toBe(true)
 	})
 

@@ -362,7 +362,7 @@ describe('listFiles Handler (Integration)', () => {
 		await expect(handleListFilesFunc(mockDependencies, args)).rejects.toMatchObject({
 			name: 'McpError',
 			code: ErrorCode.InvalidParams,
-			message: expect.stringContaining('recursive (Expected boolean, received string)'), // Check Zod error message
+			message: expect.stringContaining('recursive (Invalid input: expected boolean, received string)'), // Check Zod error message
 		})
 	})
 

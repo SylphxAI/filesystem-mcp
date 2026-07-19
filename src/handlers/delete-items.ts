@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs'
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import { PROJECT_ROOT, resolvePath } from '../utils/path-utils.js'
+import { mcpErrorFromZod } from '../utils/zod-utils.js'
 
 // --- Types ---
 
@@ -35,13 +36,7 @@ function parseAndValidateArgs(args: unknown): DeleteItemsArgs {
 	try {
 		return DeleteItemsArgsSchema.parse(args)
 	} catch (error) {
-		if (error instanceof z.ZodError) {
-			throw new McpError(
-				ErrorCode.InvalidParams,
-				`Invalid arguments: ${error.errors.map((e) => `${e.path.join('.')} (${e.message})`).join(', ')}`,
-			)
-		}
-		throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed')
+		mcpErrorFromZod(error)
 	}
 }
 

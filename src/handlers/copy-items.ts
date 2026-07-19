@@ -1,11 +1,12 @@
 // src/handlers/copyItems.ts
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js'
+import { McpError } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 // --- Types ---
 import type { McpToolResponse } from '../types/mcp-types.js'
 import { PROJECT_ROOT, resolvePath } from '../utils/path-utils.js'
+import { mcpErrorFromZod } from '../utils/zod-utils.js'
 
 export const CopyOperationSchema = z
 	.object({
@@ -54,13 +55,7 @@ function parseAndValidateArgs(args: unknown): CopyItemsArgs {
 	try {
 		return CopyItemsArgsSchema.parse(args)
 	} catch (error) {
-		if (error instanceof z.ZodError) {
-			throw new McpError(
-				ErrorCode.InvalidParams,
-				`Invalid arguments: ${error.errors.map((e) => `${e.path.join('.')} (${e.message})`).join(', ')}`,
-			)
-		}
-		throw new McpError(ErrorCode.InvalidParams, 'Argument validation failed')
+		mcpErrorFromZod(error)
 	}
 }
 

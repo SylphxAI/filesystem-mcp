@@ -3,6 +3,7 @@ import { promises as fs, type Stats } from 'node:fs' // Import Stats type
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import { PROJECT_ROOT, resolvePath } from '../utils/path-utils.js'
+import { mcpErrorFromZod } from '../utils/zod-utils.js'
 
 // --- Types ---
 
@@ -44,17 +45,7 @@ function parseAndValidateArgs(args: unknown): CreateDirsArgs {
 	try {
 		return CreateDirsArgsSchema.parse(args)
 	} catch (error) {
-		if (error instanceof z.ZodError) {
-			throw new McpError(
-				ErrorCode.InvalidParams,
-				`Invalid arguments: ${error.errors.map((e) => `${e.path.join('.')} (${e.message})`).join(', ')}`,
-			)
-		}
-		// Throw a more specific error for non-Zod issues during parsing
-		throw new McpError(
-			ErrorCode.InvalidParams,
-			`Argument validation failed: ${error instanceof Error ? error.message : String(error)}`,
-		)
+		mcpErrorFromZod(error)
 	}
 }
 

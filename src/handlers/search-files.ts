@@ -7,6 +7,7 @@ import { glob as globFn } from 'glob'
 import { z } from 'zod'
 // Import the LOCAL McpResponse type (assuming it's exported from handlers/index)
 import type { McpToolResponse } from '../types/mcp-types.js'
+import { mcpErrorFromZod } from '../utils/zod-utils.js'
 export type LocalMcpResponse = McpToolResponse
 
 import { searchFilesViaRustEngine, shouldUseRustSearchEngine } from '../engine/rust-search.js'
@@ -79,16 +80,7 @@ function parseAndValidateArgs(args: unknown): SearchFilesArgs {
 	try {
 		return SearchFilesArgsSchema.parse(args)
 	} catch (error) {
-		if (error instanceof z.ZodError) {
-			throw new McpError(
-				ErrorCode.InvalidParams,
-				`Invalid arguments: ${error.errors.map((e) => `${e.path.join('.')} (${e.message})`).join(', ')}`,
-			)
-		}
-		throw new McpError(
-			ErrorCode.InvalidParams,
-			`Argument validation failed: ${error instanceof Error ? error.message : String(error)}`,
-		)
+		mcpErrorFromZod(error)
 	}
 }
 
