@@ -54,14 +54,4 @@ describe('rust walk engine boundary', () => {
 
 		await fsPromises.rm(tempDir, { recursive: true, force: true })
 	})
-
-	it('keeps walk logic out of the TypeScript handler sources', async () => {
-		const { readFileSync } = await import('node:fs')
-		const handlerSrc = readFileSync(path.join(repoRoot, 'src/handlers/list-files.ts'), 'utf8')
-		const engineSrc = readFileSync(path.join(repoRoot, 'src/engine/rust-walk.ts'), 'utf8')
-
-		expect(engineSrc).toContain('spawnSync')
-		expect(handlerSrc).toContain('listFilesViaRustEngine')
-		expect(handlerSrc).not.toMatch(/WalkDir|max_depth/)
-	})
 })

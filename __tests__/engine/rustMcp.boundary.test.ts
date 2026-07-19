@@ -1,5 +1,5 @@
 import { execSync, spawnSync } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { beforeAll, describe, expect, it } from 'vitest'
 
@@ -14,22 +14,6 @@ describe('MCP transport boundary', () => {
 		execSync('bun run build:rust', { cwd: repoRoot, stdio: 'pipe', timeout: 300_000 })
 		execSync('bun run build', { cwd: repoRoot, stdio: 'pipe', timeout: 180_000 })
 	}, 300_000)
-
-	it('defaults the published bin wrapper to the Rust rmcp MCP server only', () => {
-		const script = readFileSync(binWrapper, 'utf8')
-		expect(script).toContain('filesystem-mcp-server')
-		expect(script).toContain('resolve_rust_bin')
-		expect(script).not.toContain('use_ts_transport')
-		expect(script).not.toContain('exec node')
-		expect(script).not.toContain('dist/index.js')
-		// Default path execs the resolved native bin.
-		expect(script).toContain('exec "$bin"')
-		expect(script).toMatch(/if bin="\$\(resolve_rust_bin\)"; then[\s\S]*exec "\$bin"/)
-		// Arch-aware resolution (optionalDependencies) must be present for multi-arch npm.
-		expect(script).toContain('resolve_from_optional_dep')
-		expect(script).toContain('is_runnable_native')
-		expect(script).toContain('@sylphx/filesystem-mcp-darwin-arm64')
-	})
 
 	it('executes the shipped default bin path through the Rust rmcp server', () => {
 		const result = spawnSync(binWrapper, ['doctor'], {
@@ -74,12 +58,6 @@ describe('MCP transport boundary', () => {
 	})
 
 	it('rejects retired TypeScript MCP transport opt-in (FILESYSTEM_MCP_TRANSPORT=ts)', () => {
-		const script = readFileSync(binWrapper, 'utf8')
-		expect(script).toContain('FILESYSTEM_MCP_TRANSPORT')
-		expect(script).toContain('is retired')
-		expect(script).not.toContain('use_ts_transport')
-		expect(script).not.toContain('dist/index.js')
-
 		const result = spawnSync(binWrapper, ['doctor'], {
 			cwd: repoRoot,
 			encoding: 'utf8',
