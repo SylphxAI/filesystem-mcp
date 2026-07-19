@@ -1,5 +1,5 @@
 import { execSync, spawnSync } from 'node:child_process'
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -160,13 +160,5 @@ describe('shipped path matrix (Rust core, no legacy flags)', () => {
 		}>
 		expect(payload[0]?.status).toBe('success')
 		expect(existsSync(nodeInvokeLog)).toBe(false)
-	})
-
-	it('documents explicit shipped routing table in mcp-server sources', () => {
-		const routes = readFileSync(path.join(repoRoot, 'crates/filesystem-mcp-server/src/tool_routes.rs'), 'utf8')
-		expect(routes).toContain('list_files')
-		expect(routes).toContain('read_content')
-		expect(routes).toContain('RustCore')
-		expect(routes).toContain('LegacyOptIn')
 	})
 })

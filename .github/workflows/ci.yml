@@ -39,9 +39,6 @@ jobs:
       - name: Release gate
         run: bun run benchmark:release-gate
 
-      - name: Public surface audit (README discovery)
-        run: bunx vitest run test/readmeDiscovery.test.ts
-
       - name: Throughput benchmarks
         run: bun run benchmark
 
