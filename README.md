@@ -1,7 +1,15 @@
-> **ARCHIVED / NON-PRIMARY (2026-07-31)**  
-> This repository is **archived** and is **not** an active Sylphx agent-instrument product.  
-> Do not treat it as install authority for the current independent product set  
-> (Citra / Iris / Cue / Prism / Spine / Lookout). Prefer those product repos instead.
+# Filesystem MCP — ARCHIVED
+
+> **ARCHIVED / NON-PRIMARY**  
+> This product is **not** an active Sylphx agent-instrument.  
+> Prefer independent products: Citra, Iris, Cue, Prism, Spine, Lookout.
+
+Historical source remains for reference only. Do not treat npm/Docker badges or install CTAs below as current install authority.
+
+---
+
+<details>
+<summary>Historical README (archived product)</summary>
 
 
 <div align="center">
@@ -244,3 +252,4 @@ Know another MCP directory? [Open an issue](https://github.com/SylphxAI/filesyst
 ## License
 
 MIT © [Sylphx](https://sylphx.com)
+</details>
