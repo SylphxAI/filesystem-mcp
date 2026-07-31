@@ -1,3 +1,9 @@
+> **ARCHIVED / NON-PRIMARY (2026-07-31)**  
+> This repository is **archived** and is **not** an active Sylphx agent-instrument product.  
+> Do not treat it as install authority for the current independent product set  
+> (Citra / Iris / Cue / Prism / Spine / Lookout). Prefer those product repos instead.
+
+
 <div align="center">
 
 # Filesystem MCP
